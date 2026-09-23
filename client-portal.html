@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Client Portal — Kinder Sports</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="sips-design-system.css">
+<link rel="stylesheet" href="sips-mobile.css">
+<script src="sips-shell.js"></script>
+<script src="sips-mobile.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="auth-guard.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+*{box-sizing:border-box;} html,body{margin:0;padding:0;background:var(--paper-0);color:var(--ink-800);font-family:var(--font-body);-webkit-font-smoothing:antialiased;}
+a{text-decoration:none;color:inherit;}
+::-webkit-scrollbar{width:9px;height:9px;} ::-webkit-scrollbar-thumb{background:#D7DAE0;border-radius:6px;}
+
+.content{max-width:1120px;margin:0 auto;padding:24px 32px 60px 32px;}
+
+/* ---- Portfolio summary strip (multi-project overview) ---- */
+.portfolio-strip{display:flex;gap:12px;overflow-x:auto;padding-bottom:4px;margin-bottom:22px;}
+.mini-proj{flex:0 0 auto;min-width:200px;background:var(--paper-1);border:1px solid var(--line);border-radius:var(--r-lg);padding:13px 15px;cursor:pointer;transition:border-color .15s ease, box-shadow .15s ease;}
+.mini-proj:hover{border-color:var(--muted-2);}
+.mini-proj.active{border-color:var(--brand-orange);box-shadow:0 0 0 1px var(--brand-orange);}
+.mini-proj .top-strip{height:4px;border-radius:3px;margin-bottom:9px;}
+.mini-proj .name{font-family:var(--font-display);font-weight:700;font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.mini-proj .row{display:flex;justify-content:space-between;align-items:center;margin-top:8px;}
+.mini-proj .pct{font-family:var(--font-mono);font-size:15px;font-weight:600;}
+.mini-proj .track{height:5px;background:var(--line-2);border-radius:4px;overflow:hidden;margin-top:6px;}
+.mini-proj .fill{height:100%;border-radius:4px;}
+
+/* ---- Detail card ---- */
+.proj-card{background:var(--paper-1);border:1px solid var(--line);border-radius:var(--r-lg);overflow:hidden;margin-bottom:24px;}
+.proj-banner{position:relative;height:150px;background-size:cover;background-position:center;display:flex;flex-direction:column;justify-content:flex-end;padding:18px 24px;}
+.proj-banner::after{content:'';position:absolute;inset:0;background:linear-gradient(180deg, rgba(0,0,0,0.05) 30%, rgba(0,0,0,0.72) 100%);pointer-events:none;}
+.proj-banner-content{position:relative;z-index:2;display:flex;justify-content:space-between;align-items:flex-end;gap:14px;flex-wrap:wrap;}
+.proj-name{font-family:var(--font-display);font-size:21px;font-weight:700;color:#fff;text-shadow:0 1px 8px rgba(0,0,0,.4);}
+.proj-meta{font-size:12px;color:rgba(255,255,255,.88);margin-top:5px;display:flex;gap:14px;flex-wrap:wrap;text-shadow:0 1px 6px rgba(0,0,0,.4);}
+.status-pill{font-family:var(--font-display);font-size:11px;font-weight:700;padding:5px 13px;border-radius:20px;text-transform:capitalize;white-space:nowrap;}
+.status-pill.good{background:#E7F7ED;color:var(--brand-green);}
+.status-pill.watch{background:#FEF3E2;color:#B45309;}
+.status-pill.bad{background:#FDEAEA;color:var(--status-bad);}
+.status-pill.neutral{background:#F1F2F4;color:var(--muted);}
+
+.proj-body{padding:22px 24px 24px;}
+.card-actions{display:flex;gap:8px;flex-wrap:wrap;}
+.btn-mini{font-family:var(--font-display);font-size:11px;font-weight:700;padding:7px 13px;border-radius:var(--r-sm);border:1px solid var(--line);background:var(--paper-0);color:var(--ink-700);cursor:pointer;transition:border-color .15s ease, color .15s ease, background .15s ease;}
+.btn-mini:hover{border-color:var(--brand-orange);color:var(--brand-orange);}
+.btn-mini.primary{background:var(--ink-900);color:#fff;border-color:var(--ink-900);}
+.btn-mini.primary:hover{background:var(--brand-orange);border-color:var(--brand-orange);color:#fff;}
+
+.progress-wrap{margin:4px 0 8px 0;}
+.progress-top{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px;}
+.progress-label{font-family:var(--font-display);font-size:11px;letter-spacing:.6px;text-transform:uppercase;color:var(--muted);}
+.progress-pct{font-family:var(--font-mono);font-size:26px;font-weight:600;color:var(--brand-green);}
+.progress-track{height:12px;background:var(--line);border-radius:8px;overflow:hidden;}
+.progress-fill{height:100%;border-radius:8px;background:var(--brand-green);transition:width .4s;}
+.progress-sub{font-size:11.5px;color:var(--muted);margin-top:7px;}
+
+.mile-row{display:flex;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid var(--line);}
+.mile-row:last-child{border-bottom:none;}
+.mile-icon{width:22px;height:22px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;}
+.mile-icon.done{background:#E7F7ED;color:var(--brand-green);}
+.mile-icon.prog{background:#FEF3E2;color:#B45309;}
+.mile-icon.todo{background:#F1F2F4;color:var(--muted);}
+.mile-name{flex:1;font-size:13px;font-weight:600;}
+.mile-bar{width:120px;height:7px;background:var(--line);border-radius:5px;overflow:hidden;flex-shrink:0;}
+.mile-bar div{height:100%;background:var(--brand-green);}
+.mile-pct{width:70px;text-align:right;font-family:var(--font-mono);font-size:12px;color:var(--muted);flex-shrink:0;}
+
+.risk-note{margin:14px 0;background:var(--status-watch-bg);border:1px solid #F5D9A8;border-radius:var(--r-md);padding:11px 14px;font-size:12px;color:#8A5A0A;display:flex;gap:8px;}
+.risk-note b{color:#B45309;}
+
+.pay-figures{display:flex;gap:14px;flex-wrap:wrap;margin:16px 0 8px;}
+.pay-fig{flex:1;min-width:130px;background:var(--paper-0);border:1px solid var(--line);border-radius:var(--r-md);padding:12px 14px;}
+.pay-fig .l{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;}
+.pay-fig .v{font-family:var(--font-mono);font-size:17px;font-weight:600;margin-top:4px;}
+.pay-fig.due .v{color:var(--status-bad);}
+.pay-fig.paid .v{color:var(--brand-green);}
+.pay-bar-track{height:8px;background:var(--line);border-radius:6px;overflow:hidden;margin-top:6px;}
+.pay-bar-fill{height:100%;background:var(--brand-green);}
+
+.gallery-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px;margin-top:12px;}
+.gallery-item{border-radius:var(--r-md);overflow:hidden;position:relative;aspect-ratio:1/1;background:var(--line-2);cursor:pointer;transition:transform .15s ease;}
+.gallery-item:hover{transform:scale(1.02);}
+.gallery-item img{width:100%;height:100%;object-fit:cover;display:block;}
+.gallery-item .cap{position:absolute;left:0;right:0;bottom:0;background:linear-gradient(180deg,transparent,rgba(0,0,0,.6));color:#fff;font-size:9.5px;padding:12px 8px 6px;}
+.gallery-empty{font-size:12px;color:var(--muted);padding:10px 0;}
+
+.doc-list{display:flex;flex-direction:column;gap:8px;margin-top:12px;}
+.doc-row{display:flex;align-items:center;gap:10px;background:var(--paper-0);border:1px solid var(--line);border-radius:var(--r-sm);padding:10px 13px;}
+.doc-icon{width:30px;height:30px;border-radius:var(--r-sm);background:var(--status-info-bg);color:var(--status-info);display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0;}
+.doc-name{flex:1;font-size:12.5px;font-weight:600;}
+.doc-meta{font-size:10.5px;color:var(--muted);}
+.doc-dl{font-family:var(--font-display);font-size:11px;font-weight:700;color:var(--status-info);cursor:pointer;background:none;border:none;}
+
+.feed{display:flex;flex-direction:column;gap:0;margin-top:12px;}
+.feed-item{display:flex;gap:12px;padding:10px 0;border-bottom:1px solid var(--line);}
+.feed-item:last-child{border-bottom:none;}
+.feed-dot{width:9px;height:9px;border-radius:50%;margin-top:5px;flex-shrink:0;}
+.feed-dot.good{background:var(--brand-green);} .feed-dot.watch{background:var(--brand-orange);} .feed-dot.info{background:var(--status-info);} .feed-dot.bad{background:var(--status-bad);}
+.feed-text{font-size:12.5px;}
+.feed-date{font-size:10.5px;color:var(--muted);margin-top:2px;}
+
+.query-box{margin-top:12px;}
+.query-box textarea{width:100%;font-family:var(--font-body);font-size:12.5px;border:1px solid var(--line);border-radius:var(--r-sm);padding:10px 12px;resize:vertical;min-height:70px;}
+.query-box textarea:focus{outline:2px solid var(--brand-blue);outline-offset:0;border-color:var(--brand-blue);}
+.query-list{display:flex;flex-direction:column;gap:8px;margin-top:12px;}
+.query-item{background:var(--paper-0);border:1px solid var(--line);border-radius:var(--r-sm);padding:10px 13px;}
+.query-item .q{font-size:12.5px;font-weight:600;}
+.query-item .meta{font-size:10.5px;color:var(--muted);margin-top:3px;}
+.query-item .reply{margin-top:8px;padding-top:8px;border-top:1px dashed var(--line);font-size:12px;color:var(--ink-700);}
+.query-item .reply b{color:var(--ink-800);}
+.pending-tag{font-family:var(--font-display);font-size:9.5px;font-weight:700;padding:2px 8px;border-radius:var(--r-sm);background:var(--status-watch-bg);color:var(--status-watch);margin-left:6px;}
+
+.section-block{border-top:1px solid var(--line-2);margin-top:18px;padding-top:16px;}
+.section-toggle{background:none;border:none;font-family:var(--font-display);font-size:11.5px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--ink-700);cursor:pointer;display:flex;align-items:center;justify-content:space-between;width:100%;padding:0;}
+.section-toggle .arrow{transition:transform .15s ease;color:var(--muted);font-size:11px;}
+.section-toggle.collapsed .arrow{transform:rotate(-90deg);}
+.section-body{margin-top:4px;}
+.section-body.hidden{display:none;}
+
+.empty{background:var(--paper-1);border:1px dashed var(--line);border-radius:var(--r-lg);padding:40px;text-align:center;color:var(--muted);}
+.empty .big{font-size:16px;color:var(--ink-700);font-family:var(--font-display);font-weight:700;margin-bottom:6px;}
+.loading{padding:44px;text-align:center;color:var(--muted);}
+
+.lightbox-overlay{display:none;position:fixed;inset:0;background:rgba(10,10,12,0.9);z-index:300;align-items:center;justify-content:center;padding:20px;}
+.lightbox-overlay.open{display:flex;}
+.lightbox-overlay img{max-width:100%;max-height:88vh;border-radius:var(--r-md);}
+.lightbox-close{position:absolute;top:14px;right:18px;color:#fff;font-size:24px;cursor:pointer;background:none;border:none;padding:10px;line-height:1;}
+
+@media(max-width:820px){
+  .content{padding-left:18px;padding-right:18px;}
+  .mile-bar{width:70px;} .mile-pct{width:52px;}
+  .pay-figures{flex-direction:column;}
+  .proj-banner{height:130px;padding:14px 18px;}
+}
+</style>
+</head>
+<body>
+
+<div id="sips-sidebar-mount"></div>
+
+<div class="app-main">
+  <div class="app-lanes"><span class="l1"></span><span class="l2"></span><span class="l3"></span><span class="l4"></span></div>
+  <div class="app-topbar">
+    <div style="display:flex;align-items:center;gap:12px;">
+      <button class="app-hamburger" id="app-hamburger-btn" aria-label="Toggle menu">&#9776;</button>
+      <div>
+        <div class="app-title">Project progress</div>
+        <div class="app-subtitle">A live overview of where your project stands</div>
+      </div>
+    </div>
+    <div class="app-user-chip">
+      <div class="app-user-avatar" id="userAvatar">–</div>
+      <div class="app-user-meta">
+        <div class="app-user-name" id="userName">—</div>
+        <div class="app-user-role" id="userRole">Client</div>
+      </div>
+      <button class="app-logout-btn" id="logoutBtn">Log out</button>
+    </div>
+  </div>
+
+  <div class="content" id="content">
+    <div class="loading">Loading your projects…</div>
+  </div>
+</div>
+
+<div class="lightbox-overlay" id="lightbox">
+  <button class="lightbox-close" id="lightboxClose">&times;</button>
+  <img id="lightboxImg" src="" alt="">
+</div>
+
+<script>
+function esc(s){ return (s==null?'':String(s)).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function fdate(v){ if(!v) return '—'; try{ return new Date(v).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}); }catch(e){ return v; } }
+function fdatetime(v){ if(!v) return '—'; try{ return new Date(v).toLocaleString('en-IN',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}); }catch(e){ return v; } }
+function money(v){ return (v||v===0) ? '₹' + Number(v).toLocaleString('en-IN') : '—'; }
+
+function statusPillClass(s){
+  s=(s||'').toLowerCase();
+  if(['on-budget','on track','clear','good standing','approved','done','completed','closed'].includes(s)) return 'good';
+  if(['watch','delayed','at risk','pending','in progress','pending review'].includes(s)) return 'watch';
+  if(['over-budget','critical','at risk — escalated','open'].includes(s)) return 'bad';
+  return 'neutral';
+}
+function barColor(cls){ return cls==='bad' ? 'var(--status-bad)' : (cls==='watch' ? 'var(--brand-orange)' : 'var(--brand-green)'); }
+
+function tasksProgress(tasks){
+  if(!tasks.length) return null;
+  const done = tasks.filter(t=>(t.status||'')==='completed').length;
+  return Math.round(done/tasks.length*100);
+}
+
+function milestoneBreakdown(tasks){
+  const groups = {};
+  tasks.forEach(t=>{ const m=t.milestone||'Other'; (groups[m]=groups[m]||[]).push(t); });
+  return Object.keys(groups).map(m=>{
+    const rows=groups[m];
+    const done=rows.filter(t=>(t.status||'')==='completed').length;
+    const prog=rows.filter(t=>(t.status||'')==='in_progress').length;
+    const pct=Math.round(done/rows.length*100);
+    const state = pct===100 ? 'done' : (prog>0||done>0 ? 'prog' : 'todo');
+    return { name:m, done, total:rows.length, pct, state };
+  });
+}
+
+const DEFAULT_BANNER_IMAGES = [
+  'https://images.unsplash.com/photo-1461896836934-ffe607ba8211?w=900&q=60',
+  'https://images.unsplash.com/photo-1546519638-68e109498ffc?w=900&q=60',
+  'https://images.unsplash.com/photo-1517649763962-0c623066013b?w=900&q=60',
+  'https://images.unsplash.com/photo-1552667466-07770ae110d0?w=900&q=60'
+];
+function bannerImageFor(p, photos){
+  if(photos && photos.length) return photos[0].url;
+  const key = (p.name || p.id || '').toString();
+  let hash = 0;
+  for(let i=0;i<key.length;i++){ hash = (hash*31 + key.charCodeAt(i)) >>> 0; }
+  return DEFAULT_BANNER_IMAGES[hash % DEFAULT_BANNER_IMAGES.length];
+}
+
+let ACTIVE_PROJECT_ID = null;
+let PROJECTS_CACHE = [];
+let CTX_CACHE = {};
+
+function toggleSection(btn){
+  const body = btn.nextElementSibling;
+  const collapsed = body.classList.toggle('hidden');
+  btn.classList.toggle('collapsed', collapsed);
+}
+
+function portfolioStripHtml(projects, ctxByProj){
+  return projects.map(p=>{
+    const ctx = ctxByProj[p.id];
+    const explicit = (p.progress!=null && p.progress!=='') ? Math.round(Number(p.progress)) : (p.progress_pct!=null ? Math.round(Number(p.progress_pct)) : null);
+    const pct = explicit!=null ? explicit : (tasksProgress(ctx.tasks) ?? 0);
+    const status = p.status || (pct>=100 ? 'Completed' : 'In progress');
+    const cls = statusPillClass(status);
+    return `<div class="mini-proj ${String(p.id)===String(ACTIVE_PROJECT_ID)?'active':''}" data-projid="${esc(p.id)}">
+      <div class="top-strip" style="background:${barColor(cls)}"></div>
+      <div class="name">${esc(p.name||'Project')}</div>
+      <div class="row"><span class="pct" style="color:${barColor(cls)}">${pct}%</span><span class="status-pill ${cls}" style="font-size:9.5px;padding:3px 9px;">${esc(status)}</span></div>
+      <div class="track"><div class="fill" style="width:${Math.min(pct,100)}%;background:${barColor(cls)}"></div></div>
+    </div>`;
+  }).join('');
+}
+
+function projectCard(p, ctx){
+  const { tasks, photos, docs, activity, queries, payments } = ctx;
+  const explicit = (p.progress!=null && p.progress!=='') ? Math.round(Number(p.progress)) : (p.progress_pct!=null ? Math.round(Number(p.progress_pct)) : null);
+  const pct = explicit!=null ? explicit : (tasksProgress(tasks) ?? 0);
+  const status = p.status || (pct>=100 ? 'Completed' : 'In progress');
+  const miles = milestoneBreakdown(tasks);
+
+  let mileHtml = miles.length ? miles.map(m=>{
+    const icon = m.state==='done' ? '<div class="mile-icon done">✓</div>' : (m.state==='prog' ? '<div class="mile-icon prog">◐</div>' : '<div class="mile-icon todo">○</div>');
+    return `<div class="mile-row">
+      ${icon}
+      <div class="mile-name">${esc(m.name)}</div>
+      <div class="mile-bar"><div style="width:${m.pct}%"></div></div>
+      <div class="mile-pct">${m.pct}% · ${m.done}/${m.total}</div>
+    </div>`;
+  }).join('') : `<div class="gallery-empty">No milestones recorded yet.</div>`;
+
+  const dates = [];
+  if(p.start_date) dates.push('Start: ' + fdate(p.start_date));
+  if(p.end_date) dates.push('Target: ' + fdate(p.end_date));
+
+  const riskNote = (p.schedule_status === 'delayed' || p.schedule_status === 'at risk') && p.delay_reason
+    ? `<div class="risk-note"><span>⚠</span><div><b>Schedule note:</b> ${esc(p.delay_reason)}</div></div>` : '';
+
+  const totalContract = payments.totalContract, totalPaid = payments.totalPaid, totalDue = Math.max(0, totalContract-totalPaid);
+  const payPct = totalContract>0 ? Math.min(100, Math.round(totalPaid/totalContract*100)) : 0;
+  const paySection = totalContract>0 ? `
+    <div class="pay-figures">
+      <div class="pay-fig"><div class="l">Contract Value</div><div class="v">${esc(money(totalContract))}</div></div>
+      <div class="pay-fig paid"><div class="l">Paid to date</div><div class="v">${esc(money(totalPaid))}</div></div>
+      <div class="pay-fig due"><div class="l">Balance due</div><div class="v">${esc(money(totalDue))}</div></div>
+    </div>
+    <div class="pay-bar-track"><div class="pay-bar-fill" style="width:${payPct}%"></div></div>
+    <div class="progress-sub">${payPct}% of contract value paid</div>` : `<div class="gallery-empty">Payment details will appear here once billing is set up.</div>`;
+
+  const galleryHtml = photos.length ? `<div class="gallery-grid">${photos.slice(0,8).map(ph=>`
+      <div class="gallery-item" data-img="${esc(ph.url)}">
+        <img src="${esc(ph.url)}" alt="${esc(ph.caption||'Site photo')}" loading="lazy">
+        <div class="cap">${esc(ph.caption || fdate(ph.created_at))}</div>
+      </div>`).join('')}</div>` : `<div class="gallery-empty">No site photos uploaded yet.</div>`;
+
+  const docsHtml = docs.length ? `<div class="doc-list">${docs.map(d=>`
+      <div class="doc-row">
+        <div class="doc-icon">📄</div>
+        <div style="flex:1;">
+          <div class="doc-name">${esc(d.name)}</div>
+          <div class="doc-meta">${esc(d.category||'Document')} · ${fdate(d.created_at)}</div>
+        </div>
+        <button class="doc-dl" data-url="${esc(d.url)}" data-name="${esc(d.name)}">Download</button>
+      </div>`).join('')}</div>` : `<div class="gallery-empty">No approved documents shared yet.</div>`;
+
+  const feedHtml = activity.length ? `<div class="feed">${activity.slice(0,10).map(a=>`
+      <div class="feed-item">
+        <span class="feed-dot ${a.cls}"></span>
+        <div>
+          <div class="feed-text">${esc(a.text)}</div>
+          <div class="feed-date">${fdatetime(a.date)}</div>
+        </div>
+      </div>`).join('')}</div>` : `<div class="gallery-empty">No activity recorded yet.</div>`;
+
+  const queryListHtml = queries.length ? `<div class="query-list">${queries.map(q=>`
+      <div class="query-item">
+        <div class="q">${esc(q.message)}${!q.reply ? '<span class="pending-tag">Awaiting reply</span>' : ''}</div>
+        <div class="meta">${fdatetime(q.created_at)}</div>
+        ${q.reply ? `<div class="reply"><b>Team reply:</b> ${esc(q.reply)}</div>` : ''}
+      </div>`).join('')}</div>` : `<div class="gallery-empty">No questions asked yet.</div>`;
+
+  const banner = bannerImageFor(p, photos);
+
+  return `<div class="proj-card" data-projid="${esc(p.id)}">
+    <div class="proj-banner" style="background-image:linear-gradient(180deg, rgba(0,0,0,.05), rgba(0,0,0,.1)), url('${banner}')">
+      <div class="proj-banner-content">
+        <div>
+          <div class="proj-name">${esc(p.name || 'Project')}</div>
+          <div class="proj-meta">
+            ${p.location ? '<span>📍 '+esc(p.location)+'</span>' : ''}
+            ${dates.length ? '<span>🗓 '+esc(dates.join('  ·  '))+'</span>' : ''}
+          </div>
+        </div>
+        <span class="status-pill ${statusPillClass(status)}">${esc(status)}</span>
+      </div>
+    </div>
+
+    <div class="proj-body">
+      <div style="display:flex;justify-content:flex-end;margin-bottom:14px;">
+        <div class="card-actions">
+          <button class="btn-mini primary" data-export="${esc(p.id)}">⬇ Download report (PDF)</button>
+        </div>
+      </div>
+
+      ${riskNote}
+
+      <div class="progress-wrap">
+        <div class="progress-top">
+          <span class="progress-label">Overall Progress</span>
+          <span class="progress-pct">${pct}%</span>
+        </div>
+        <div class="progress-track"><div class="progress-fill" style="width:${Math.min(pct,100)}%;background:${pct>=100?'var(--brand-green)':(pct>=50?'var(--brand-green)':'var(--brand-orange)')}"></div></div>
+        ${tasks.length ? `<div class="progress-sub">${tasks.filter(t=>t.status==='completed').length} of ${tasks.length} tasks completed</div>` : ''}
+      </div>
+
+      <div class="section-block">
+        <button class="section-toggle" data-key="${p.id}:mile"><span>Milestones</span><span class="arrow">▾</span></button>
+        <div class="section-body">${mileHtml}</div>
+      </div>
+
+      <div class="section-block">
+        <button class="section-toggle" data-key="${p.id}:pay"><span>Payment summary</span><span class="arrow">▾</span></button>
+        <div class="section-body">${paySection}</div>
+      </div>
+
+      <div class="section-block">
+        <button class="section-toggle" data-key="${p.id}:gallery"><span>Site photos</span><span class="arrow">▾</span></button>
+        <div class="section-body">${galleryHtml}</div>
+      </div>
+
+      <div class="section-block">
+        <button class="section-toggle" data-key="${p.id}:docs"><span>Document center</span><span class="arrow">▾</span></button>
+        <div class="section-body">${docsHtml}</div>
+      </div>
+
+      <div class="section-block">
+        <button class="section-toggle" data-key="${p.id}:feed"><span>Activity timeline</span><span class="arrow">▾</span></button>
+        <div class="section-body">${feedHtml}</div>
+      </div>
+
+      <div class="section-block">
+        <button class="section-toggle" data-key="${p.id}:query"><span>Questions &amp; queries</span><span class="arrow">▾</span></button>
+        <div class="section-body">
+          <div class="query-box">
+            <textarea placeholder="Ask your project manager a question…" data-qinput="${esc(p.id)}"></textarea>
+            <div style="margin-top:8px;text-align:right;"><button class="btn-mini primary" data-qsubmit="${esc(p.id)}">Send question</button></div>
+          </div>
+          ${queryListHtml}
+        </div>
+      </div>
+    </div>
+  </div>`;
+}
+
+(async function(){
+  const auth = await requireAuth();
+  if(!auth) return;
+  const { session, role } = auth;
+
+  const emailName = (session.user.email || 'Signed in').split('@')[0];
+  document.getElementById('userName').textContent = emailName;
+  document.getElementById('userAvatar').textContent = emailName.charAt(0).toUpperCase();
+  document.getElementById('userRole').textContent = role === 'client' ? 'Client' : (role || '—');
+  document.getElementById('logoutBtn').addEventListener('click', async ()=>{ await sb.auth.signOut(); window.location.href = 'login.html'; });
+
+  const content = document.getElementById('content');
+
+  let projectFilter = null;
+  if(role !== 'director'){
+    try { projectFilter = await fetchAssignedProjectIds(session.user.id); }
+    catch(e){ projectFilter = []; }
+  }
+
+  if(projectFilter && projectFilter.length === 0){
+    content.innerHTML = `<div class="empty"><div class="big">No project linked yet</div>Your project isn't linked to this account yet. Please contact your project manager.</div>`;
+    return;
+  }
+
+  let q = sb.from('projects').select('*').order('created_at');
+  if(projectFilter) q = q.in('id', projectFilter);
+  const { data: projects, error } = await q;
+
+  if(error){ content.innerHTML = `<div class="empty"><div class="big">Could not load</div>${esc(error.message)}</div>`; return; }
+  if(!projects || !projects.length){ content.innerHTML = `<div class="empty"><div class="big">No projects yet</div>There are no projects to show right now.</div>`; return; }
+
+  PROJECTS_CACHE = projects;
+  const ids = projects.map(p=>p.id);
+  const safeSelect = async (table, cols) => {
+    try { const { data } = await sb.from(table).select(cols).in('project_id', ids); return data||[]; }
+    catch(e){ return []; }
+  };
+
+  const [tasksAll, photosAll, docsAll, ncrsAll, cosAll, drawingsAll, queriesAll, paymentsAll] = await Promise.all([
+    safeSelect('schedule_tasks','*'),
+    safeSelect('site_photos','id,project_id,url,caption,created_at'),
+    safeSelect('project_documents','id,project_id,name,category,url,created_at'),
+    safeSelect('ncrs','id,project_id,title,status,created_at'),
+    safeSelect('change_orders','id,project_id,title,description,status,created_at'),
+    safeSelect('drawings','id,project_id,name,status,created_at'),
+    safeSelect('client_queries','id,project_id,message,reply,created_at'),
+    safeSelect('payments','id,project_id,amount,type,created_at')
+  ]);
+
+  const groupBy = (arr) => { const g={}; arr.forEach(x=>{ (g[x.project_id]=g[x.project_id]||[]).push(x); }); return g; };
+  const tasksByProj = groupBy(tasksAll);
+  const photosByProj = groupBy(photosAll);
+  const docsByProj = groupBy(docsAll);
+  const ncrsByProj = groupBy(ncrsAll);
+  const cosByProj = groupBy(cosAll);
+  const drawingsByProj = groupBy(drawingsAll);
+  const queriesByProj = groupBy(queriesAll);
+  const paymentsByProj = groupBy(paymentsAll);
+
+  function buildActivity(p){
+    const items = [];
+    (tasksByProj[p.id]||[]).filter(t=>t.status==='completed').forEach(t=>{
+      items.push({ text: (t.milestone?t.milestone+' — ':'') + (t.task||'Task') + ' completed', date: t.updated_at||t.created_at, cls:'good' });
+    });
+    (ncrsByProj[p.id]||[]).forEach(n=>{
+      items.push({ text: 'NCR ' + (n.status==='open'?'raised':'resolved') + ' — ' + (n.title||('#'+n.id)), date: n.created_at, cls: n.status==='open'?'bad':'good' });
+    });
+    (cosByProj[p.id]||[]).forEach(c=>{
+      items.push({ text: 'Change order ' + (c.status||'submitted') + ' — ' + (c.title||c.description||('#'+c.id)), date: c.created_at, cls:'watch' });
+    });
+    (drawingsByProj[p.id]||[]).forEach(d=>{
+      items.push({ text: 'Drawing ' + (d.status||'shared') + ' — ' + (d.name||('#'+d.id)), date: d.created_at, cls:'info' });
+    });
+    items.sort((a,b)=> new Date(b.date||0)-new Date(a.date||0));
+    return items;
+  }
+
+  function buildPayments(p){
+    const rows = paymentsByProj[p.id]||[];
+    const totalContract = Number(p.contract_value ?? p.budget_approved ?? 0);
+    const totalPaid = rows.filter(r=>(r.type||'received')==='received' || r.type==='payment').reduce((s,r)=>s+Number(r.amount||0),0);
+    return { totalContract, totalPaid };
+  }
+
+  const ctxByProj = {};
+  projects.forEach(p=>{
+    ctxByProj[p.id] = {
+      tasks: tasksByProj[p.id]||[],
+      photos: photosByProj[p.id]||[],
+      docs: docsByProj[p.id]||[],
+      activity: buildActivity(p),
+      queries: queriesByProj[p.id]||[],
+      payments: buildPayments(p)
+    };
+  });
+  CTX_CACHE = ctxByProj;
+
+  ACTIVE_PROJECT_ID = projects[0].id;
+  renderPortal(projects, ctxByProj);
+})();
+
+function renderPortal(projects, ctxByProj){
+  const content = document.getElementById('content');
+  const showSwitcher = projects.length > 1;
+  const activeProj = projects.find(p=>String(p.id)===String(ACTIVE_PROJECT_ID)) || projects[0];
+
+  let html = '';
+  if(showSwitcher){
+    html += `<div class="portfolio-strip scroll-hint-x" id="portfolioStrip">${portfolioStripHtml(projects, ctxByProj)}</div>`;
+  }
+  html += `<div id="detailArea">${projectCard(activeProj, ctxByProj[activeProj.id])}</div>`;
+
+  content.innerHTML = html;
+  wireInteractions(projects, ctxByProj);
+  if(typeof sipsWireScrollHints === 'function') sipsWireScrollHints();
+}
+
+function wireInteractions(projects, ctxByProj){
+  document.querySelectorAll('.mini-proj').forEach(el=>{
+    el.addEventListener('click', ()=>{
+      ACTIVE_PROJECT_ID = el.getAttribute('data-projid');
+      renderPortal(projects, ctxByProj);
+      document.getElementById('detailArea').scrollIntoView({behavior:'smooth', block:'start'});
+    });
+  });
+
+  document.querySelectorAll('.section-toggle').forEach(btn=>{
+    btn.addEventListener('click', ()=> toggleSection(btn));
+  });
+
+  document.querySelectorAll('.gallery-item').forEach(el=>{
+    el.addEventListener('click', ()=>{
+      document.getElementById('lightboxImg').src = el.getAttribute('data-img');
+      document.getElementById('lightbox').classList.add('open');
+    });
+  });
+  document.getElementById('lightboxClose').addEventListener('click', ()=> document.getElementById('lightbox').classList.remove('open'));
+  document.getElementById('lightbox').addEventListener('click', (e)=>{ if(e.target.id==='lightbox') e.currentTarget.classList.remove('open'); });
+
+  document.querySelectorAll('.doc-dl').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const url = btn.getAttribute('data-url');
+      if(url) window.open(url, '_blank');
+    });
+  });
+
+  document.querySelectorAll('[data-qsubmit]').forEach(btn=>{
+    btn.addEventListener('click', async ()=>{
+      const pid = btn.getAttribute('data-qsubmit');
+      const input = document.querySelector(`[data-qinput="${pid}"]`);
+      const message = input.value.trim();
+      if(!message) return;
+      btn.disabled = true;
+      try{
+        const { error } = await sb.from('client_queries').insert({ project_id: pid, message });
+        if(error){ sipsToast('Could not send: ' + error.message, 'error'); btn.disabled=false; return; }
+        input.value='';
+        sipsToast('Question sent to your project team.', 'success');
+      }catch(e){ sipsToast('Could not send: ' + e.message, 'error'); }
+      btn.disabled = false;
+    });
+  });
+
+  document.querySelectorAll('[data-export]').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const pid = btn.getAttribute('data-export');
+      const proj = projects.find(p=>String(p.id)===String(pid));
+      exportProjectPdf(proj);
+    });
+  });
+}
+
+function exportProjectPdf(p){
+  if(!p || !window.jspdf){ sipsToast('PDF export is not available right now.', 'error'); return; }
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
+  doc.setFont('helvetica','bold'); doc.setFontSize(16);
+  doc.text('Kinder Sports — Project Progress Report', 14, 18);
+  doc.setFont('helvetica','normal'); doc.setFontSize(10);
+  doc.text('Generated: ' + new Date().toLocaleString('en-IN'), 14, 25);
+
+  let y = 38;
+  doc.setFont('helvetica','bold'); doc.setFontSize(13);
+  doc.text(p.name || 'Project', 14, y); y+=8;
+  doc.setFont('helvetica','normal'); doc.setFontSize(10);
+  if(p.location){ doc.text('Location: ' + p.location, 14, y); y+=6; }
+  if(p.start_date){ doc.text('Start date: ' + fdate(p.start_date), 14, y); y+=6; }
+  if(p.end_date){ doc.text('Target date: ' + fdate(p.end_date), 14, y); y+=6; }
+  y+=4;
+  doc.setFont('helvetica','bold');
+  doc.text('Progress: ' + (p.progress_pct||p.progress||0) + '%', 14, y); y+=10;
+  doc.setFont('helvetica','normal');
+  doc.text('This report reflects project status at the time of generation.', 14, y);
+
+  doc.save((p.name||'project').replace(/[^a-z0-9]/gi,'_') + '_progress_report.pdf');
+}
+</script>
+<script>
+sipsRenderShell({ activeHref: "client-portal.html" });
+</script>
+</body>
+</html>

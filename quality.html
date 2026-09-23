@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Quality — Kinder Sports</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="sips-design-system.css">
+<link rel="stylesheet" href="sips-mobile.css">
+<script src="sips-shell.js"></script>
+<script src="sips-mobile.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="auth-guard.js"></script>
+<style>
+*{box-sizing:border-box;} html,body{margin:0;padding:0;}
+body{background:var(--paper-0);color:var(--ink-800);font-family:var(--font-body);}
+a{text-decoration:none;color:inherit;}
+.app-topbar-actions{display:flex;gap:8px;align-items:center;}
+.main{max-width:1300px;margin:0 auto;padding:26px 32px 60px 32px;}
+.card{background:var(--paper-1);border:1px solid var(--line);border-radius:var(--r-lg);padding:19px;margin-bottom:18px;}
+.card h3{font-family:var(--font-display);font-size:14px;margin:0 0 14px 0;display:flex;align-items:center;gap:9px;color:var(--ink-900);}
+.card h3 .cnt{font-family:var(--font-mono);font-size:10.5px;font-weight:500;color:var(--muted);background:var(--paper-0);border:1px solid var(--line);padding:2px 9px;border-radius:var(--r-pill);}
+.btn{font-family:var(--font-display);font-size:12px;font-weight:600;padding:9px 14px;border-radius:var(--r-sm);border:1px solid var(--line);background:var(--paper-1);cursor:pointer;color:var(--ink-800);transition:border-color .15s ease, color .15s ease, background .15s ease;}
+.btn:hover{border-color:var(--brand-orange);color:var(--brand-orange);}
+.btn.dark{background:var(--ink-900);color:#fff;border-color:var(--ink-900);}
+.btn.dark:hover{background:var(--brand-orange);border-color:var(--brand-orange);color:#fff;}
+.btn.orange{background:var(--brand-orange);color:#fff;border-color:var(--brand-orange);}
+.btn.orange:hover{background:var(--brand-orange-600);border-color:var(--brand-orange-600);color:#fff;}
+.btn.sm{padding:6px 10px;font-size:11px;}
+.btn.danger{color:var(--status-bad);border-color:#F3C6C1;}
+.btn.danger:hover{background:var(--status-bad);color:#fff;border-color:var(--status-bad);}
+.btn:disabled{opacity:.55;cursor:not-allowed;}
+select,input[type=text],input[type=date],textarea{padding:9px 10px;border:1px solid var(--line);border-radius:var(--r-sm);font-size:12.5px;font-family:var(--font-body);background:var(--paper-0);color:var(--ink-800);width:100%;}
+select{font-family:var(--font-display);}
+textarea{resize:vertical;min-height:70px;}
+.filters{display:flex;gap:10px;flex-wrap:wrap;align-items:center;}
+.filters select,.filters input{width:auto;min-width:150px;}
+.qtable-wrap{overflow-x:auto;}
+table.qtable{width:100%;border-collapse:collapse;font-size:12.5px;}
+table.qtable th{text-align:left;font-family:var(--font-display);font-size:10px;letter-spacing:.7px;text-transform:uppercase;color:var(--muted);font-weight:600;padding:8px 10px;border-bottom:1px solid var(--line);white-space:nowrap;}
+table.qtable td{padding:10px;border-bottom:1px solid var(--line);vertical-align:top;color:var(--ink-800);}
+table.qtable tbody tr:hover{background:var(--paper-0);}
+table.qtable td.particular{font-weight:600;color:var(--ink-900);min-width:160px;}
+table.qtable td.remarks{max-width:220px;white-space:pre-wrap;color:var(--muted);}
+table.qtable td.actions{white-space:nowrap;text-align:right;}
+.ev-link{font-size:11.5px;font-weight:600;color:var(--status-info);border:1px solid var(--line);background:var(--paper-0);padding:4px 9px;border-radius:var(--r-sm);display:inline-flex;align-items:center;gap:5px;}
+.ev-link:hover{border-color:var(--status-info);}
+.ev-none{color:var(--muted);font-size:11.5px;}
+.empty{padding:26px;text-align:center;color:var(--muted);font-size:12.5px;}
+.modal{position:fixed;inset:0;background:rgba(20,21,26,0.5);z-index:200;display:none;align-items:flex-start;justify-content:center;padding:40px 16px;overflow-y:auto;}
+.modal.on{display:flex;}
+.modal-box{background:var(--paper-1);border-radius:var(--r-lg);width:100%;max-width:600px;padding:22px;box-shadow:var(--shadow-lg);}
+.modal-box h4{font-family:var(--font-display);font-size:15px;margin:0 0 16px 0;color:var(--ink-900);}
+.frow{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;}
+.frow.one{grid-template-columns:1fr;}
+.frow.three{grid-template-columns:2fr 1fr 1fr;}
+.fld .k{font-size:9.5px;letter-spacing:.9px;text-transform:uppercase;color:var(--muted);font-family:var(--font-display);font-weight:600;margin-bottom:5px;display:block;}
+.fld .existing-ev{font-size:11px;color:var(--muted);margin-top:6px;}
+.modal-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:16px;}
+.msg{font-size:11.5px;color:var(--muted);margin-top:10px;}
+.msg.err{color:var(--status-bad);} .msg.ok{color:var(--brand-green);}
+.lightbox{position:fixed;inset:0;background:rgba(10,10,12,0.92);z-index:300;display:none;align-items:center;justify-content:center;padding:30px;}
+.lightbox.on{display:flex;}
+.lightbox img{max-width:92vw;max-height:88vh;border-radius:var(--r-md);object-fit:contain;}
+.lb-close{position:absolute;top:14px;right:18px;background:none;border:none;color:#fff;font-size:24px;cursor:pointer;line-height:1;padding:10px;}
+@media(max-width:820px){.main{padding-left:18px;padding-right:18px;}.frow,.frow.three{grid-template-columns:1fr;}}
+</style>
+</head>
+<body>
+<div id="sips-sidebar-mount"></div>
+
+<div class="app-main">
+  <div class="app-lanes"><span class="l1"></span><span class="l2"></span><span class="l3"></span><span class="l4"></span></div>
+  <div class="app-topbar">
+    <div style="display:flex;align-items:center;gap:12px;">
+    <button class="app-hamburger" id="app-hamburger-btn" aria-label="Toggle menu">&#9776;</button>
+    <div>
+      <div class="app-crumb">Projects › <span id="crumbName">—</span> › Quality</div>
+      <div class="app-title">Quality</div>
+      <div class="app-subtitle">Quality checks, measurements and supporting evidence</div>
+    </div>
+    </div>
+    <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;">
+      <div class="app-topbar-actions">
+        <a class="btn" href="project-overview.html" id="backLink">← Overview</a>
+        <button class="btn orange" id="newBtn">+ Add Quality Check</button>
+      </div>
+      <div class="app-user-chip">
+        <div class="app-user-avatar" id="userAvatar">–</div>
+        <div class="app-user-meta">
+          <div class="app-user-name" id="userName">—</div>
+          <div class="app-user-role" id="userRole">—</div>
+        </div>
+        <button class="app-logout-btn" id="logoutBtn">Log out</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="main">
+    <div class="card">
+      <h3>Filters</h3>
+      <div class="filters">
+        <input type="text" id="fSearch" placeholder="Search particular, unit, remarks…">
+        <button class="btn sm" id="clearF">Clear</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Quality Checks <span class="cnt" id="cntShown">0</span></h3>
+      <div class="qtable-wrap">
+        <table class="qtable">
+          <thead>
+            <tr>
+              <th>Particular</th>
+              <th>Unit</th>
+              <th>Expected Value</th>
+              <th>Actual Value</th>
+              <th>Remarks</th>
+              <th>Evidence</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="qBody"><tr><td colspan="7" class="empty">Loading…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Add / Edit Quality Check modal -->
+<div class="modal" id="modal">
+  <div class="modal-box">
+    <h4 id="modalTitle">Add Quality Check</h4>
+    <input type="hidden" id="fId">
+    <div class="frow one">
+      <div class="fld"><span class="k">Particular</span><input type="text" id="fParticular" placeholder="e.g. Concrete Cube Strength"></div>
+    </div>
+    <div class="frow three">
+      <div class="fld"><span class="k">Unit</span><input type="text" id="fUnit" placeholder="e.g. MPa, mm, %"></div>
+      <div class="fld"><span class="k">Expected Value</span><input type="text" id="fExpected" placeholder="e.g. 25"></div>
+      <div class="fld"><span class="k">Actual Value</span><input type="text" id="fActual" placeholder="e.g. 27"></div>
+    </div>
+    <div class="frow one">
+      <div class="fld"><span class="k">Remarks</span><textarea id="fRemarks" placeholder="Inspector's comments"></textarea></div>
+    </div>
+    <div class="frow one">
+      <div class="fld">
+        <span class="k">Evidence (optional)</span>
+        <input type="file" id="fEvidence" style="font-size:11.5px;padding:7px 0;border:none;background:none;">
+        <div class="existing-ev" id="existingEv"></div>
+      </div>
+    </div>
+    <div class="msg" id="modalMsg"></div>
+    <div class="modal-actions">
+      <button class="btn" id="cancelBtn">Cancel</button>
+      <button class="btn dark" id="saveBtn">Save Quality Check</button>
+    </div>
+  </div>
+</div>
+
+<div class="lightbox" id="lightbox">
+  <button class="lb-close" id="lbClose">×</button>
+  <img id="lbImg" src="" alt="">
+</div>
+
+<script>
+let currentProj = null, allChecks = [], editingEvidenceUrl = null, canDelete = false;
+
+function esc(s){ return (s==null?'':String(s)).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function isImageUrl(u){ return !!u && /\.(png|jpe?g|gif|webp)$/i.test(u.split('?')[0]); }
+function evidenceFileName(u){ if(!u) return ''; try{ return decodeURIComponent(u.split('/').pop().split('?')[0]).replace(/^\d+_/,''); }catch(e){ return 'Evidence'; } }
+
+async function loadProject(){
+  const params = new URLSearchParams(window.location.search);
+  const projectId = params.get('id');
+  let q = sb.from('projects').select('*');
+  q = projectId ? q.eq('id', projectId) : q.eq('name','Sama Sports Complex');
+  const { data: proj } = await q.single();
+  if(!proj){ document.getElementById('qBody').innerHTML='<tr><td colspan="7" class="empty">Project sapadla nahi.</td></tr>'; return; }
+  currentProj = proj;
+  document.getElementById('crumbName').textContent = proj.name;
+  document.getElementById('backLink').href = 'project-overview.html?id=' + proj.id;
+  await loadChecks();
+}
+
+async function loadChecks(){
+  const body = document.getElementById('qBody');
+  const { data, error } = await sb.from('quality_checks').select('*')
+    .eq('project_id', currentProj.id).order('created_at',{ascending:false});
+  if(error){
+    body.innerHTML = `<tr><td colspan="7" class="empty">quality_checks table load zala nahi — ${esc(error.message)}<br><br>Supabase madhe <b>quality_checks</b> table banva: id, project_id, particular, unit, expected_value, actual_value, remarks, evidence_url, created_at, updated_at</td></tr>`;
+    return;
+  }
+  allChecks = data || [];
+  render();
+}
+
+function render(){
+  const q = document.getElementById('fSearch').value.trim().toLowerCase();
+  const rows = allChecks.filter(c=>{
+    if(q){
+      const hay = [c.particular,c.unit,c.expected_value,c.actual_value,c.remarks].join(' ').toLowerCase();
+      if(!hay.includes(q)) return false;
+    }
+    return true;
+  });
+
+  document.getElementById('cntShown').textContent = rows.length;
+  const body = document.getElementById('qBody');
+  if(!rows.length){ body.innerHTML = '<tr><td colspan="7" class="empty">Ekhi Quality Check sapadla nahi.</td></tr>'; return; }
+
+  body.innerHTML = rows.map(c=>`
+    <tr data-id="${c.id}">
+      <td class="particular">${esc(c.particular||'—')}</td>
+      <td>${esc(c.unit||'—')}</td>
+      <td>${esc(c.expected_value||'—')}</td>
+      <td>${esc(c.actual_value||'—')}</td>
+      <td class="remarks">${esc(c.remarks||'—')}</td>
+      <td>${c.evidence_url ? `<a class="ev-link" href="#" data-view="${esc(c.evidence_url)}">📎 View</a>` : '<span class="ev-none">—</span>'}</td>
+      <td class="actions">
+        <button class="btn sm" data-edit="${c.id}">✎ Edit</button>
+        ${canDelete ? `<button class="btn sm danger" data-del="${c.id}">✕ Delete</button>` : ''}
+      </td>
+    </tr>`).join('');
+
+  bind();
+}
+
+function bind(){
+  document.querySelectorAll('[data-view]').forEach(el=>{
+    el.onclick = (e)=>{
+      e.preventDefault();
+      const url = el.dataset.view;
+      if(isImageUrl(url)){
+        document.getElementById('lbImg').src = url;
+        document.getElementById('lightbox').classList.add('on');
+      } else {
+        window.open(url, '_blank');
+      }
+    };
+  });
+  document.querySelectorAll('[data-edit]').forEach(b=> b.onclick = ()=> openModal(allChecks.find(c=>c.id===b.dataset.edit)));
+  document.querySelectorAll('[data-del]').forEach(b=> b.onclick = async ()=>{
+    if(!(await sipsConfirm('Delete this Quality Check?', 'This cannot be undone.', 'Delete'))) return;
+    const { error } = await sb.from('quality_checks').delete().eq('id', b.dataset.del);
+    if(error){ sipsToast('Delete fail: ' + error.message, 'error'); return; }
+    await loadChecks();
+  });
+}
+
+/* ---------- Modal ---------- */
+const modal = document.getElementById('modal');
+function openModal(c){
+  editingEvidenceUrl = c ? (c.evidence_url||null) : null;
+  document.getElementById('modalTitle').textContent = c ? 'Edit Quality Check' : 'Add Quality Check';
+  document.getElementById('fId').value        = c ? c.id : '';
+  document.getElementById('fParticular').value = c ? (c.particular||'') : '';
+  document.getElementById('fUnit').value      = c ? (c.unit||'') : '';
+  document.getElementById('fExpected').value  = c ? (c.expected_value||'') : '';
+  document.getElementById('fActual').value    = c ? (c.actual_value||'') : '';
+  document.getElementById('fRemarks').value   = c ? (c.remarks||'') : '';
+  document.getElementById('fEvidence').value  = '';
+  const evNote = document.getElementById('existingEv');
+  evNote.textContent = (c && c.evidence_url) ? ('Current evidence: ' + evidenceFileName(c.evidence_url) + ' (uploading a new file will replace it)') : '';
+  document.getElementById('modalMsg').textContent = '';
+  document.getElementById('modalMsg').className = 'msg';
+  modal.classList.add('on');
+}
+document.getElementById('newBtn').onclick = ()=> openModal(null);
+document.getElementById('cancelBtn').onclick = ()=> modal.classList.remove('on');
+modal.onclick = e=>{ if(e.target===modal) modal.classList.remove('on'); };
+
+document.getElementById('saveBtn').onclick = async ()=>{
+  const msg = document.getElementById('modalMsg');
+  const btn = document.getElementById('saveBtn');
+  const particular = document.getElementById('fParticular').value.trim();
+  if(!particular){ msg.className='msg err'; msg.textContent='Particular takaych lagel.'; return; }
+  btn.disabled = true; msg.className='msg'; msg.textContent='Saving…';
+
+  let evidenceUrl = editingEvidenceUrl;
+  const ef = document.getElementById('fEvidence').files[0];
+  if(ef){
+    try{
+      const safe = ef.name.replace(/[^a-zA-Z0-9._-]/g,'_');
+      const path = `${currentProj.id}/quality/${Date.now()}_${safe}`;
+      const { error: upErr } = await sb.storage.from('project-media').upload(path, ef, {contentType: ef.type || undefined});
+      if(upErr) throw upErr;
+      const { data: pub } = sb.storage.from('project-media').getPublicUrl(path);
+      evidenceUrl = pub ? pub.publicUrl : null;
+    }catch(err){
+      btn.disabled=false; msg.className='msg err'; msg.textContent='Evidence upload fail: ' + err.message; return;
+    }
+  }
+
+  const row = {
+    project_id: currentProj.id,
+    particular,
+    unit: document.getElementById('fUnit').value.trim(),
+    expected_value: document.getElementById('fExpected').value.trim(),
+    actual_value: document.getElementById('fActual').value.trim(),
+    remarks: document.getElementById('fRemarks').value.trim(),
+    evidence_url: evidenceUrl
+  };
+
+  const id = document.getElementById('fId').value;
+  const { error } = id
+    ? await sb.from('quality_checks').update(row).eq('id', id)
+    : await sb.from('quality_checks').insert(row);
+
+  btn.disabled = false;
+  if(error){ msg.className='msg err'; msg.textContent='Save fail: ' + error.message; return; }
+  modal.classList.remove('on');
+  await loadChecks();
+};
+
+/* ---------- Filters + lightbox ---------- */
+document.getElementById('fSearch').oninput = render;
+document.getElementById('clearF').onclick = ()=>{ document.getElementById('fSearch').value=''; render(); };
+const lb = document.getElementById('lightbox');
+document.getElementById('lbClose').onclick = ()=> lb.classList.remove('on');
+lb.onclick = e=>{ if(e.target===lb) lb.classList.remove('on'); };
+document.addEventListener('keydown', e=>{
+  if(e.key!=='Escape') return;
+  lb.classList.remove('on'); modal.classList.remove('on');
+});
+
+(async function(){
+  const auth = await requireAuth();
+  if(!auth) return;
+
+  /* ---- Topbar user chip (matches every other page) ---- */
+  const roleLabels = { director:'Director', pm:'Project Manager', engineer:'Site Engineer', vendor:'Vendor', client:'Client', accounts:'Accounts' };
+  const emailName = (auth.session.user.email || 'Signed in').split('@')[0];
+  document.getElementById('userName').textContent = emailName;
+  document.getElementById('userRole').textContent = roleLabels[auth.role] || auth.role || '—';
+  document.getElementById('userAvatar').textContent = emailName.charAt(0).toUpperCase();
+  document.getElementById('logoutBtn').addEventListener('click', async ()=>{ await sb.auth.signOut(); window.location.href = 'login.html'; });
+
+  /* Delete permission follows existing SIPS role rules: vendor/client are read+add/edit only,
+     everyone else (director/pm/engineer/accounts) can delete — same pattern used elsewhere in SIPS.
+     Adjust here if your permission rules differ. */
+  canDelete = !['vendor','client'].includes(auth.role);
+
+  await loadProject();
+})();
+</script>
+<script>
+sipsRenderShell({ activeHref: "quality.html" });
+</script>
+</body>
+</html>

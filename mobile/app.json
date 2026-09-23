@@ -1,0 +1,33 @@
+{
+  "expo": {
+    "name": "SIPS Mobile",
+    "slug": "sips-mobile",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/logo-mark.png",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "splash": {
+      "image": "./assets/logo-full.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#0D1220"
+    },
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/logo-mark.png",
+        "backgroundColor": "#0D1220"
+      },
+      "package": "com.anonymous.sipsmobile"
+    },
+    "web": {
+      "favicon": "./assets/logo-mark-sm.png"
+    },
+    "plugins": [
+      "expo-asset",
+      "expo-font"
+    ]
+  }
+}

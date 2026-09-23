@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sign in — Kinder Sports</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="sips-design-system.css">
+<link rel="stylesheet" href="sips-mobile.css">
+<style>
+.login-page{ min-height:100vh; display:flex; flex-direction:column; background: radial-gradient(1100px 480px at 50% 0%, rgba(46,108,166,0.06), transparent 60%), var(--paper-0); }
+.login-topbar{ background:var(--ink-900); padding:16px 28px; display:flex; align-items:center; justify-content:space-between; }
+.login-brand{ display:flex; align-items:center; gap:10px; }
+.login-brand img{ width:30px; height:30px; object-fit:contain; }
+.login-brand-name{ font-family:var(--font-display); font-weight:700; font-size:16px; color:#fff; }
+.login-brand-name b{ color:var(--brand-orange); }
+.login-brand-tag{ font-size:10.5px; color:#9AA79E; font-weight:500; letter-spacing:0.02em; }
+.login-topbar-links{ display:flex; align-items:center; gap:22px; font-size:12.5px; color:#9CA3AF; }
+.login-topbar-links a:hover{ color:#fff; }
+
+.login-main{ flex:1; display:flex; align-items:center; justify-content:center; padding:40px 20px; }
+.login-card-wrap{ width:100%; max-width:420px; }
+.login-card{ padding:34px 32px 28px; }
+.login-heading{ margin-bottom:22px; }
+.login-heading h1{ font-size:23px; margin:0 0 6px; }
+.login-heading p{ font-size:var(--text-sm); color:var(--muted); margin:0; }
+.login-error{ display:none; align-items:flex-start; gap:9px; background:var(--status-bad-bg); color:var(--status-bad); border-radius:var(--r-md); padding:11px 13px; font-size:var(--text-sm); margin-bottom:16px; }
+.login-error.show{ display:flex; }
+.login-error svg{ width:17px; height:17px; flex-shrink:0; margin-top:1px; }
+.form-group{ margin-bottom:16px; }
+.password-row{ display:flex; justify-content:space-between; align-items:baseline; margin-bottom:6px; }
+.forgot-link{ font-size:11.5px; color:var(--status-info); font-weight:600; }
+.input-wrap{ position:relative; }
+.input-wrap .input-field{ padding-right:40px; }
+.toggle-visibility{ position:absolute; right:10px; top:50%; transform:translateY(-50%); background:none; border:none; color:var(--muted); cursor:pointer; padding:4px; display:flex; }
+.remember-row{ display:flex; align-items:center; gap:8px; margin-bottom:20px; font-size:var(--text-sm); color:var(--ink-700); }
+.remember-row input{ width:15px; height:15px; accent-color:var(--brand-orange); }
+.btn-signin{ width:100%; padding:11px; font-size:var(--text-base); }
+.login-divider{ display:flex; align-items:center; gap:10px; margin:20px 0; font-size:11px; color:var(--muted); }
+.login-divider::before, .login-divider::after{ content:''; flex:1; height:1px; background:var(--line); }
+.sso-btn{ width:100%; padding:10px; }
+.signup-hint{ text-align:center; font-size:var(--text-sm); color:var(--muted); margin:20px 0 0; }
+.signup-hint a{ color:var(--brand-orange); font-weight:600; }
+.login-footer{ padding:18px 28px; display:flex; justify-content:space-between; align-items:center; font-size:11px; color:var(--muted); flex-wrap:wrap; gap:8px; }
+.login-footer a{ margin-left:16px; }
+.field-label, .label{ display:block; font-size:12.5px; font-weight:600; color:var(--ink-700); margin-bottom:6px; }
+
+@media (prefers-reduced-motion: no-preference){
+  .login-card-wrap{ animation: card-rise 420ms var(--ease) both; }
+  @keyframes card-rise{ from{ opacity:0; transform:translateY(8px); } to{ opacity:1; transform:translateY(0); } }
+}
+
+/* ---- Responsive: tablet / mobile ---- */
+@media (max-width: 640px){
+  .login-topbar{ padding:14px 18px; }
+  .login-brand-tag{ display:none; }               /* keep the topbar compact — brand name alone is enough on a small screen */
+  .login-topbar-links{ display:none; }             /* secondary marketing links give way to the sign-in task on mobile */
+  .login-main{ padding:28px 16px; }
+  .login-card{ padding:26px 20px 22px; }
+  .login-heading h1{ font-size:20px; }
+  .login-footer{ flex-direction:column; align-items:flex-start; gap:10px; padding:16px 18px; }
+  .login-footer .footer-links{ display:flex; gap:16px; }
+  .login-footer a{ margin-left:0; }
+}
+@media (max-width: 380px){
+  .login-card{ padding:22px 16px 18px; }
+  .login-heading h1{ font-size:19px; }
+}
+</style>
+</head>
+<body>
+
+<div class="login-page">
+
+  <div class="login-topbar">
+    <div class="login-brand">
+      <img src="assets/logo-mark-sm.png" alt="">
+      <div>
+        <div class="login-brand-name">Kinder<b>Sports</b></div>
+        <div class="login-brand-tag">Sports infrastructure project management</div>
+      </div>
+    </div>
+    <nav class="login-topbar-links">
+      <a href="#">Product</a>
+      <a href="#">Support</a>
+      <a href="#">Contact sales</a>
+    </nav>
+  </div>
+
+  <div class="app-lanes" role="presentation"><span class="l1"></span><span class="l2"></span><span class="l3"></span><span class="l4"></span></div>
+
+  <main class="login-main">
+    <div class="login-card-wrap">
+      <div class="card login-card">
+
+        <div class="login-heading">
+          <h1>Welcome back</h1>
+          <p>Sign in to access your project workspace.</p>
+        </div>
+
+        <div id="loginError" class="login-error" role="alert">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          <span id="loginErrorText">Enter a valid work email address.</span>
+        </div>
+
+        <form id="loginForm" novalidate>
+
+          <div class="form-group field">
+            <label class="label" for="email">Work email</label>
+            <input type="email" id="email" class="input-field" placeholder="you@company.com" autocomplete="username" required>
+          </div>
+
+          <div class="form-group field">
+            <div class="password-row">
+              <label class="label" for="password" style="margin:0;">Password</label>
+              <a href="#" class="forgot-link">Forgot password?</a>
+            </div>
+            <div class="input-wrap">
+              <input type="password" id="password" class="input-field" placeholder="Enter your password" autocomplete="current-password" required>
+              <button type="button" class="toggle-visibility" id="togglePassword" aria-label="Show password">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8Z"/><circle cx="12" cy="12" r="3"/></svg>
+              </button>
+            </div>
+          </div>
+
+          <div class="remember-row">
+            <input type="checkbox" id="remember">
+            <label for="remember">Keep me signed in on this device</label>
+          </div>
+
+          <button type="submit" class="btn accent btn-signin" id="submitBtn">Sign in</button>
+        </form>
+
+        <div class="login-divider"><span>OR</span></div>
+
+        <button type="button" class="btn sso-btn">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="10" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+          Sign in with company SSO
+        </button>
+
+        <p class="signup-hint">New vendor or client? <a href="#">Request access</a></p>
+
+      </div>
+    </div>
+  </main>
+
+  <footer class="login-footer">
+    <p>© 2026 Kinder Sports. All rights reserved.</p>
+    <div class="footer-links">
+      <a href="#">Privacy</a>
+      <a href="#">Terms</a>
+      <a href="#">Security</a>
+    </div>
+  </footer>
+
+</div>
+
+<script>
+/* ==========================================================================
+   Login Page — Interaction logic
+   Password visibility, client-side validation, Supabase Auth, role lookup.
+   Role is NEVER user-selected — it is always read from profiles.role after
+   a successful sign-in, so access level cannot be spoofed from the UI.
+   ========================================================================== */
+
+const SUPABASE_URL = 'https://tlorepamqatsmrdpsttx.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_yLXE201tGNBWp4H49FdIlQ_OICGk29t';
+
+// Same dynamic storage adapter as auth-guard.js — see that file for the full
+// explanation. Must match exactly so every other page reads the session back
+// correctly regardless of which store this page put it in.
+const sipsAuthStorage = {
+  getItem: (key) => {
+    try { return window.sessionStorage.getItem(key) ?? window.localStorage.getItem(key); }
+    catch(e){ return null; }
+  },
+  setItem: (key, value) => {
+    try {
+      const persist = window.localStorage.getItem('sips_keep_signed_in') !== '0';
+      if(persist){ window.localStorage.setItem(key, value); window.sessionStorage.removeItem(key); }
+      else { window.sessionStorage.setItem(key, value); window.localStorage.removeItem(key); }
+    } catch(e){}
+  },
+  removeItem: (key) => {
+    try { window.localStorage.removeItem(key); window.sessionStorage.removeItem(key); } catch(e){}
+  }
+};
+
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+  auth: { storage: sipsAuthStorage, persistSession: true, autoRefreshToken: true }
+});
+
+// Where each role lands after login. Portfolio dashboard is shared by all
+// roles today; sidebar visibility inside it will be filtered in the next step.
+const ROLE_HOME = {
+  director: 'dashboard.html',
+  pm: 'dashboard.html',
+  engineer: 'dashboard.html',
+  vendor: 'dashboard.html',
+  client: 'dashboard.html'
+};
+
+(function () {
+  'use strict';
+
+  const form = document.getElementById('loginForm');
+  const emailField = document.getElementById('email');
+  const passwordField = document.getElementById('password');
+  const toggleBtn = document.getElementById('togglePassword');
+  const errorBox = document.getElementById('loginError');
+  const errorText = document.getElementById('loginErrorText');
+  const submitBtn = document.getElementById('submitBtn');
+
+  // --- If already signed in with a valid role, skip login screen ---
+  (async () => {
+    const { data } = await sb.auth.getSession();
+    if (data.session) {
+      const role = await fetchRole(data.session.user.id);
+      if (role === 'INACTIVE') { await sb.auth.signOut(); return; }
+      if (role) { window.location.href = ROLE_HOME[role] || 'dashboard.html'; }
+    }
+  })();
+
+  async function fetchRole(userId) {
+    const { data: profile, error } = await sb
+      .from('profiles')
+      .select('role, company_id, full_name, is_active')
+      .eq('id', userId)
+      .single();
+    if (error || !profile || !profile.role) return null;
+    if (profile.is_active === false) return 'INACTIVE';
+    sessionStorage.setItem('sips_role', profile.role);
+    sessionStorage.setItem('sips_company_id', profile.company_id || '');
+    sessionStorage.setItem('sips_full_name', profile.full_name || '');
+    return profile.role;
+  }
+
+  // --- Password visibility toggle ---
+  toggleBtn.addEventListener('click', () => {
+    const isPassword = passwordField.type === 'password';
+    passwordField.type = isPassword ? 'text' : 'password';
+    toggleBtn.innerHTML = isPassword ? eyeOffIcon() : eyeIcon();
+    toggleBtn.setAttribute('aria-label', isPassword ? 'Hide password' : 'Show password');
+  });
+
+  function eyeIcon() {
+    return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8Z"/><circle cx="12" cy="12" r="3"/></svg>';
+  }
+  function eyeOffIcon() {
+    return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><path d="M6.61 6.61A18.5 18.5 0 0 0 1 12s4 8 11 8a9.26 9.26 0 0 0 5.39-1.61"/><line x1="1" y1="1" x2="23" y2="23"/></svg>';
+  }
+
+  function showError(message) {
+    errorText.textContent = message;
+    errorBox.classList.add('show');
+  }
+  function hideError() {
+    errorBox.classList.remove('show');
+  }
+
+  // --- Form submit: real Supabase Auth + DB-driven role check ---
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    hideError();
+
+    const email = emailField.value.trim();
+    const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailPattern.test(email)) {
+      showError('Enter a valid work email address.');
+      emailField.focus();
+      return;
+    }
+    if (passwordField.value.length < 6) {
+      showError('Password must be at least 6 characters.');
+      passwordField.focus();
+      return;
+    }
+
+    const originalLabel = submitBtn.textContent;
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Signing in…';
+
+    // Set BEFORE signing in, so the storage adapter (see sipsAuthStorage
+    // above) writes the new session tokens to the right place from the start.
+    localStorage.setItem('sips_keep_signed_in', document.getElementById('remember').checked ? '1' : '0');
+
+    const { data, error } = await sb.auth.signInWithPassword({
+      email,
+      password: passwordField.value
+    });
+
+    if (error) {
+      submitBtn.disabled = false;
+      submitBtn.textContent = originalLabel;
+      showError(error.message === 'Invalid login credentials'
+        ? 'Incorrect email or password.'
+        : error.message);
+      return;
+    }
+
+    const role = await fetchRole(data.user.id);
+
+    if (role === 'INACTIVE') {
+      await sb.auth.signOut();
+      submitBtn.disabled = false;
+      submitBtn.textContent = originalLabel;
+      showError('This account has been deactivated. Contact your administrator.');
+      return;
+    }
+
+    if (!role) {
+      await sb.auth.signOut();
+      submitBtn.disabled = false;
+      submitBtn.textContent = originalLabel;
+      showError('No role assigned to this account yet. Contact your administrator.');
+      return;
+    }
+
+    window.location.href = ROLE_HOME[role] || 'dashboard.html';
+  });
+})();
+
+</script>
+</body>
+</html>

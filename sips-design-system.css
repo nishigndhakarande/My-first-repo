@@ -1,0 +1,532 @@
+/* ==========================================================================
+   SIPS DESIGN SYSTEM — v2
+   Kinder Sports — Sports Infrastructure Project Management
+   Single source of truth for color, type, spacing, and every shared
+   component. Every page in the app loads this ONE file — do not fork it.
+
+   v2 notes: same custom-property NAMES and same component CLASS NAMES as
+   v1, only values/rules changed — so no page markup or JS needed to change
+   for this file to take effect. New: --red/--green aliases (fixes a latent
+   bug where dashboard.html referenced var(--red)/var(--green) that v1 never
+   defined), Inter typeface loaded via @import so no <head> edits are needed
+   anywhere, and a couple of small purely-additive component classes used by
+   the redesigned dashboard (.qa-tile, .greet-row, .locked-note) live at the
+   bottom — unused by any other page today, safe no-ops if referenced.
+   ========================================================================== */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+:root{
+  /* ---- Brand ---- */
+  --brand-orange:      #FF5A00;
+  --brand-orange-600:  #E24F00;
+  --brand-orange-700:  #C74600;
+  --brand-orange-100:  #FFEBDF;
+  --brand-orange-50:   #FFF4EE;
+  --brand-yellow:      #D97706;
+  --brand-green:       #16A34A;
+  --brand-red:         #DC2626;
+  --brand-blue:        #2563EB;
+
+  /* ---- Ink / neutrals ---- */
+  --ink-900:   #17181C;
+  --ink-800:   #262730;
+  --ink-700:   #40424C;
+  --ink-600:   #55575F;
+  --muted:     #74767F;
+  --muted-2:   #A2A4AC;
+  --line:      #ECEDF1;
+  --line-2:    #F3F4F7;
+  --paper-0:   #F5F5F8;
+  --paper-1:   #FFFFFF;
+
+  /* ---- Status ---- */
+  --status-good:      var(--brand-green);
+  --status-good-bg:   #E7F7ED;
+  --status-watch:     #B45309;
+  --status-watch-bg:  #FEF3E2;
+  --status-bad:       var(--brand-red);
+  --status-bad-bg:    #FDEAEA;
+  --status-info:      var(--brand-blue);
+  --status-info-bg:   #EAF1FE;
+  --status-neutral:   var(--muted);
+  --status-neutral-bg:#EEF0F2;
+
+  /* legacy aliases some pages reference directly */
+  --red:  var(--status-bad);
+  --green:var(--status-good);
+
+  /* ---- Type ---- */
+  --font-display: 'Inter', sans-serif;
+  --font-body:    'Inter', sans-serif;
+  --font-mono:    'Inter', sans-serif;
+
+  --text-xs:   11px;
+  --text-sm:   12.5px;
+  --text-base: 13.5px;
+  --text-md:   15px;
+  --text-lg:   18px;
+  --text-xl:   22px;
+  --text-2xl:  28px;
+
+  /* ---- Spacing (4px base scale) ---- */
+  --sp-1: 4px;  --sp-2: 8px;  --sp-3: 12px; --sp-4: 16px;
+  --sp-5: 20px; --sp-6: 24px; --sp-7: 32px; --sp-8: 40px;
+
+  /* ---- Radius (rounder, softer — SaaS reference language) ---- */
+  --r-sm: 10px; --r-md: 14px; --r-lg: 22px; --r-xl: 28px; --r-pill: 999px;
+
+  /* ---- Shadow — soft & resting; cards float gently, not just on hover ---- */
+  --shadow-sm: 0 1px 2px rgba(23,24,28,0.04);
+  --shadow-card: 0 2px 5px rgba(23,24,28,0.04), 0 10px 24px rgba(23,24,28,0.05);
+  --shadow-md: 0 10px 28px rgba(23,24,28,0.09);
+  --shadow-lg: 0 24px 56px rgba(23,24,28,0.16);
+  --shadow-nav: 0 12px 32px rgba(23,24,28,0.10), 0 2px 8px rgba(23,24,28,0.05);
+  --shadow-orange: 0 8px 18px rgba(255,90,0,0.28);
+
+  /* ---- Motion ---- */
+  --ease: cubic-bezier(0.2,0.7,0.2,1);
+  --dur-fast: 120ms;
+  --dur-base: 200ms;
+
+  /* ---- Floating nav ---- */
+  --nav-w: 76px;
+  --nav-w-mobile: 244px;
+  --nav-margin: 14px;
+  --sidebar-w: 244px;
+}
+
+*{ box-sizing:border-box; }
+html,body{ margin:0; padding:0; overflow-x:hidden; }
+body{
+  background:var(--paper-0);
+  color:var(--ink-800);
+  font-family:var(--font-body);
+  font-size:var(--text-base);
+  -webkit-font-smoothing:antialiased;
+  line-height:1.5;
+}
+a{ color:inherit; text-decoration:none; }
+h1,h2,h3,h4{ font-family:var(--font-display); font-weight:700; margin:0; letter-spacing:-0.01em; color:var(--ink-900); }
+::-webkit-scrollbar{ width:9px; height:9px; }
+::-webkit-scrollbar-thumb{ background:#D7DAE0; border-radius:6px; }
+
+/* Visible keyboard focus everywhere — accessibility floor */
+a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible,
+textarea:focus-visible, [tabindex]:focus-visible{
+  outline:2px solid var(--brand-blue);
+  outline-offset:2px;
+  border-radius:var(--r-sm);
+}
+@media (prefers-reduced-motion: reduce){
+  *,*::before,*::after{ animation-duration:0.01ms !important; transition-duration:0.01ms !important; }
+}
+
+/* ==========================================================================
+   APP SHELL — floating icon navigation + topbar (shared markup lives in shell.js)
+   Desktop: a slim rounded "pill" rail floating clear of the viewport edges,
+   icon-only with hover tooltips, KinderSports-orange active state.
+   Tablet/mobile: same element becomes an off-canvas drawer (icons + labels)
+   opened by the hamburger — never a squeezed version of the desktop rail.
+   ========================================================================== */
+.app-sidebar{
+  position:fixed; top:var(--nav-margin); left:var(--nav-margin); bottom:var(--nav-margin);
+  width:var(--nav-w);
+  background:var(--paper-1); color:var(--ink-800);
+  border-radius:var(--r-xl);
+  box-shadow:var(--shadow-nav);
+  border:1px solid var(--line-2);
+  display:flex; flex-direction:column; align-items:center; z-index:80;
+  padding:16px 0 14px;
+  transform:translateX(0); transition:transform var(--dur-base) var(--ease), left var(--dur-base) var(--ease), width var(--dur-base) var(--ease);
+}
+.app-sidebar-brand{
+  display:flex; align-items:center; justify-content:center; flex-shrink:0;
+  width:42px; height:42px; border-radius:var(--r-md); margin-bottom:16px; cursor:pointer;
+  background:var(--paper-0); overflow:hidden;
+}
+.app-sidebar-brand img{ width:26px; height:26px; object-fit:contain; }
+.app-sidebar-brand-text, .app-sidebar-brand-sub{ display:none; } /* logo lives in the header on desktop; text hidden here to avoid duplicate branding */
+
+.app-sidebar-nav{ flex:1; overflow-y:auto; overflow-x:visible; width:100%; padding:2px 12px; display:flex; flex-direction:column; align-items:center; }
+.app-sidebar-nav::-webkit-scrollbar{ width:0; }
+.app-nav-section{
+  width:100%; display:flex; flex-direction:column; align-items:center; gap:5px;
+  padding-bottom:10px; margin-bottom:10px; border-bottom:1px solid var(--line-2);
+  font-size:0; /* section text hidden in slim rail; still in DOM for screen readers */
+}
+.app-nav-section:last-of-type{ border-bottom:none; margin-bottom:0; padding-bottom:0; }
+.app-nav-section .app-nav-section-label{
+  position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0,0,0,0);
+}
+.app-nav-item{
+  display:flex; align-items:center; justify-content:center; gap:10px;
+  width:44px; height:44px; border-radius:15px; flex-shrink:0;
+  font-family:var(--font-display); font-size:12.5px; font-weight:600; color:var(--muted);
+  cursor:pointer; position:relative; text-decoration:none;
+  transition:background var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease);
+}
+.app-nav-item .ic{ width:19px; height:19px; flex-shrink:0; display:flex; }
+.app-nav-item .ic svg{ width:100%; height:100%; }
+.app-nav-item:hover{ background:var(--brand-orange-50); color:var(--brand-orange); }
+.app-nav-item.active{ background:var(--brand-orange); color:#fff; box-shadow:var(--shadow-orange); }
+.app-nav-item.inert{ cursor:default; opacity:0.4; }
+.app-nav-item.inert:hover{ background:none; color:var(--muted); }
+.app-nav-item .lbl{
+  position:absolute; left:calc(100% + 14px); top:50%; transform:translateY(-50%) translateX(-4px);
+  background:var(--ink-900); color:#fff; padding:7px 12px; border-radius:10px;
+  white-space:nowrap; opacity:0; pointer-events:none; z-index:120;
+  transition:opacity .12s ease, transform .12s ease; font-size:11.5px; font-weight:600;
+}
+.app-nav-item:hover .lbl{ opacity:1; transform:translateY(-50%) translateX(0); }
+.app-nav-soon{ display:none; }
+.app-nav-badge{
+  position:absolute; top:2px; right:2px; min-width:16px; height:16px; padding:0 4px;
+  background:var(--brand-red); color:#fff; font-family:var(--font-mono); font-size:9px; font-weight:700;
+  border-radius:var(--r-pill); border:2px solid var(--paper-1);
+  display:flex; align-items:center; justify-content:center; line-height:1;
+}
+
+.app-sidebar-help{
+  margin-top:12px; width:44px; height:44px; border-radius:15px; flex-shrink:0;
+  background:var(--paper-0); color:var(--muted); display:flex; align-items:center; justify-content:center;
+  position:relative; cursor:default;
+}
+.app-sidebar-help svg{ width:18px; height:18px; }
+.app-sidebar-help b{ display:none; }
+.app-sidebar-help .lbl{
+  position:absolute; left:calc(100% + 14px); top:50%; transform:translateY(-50%) translateX(-4px);
+  background:var(--ink-900); color:#fff; padding:8px 12px; border-radius:10px; white-space:nowrap;
+  opacity:0; pointer-events:none; transition:opacity .12s ease, transform .12s ease; font-size:11px; line-height:1.6; text-align:left;
+}
+.app-sidebar-help:hover .lbl{ opacity:1; transform:translateY(-50%) translateX(0); }
+
+.app-main{ margin-left:calc(var(--nav-w) + var(--nav-margin) * 2); min-height:100vh; transition:margin-left var(--dur-base) var(--ease); }
+
+/* Signature lane stripe — the app's brand motif, doubles as the status legend.
+   Kept as a component (some pages may still reference it) but no longer
+   rendered edge-to-edge under the new floating-nav layout. */
+.app-lanes{ height:3px; display:flex; border-radius:var(--r-pill); overflow:hidden; margin:0 0 14px; }
+.app-lanes span{ flex:1; }
+.app-lanes .l1{ background:var(--brand-yellow); } .app-lanes .l2{ background:var(--brand-orange); }
+.app-lanes .l3{ background:var(--brand-green); }  .app-lanes .l4{ background:var(--brand-red); }
+
+.app-topbar{
+  background:var(--paper-1); border:1px solid var(--line-2);
+  padding:14px 22px; display:flex; align-items:center; justify-content:space-between;
+  gap:16px; flex-wrap:wrap; position:sticky; top:14px; z-index:50;
+  box-shadow:var(--shadow-card); border-radius:var(--r-lg);
+  margin:0 0 20px;
+}
+.app-crumb{ font-size:var(--text-xs); color:var(--muted); margin-bottom:4px; }
+.app-title{ font-family:var(--font-display); font-size:19px; font-weight:700; letter-spacing:-0.2px; }
+.app-subtitle{ font-size:var(--text-sm); color:var(--muted); margin-top:2px; }
+.app-topbar-actions{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+.app-topbar-brand{ display:flex; align-items:center; gap:10px; flex-shrink:0; }
+.app-topbar-brand img{ width:30px; height:30px; object-fit:contain; border-radius:8px; flex-shrink:0; }
+.app-topbar-brand-text{ font-family:var(--font-display); font-weight:700; font-size:14.5px; line-height:1.15; color:var(--ink-900); white-space:nowrap; }
+.app-topbar-brand-text b{ color:var(--brand-orange); font-weight:800; }
+.app-topbar-divider{ width:1px; align-self:stretch; background:var(--line); margin:2px 2px; flex-shrink:0; }
+
+.app-hamburger{
+  display:none; align-items:center; justify-content:center;
+  width:36px; height:36px; border-radius:var(--r-md); border:1px solid var(--line);
+  background:var(--paper-1); font-size:15px; cursor:pointer; color:var(--ink-800); flex-shrink:0;
+}
+.app-sidebar-backdrop{ position:fixed; inset:0; background:rgba(23,24,28,0.35); backdrop-filter:blur(1px); z-index:75; opacity:0; pointer-events:none; transition:opacity var(--dur-base) var(--ease); }
+.app-sidebar-backdrop.show{ opacity:1; pointer-events:auto; }
+
+.app-user-chip{ display:flex; align-items:center; gap:10px; }
+.app-user-avatar{
+  width:34px; height:34px; border-radius:50%; background:var(--brand-orange); color:#fff;
+  display:flex; align-items:center; justify-content:center; font-family:var(--font-display);
+  font-weight:700; font-size:12.5px; flex-shrink:0;
+}
+.app-user-meta{ line-height:1.3; text-align:right; }
+.app-user-name{ font-size:12.5px; font-weight:700; font-family:var(--font-display); }
+.app-user-role{ font-size:10.5px; color:var(--muted); }
+.app-logout-btn{ background:var(--paper-0); border:1px solid var(--line); color:var(--muted); border-radius:var(--r-pill); padding:7px 14px; font-size:11px; cursor:pointer; font-family:inherit; font-weight:600; }
+.app-logout-btn:hover{ background:var(--status-bad-bg); color:var(--status-bad); border-color:transparent; }
+
+/* Round icon buttons for topbar utility actions (notifications, search, settings) */
+.icon-btn{
+  display:inline-flex; align-items:center; justify-content:center; position:relative;
+  width:36px; height:36px; border-radius:50%; border:1px solid var(--line);
+  background:var(--paper-1); color:var(--ink-700); cursor:pointer; flex-shrink:0;
+  transition:background .15s ease, color .15s ease, border-color .15s ease;
+}
+.icon-btn svg{ width:16px; height:16px; }
+.icon-btn:hover{ background:var(--brand-orange-50); color:var(--brand-orange); border-color:var(--brand-orange-100); }
+
+@media (max-width:900px){
+  .app-sidebar{
+    left:0; top:0; bottom:0; margin:0; width:var(--nav-w-mobile);
+    border-radius:0 var(--r-xl) var(--r-xl) 0; align-items:stretch; padding:20px 14px;
+    transform:translateX(-100%); box-shadow:var(--shadow-lg);
+  }
+  .app-sidebar.open{ transform:translateX(0); }
+  .app-sidebar-brand{ align-self:flex-start; }
+  .app-sidebar-nav{ align-items:stretch; padding:2px 0; }
+  .app-nav-section{ align-items:stretch; }
+  .app-nav-item{ width:100%; justify-content:flex-start; padding:0 12px; gap:12px; }
+  .app-nav-item .lbl{
+    position:static; opacity:1; pointer-events:auto; transform:none;
+    background:none; color:inherit; padding:0; font-weight:600; white-space:normal;
+  }
+  .app-sidebar-help{ width:100%; justify-content:flex-start; padding:0 12px; gap:12px; }
+  .app-sidebar-help .lbl{ position:static; opacity:1; transform:none; background:none; color:var(--muted); padding:0; font-size:11px; line-height:1.6; }
+  .app-sidebar-help b{ display:block; color:var(--ink-800); font-family:var(--font-display); }
+  .app-main{ margin-left:0; }
+  .app-hamburger{ display:flex; }
+  .app-topbar{ top:0; border-radius:0; margin:0 0 18px; }
+}
+
+.app-content{ max-width:1360px; margin:0 auto; padding:18px 24px 56px; }
+.app-content.narrow{ max-width:1000px; }
+
+/* ==========================================================================
+   TYPOGRAPHY UTILITIES
+   ========================================================================== */
+.eyebrow{ font-family:var(--font-display); font-size:10px; letter-spacing:1px; text-transform:uppercase; font-weight:700; color:var(--muted); }
+.text-mono{ font-family:var(--font-mono); font-variant-numeric:tabular-nums; }
+.text-muted{ color:var(--muted); }
+.text-sm{ font-size:var(--text-sm); }
+
+/* ==========================================================================
+   BUTTONS
+   ========================================================================== */
+.btn{
+  display:inline-flex; align-items:center; justify-content:center; gap:6px;
+  font-family:var(--font-display); font-size:12.5px; font-weight:600;
+  padding:10px 16px; border-radius:var(--r-pill); border:1px solid var(--line);
+  background:var(--paper-1); color:var(--ink-800); cursor:pointer;
+  transition:background var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease), transform var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease);
+  white-space:nowrap;
+}
+.btn:hover{ background:var(--paper-0); border-color:var(--muted-2); }
+.btn:active{ transform:translateY(1px); }
+.btn:disabled{ opacity:0.5; cursor:not-allowed; }
+.btn.primary{ background:var(--ink-900); color:#fff; border-color:var(--ink-900); }
+.btn.primary:hover{ background:var(--brand-orange); border-color:var(--brand-orange); box-shadow:var(--shadow-orange); }
+.btn.accent{ background:var(--brand-orange); color:#fff; border-color:var(--brand-orange); box-shadow:var(--shadow-orange); }
+.btn.accent:hover{ background:var(--brand-orange-600); border-color:var(--brand-orange-600); }
+.btn.danger-outline{ background:var(--paper-1); color:var(--status-bad); border-color:var(--status-bad); }
+.btn.danger-outline:hover{ background:var(--status-bad); color:#fff; }
+.btn.sm{ padding:7px 13px; font-size:11.5px; }
+.btn.icon-only{ padding:8px; width:36px; height:36px; border-radius:50%; }
+
+/* Page-local .btn-add (create/import icon buttons) is duplicated per-page —
+   normalized here so it looks identical everywhere even where a page
+   redefines it with old hex values; page copies still take precedence only
+   for layout, colors now resolve through variables. */
+.btn-add{ transition:all .15s ease; }
+.btn-add:hover{ color:var(--brand-orange); border-color:var(--brand-orange); }
+.btn-add.primary:hover{ background:var(--brand-orange); border-color:var(--brand-orange); color:#fff; }
+
+/* ==========================================================================
+   CARDS / PANELS
+   ========================================================================== */
+.card{
+  background:var(--paper-1); border:1px solid var(--line-2); border-radius:var(--r-lg);
+  box-shadow:var(--shadow-card);
+}
+.card-head{ display:flex; justify-content:space-between; align-items:flex-start; gap:14px; padding:18px 20px; border-bottom:1px solid var(--line-2); }
+.card-head h3{ font-size:var(--text-lg); margin:0 0 3px; }
+.card-head p{ font-size:var(--text-sm); color:var(--muted); margin:0; max-width:640px; line-height:1.5; }
+.card-body{ padding:18px 20px; }
+
+.kpi-grid{ display:grid; grid-template-columns:repeat(4,1fr); gap:14px; }
+.kpi{
+  background:var(--paper-1); border:1px solid var(--line-2);
+  border-radius:var(--r-lg); padding:18px 19px; position:relative; box-shadow:var(--shadow-card);
+}
+.kpi::before{ content:''; position:absolute; left:19px; top:18px; width:34px; height:34px; border-radius:var(--r-md); background:var(--brand-orange-50); }
+.kpi.accent-good::before{ background:var(--status-good-bg); }
+.kpi.accent-watch::before{ background:var(--status-watch-bg); }
+.kpi.accent-bad::before{ background:var(--status-bad-bg); }
+.kpi.accent-info::before{ background:var(--status-info-bg); }
+.kpi-label{ font-family:var(--font-display); font-size:10px; letter-spacing:0.5px; text-transform:uppercase; color:var(--muted); font-weight:700; }
+.kpi-value{ font-family:var(--font-display); font-size:24px; font-weight:800; margin-top:6px; color:var(--ink-900); }
+.kpi-sub{ font-size:var(--text-xs); color:var(--muted); margin-top:3px; }
+.kpi-bar{ height:6px; background:var(--line-2); border-radius:var(--r-pill); margin-top:9px; overflow:hidden; }
+.kpi-bar-fill{ height:100%; border-radius:var(--r-pill); background:var(--status-good); }
+
+@media (max-width:900px){ .kpi-grid{ grid-template-columns:repeat(2,1fr); } }
+
+/* ==========================================================================
+   TABLES
+   ========================================================================== */
+table.data-table{ width:100%; border-collapse:collapse; font-size:var(--text-base); }
+.data-table th{
+  text-align:left; padding:11px 16px; font-family:var(--font-display);
+  font-size:10.5px; letter-spacing:0.4px; text-transform:uppercase; font-weight:700;
+  color:var(--muted); background:var(--paper-0); border-bottom:1px solid var(--line);
+}
+.data-table td{ padding:11px 16px; border-bottom:1px solid var(--line-2); vertical-align:middle; }
+.data-table td.num{ font-family:var(--font-mono); text-align:right; font-variant-numeric:tabular-nums; }
+.data-table tbody tr:hover{ background:var(--paper-0); }
+.data-table tbody tr:last-child td{ border-bottom:none; }
+
+/* ==========================================================================
+   FORMS
+   ========================================================================== */
+.field{ margin-bottom:14px; }
+.field label{ display:block; font-family:var(--font-display); font-size:11px; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:0.4px; margin-bottom:6px; }
+.field input, .field select, .field textarea{
+  width:100%; padding:9px 12px; border:1px solid var(--line); border-radius:var(--r-sm);
+  font-size:var(--text-base); font-family:inherit; background:var(--paper-0); color:var(--ink-800);
+}
+.field input:focus, .field select:focus, .field textarea:focus{
+  outline:2px solid var(--brand-blue); outline-offset:0; border-color:var(--brand-blue); background:var(--paper-1);
+}
+.field-row{ display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+
+/* ==========================================================================
+   BADGES / STATUS PILLS  — one system, used everywhere
+   ========================================================================== */
+.pill{
+  display:inline-flex; align-items:center; gap:5px; font-family:var(--font-display);
+  font-size:10.5px; font-weight:700; padding:3px 10px; border-radius:var(--r-pill);
+}
+.pill::before{ content:''; width:6px; height:6px; border-radius:50%; background:currentColor; flex-shrink:0; }
+.pill.good{ background:var(--status-good-bg); color:var(--status-good); }
+.pill.watch{ background:var(--status-watch-bg); color:var(--status-watch); }
+.pill.bad{ background:var(--status-bad-bg); color:var(--status-bad); }
+.pill.info{ background:var(--status-info-bg); color:var(--status-info); }
+.pill.neutral{ background:var(--status-neutral-bg); color:var(--muted); }
+
+/* ==========================================================================
+   TABS (shared pattern used by project-overview.html and others)
+   ========================================================================== */
+.tabs{ display:flex; gap:4px; border-bottom:1px solid var(--line); flex-wrap:wrap; }
+.tab-btn{
+  font-family:var(--font-display); font-size:12.5px; font-weight:600; color:var(--muted);
+  background:none; border:none; padding:11px 16px; cursor:pointer; position:relative; border-radius:var(--r-sm) var(--r-sm) 0 0;
+}
+.tab-btn:hover{ color:var(--ink-800); background:var(--paper-0); }
+.tab-btn.active{ color:var(--brand-orange); }
+.tab-btn.active::after{ content:''; position:absolute; left:10px; right:10px; bottom:-1px; height:2px; background:var(--brand-orange); border-radius:2px 2px 0 0; }
+
+/* ==========================================================================
+   MODALS
+   ========================================================================== */
+.modal-overlay{
+  position:fixed; inset:0; background:rgba(20,21,26,0.5); z-index:200;
+  display:none; align-items:flex-start; justify-content:center; padding:64px 20px; overflow-y:auto;
+}
+.modal-overlay.open{ display:flex; }
+.modal-box{ background:var(--paper-1); border-radius:var(--r-lg); width:100%; max-width:480px; box-shadow:var(--shadow-lg); }
+.modal-box.wide{ max-width:720px; }
+.modal-head{ display:flex; align-items:center; justify-content:space-between; padding:18px 22px; border-bottom:1px solid var(--line); }
+.modal-head h3{ font-size:var(--text-lg); }
+.modal-close{ background:none; border:none; font-size:20px; cursor:pointer; color:var(--muted); line-height:1; }
+.modal-close:hover{ color:var(--ink-800); }
+.modal-body{ padding:20px 22px; max-height:70vh; overflow-y:auto; }
+.modal-foot{ display:flex; justify-content:flex-end; gap:9px; padding:15px 22px; border-top:1px solid var(--line); }
+.modal-msg{ font-size:var(--text-sm); padding:9px 11px; border-radius:var(--r-sm); display:none; margin-bottom:12px; }
+.modal-msg.show{ display:block; }
+.modal-msg.err{ background:var(--status-bad-bg); color:var(--status-bad); }
+.modal-msg.ok{ background:var(--status-good-bg); color:var(--status-good); }
+
+/* ==========================================================================
+   TOASTS  — replaces alert()/confirm() everywhere
+   ========================================================================== */
+#toast-root{ position:fixed; bottom:20px; right:20px; z-index:400; display:flex; flex-direction:column; gap:8px; max-width:360px; }
+.toast{
+  background:var(--ink-900); color:#fff; border-radius:var(--r-md); padding:12px 15px;
+  font-size:var(--text-sm); box-shadow:var(--shadow-md); display:flex; align-items:flex-start; gap:10px;
+  animation:toast-in var(--dur-base) var(--ease);
+}
+.toast.err{ background:var(--status-bad); } .toast.ok{ background:var(--status-good); }
+.toast .toast-close{ margin-left:auto; cursor:pointer; opacity:0.7; background:none; border:none; color:inherit; font-size:14px; }
+.toast .toast-close:hover{ opacity:1; }
+@keyframes toast-in{ from{ opacity:0; transform:translateY(8px); } to{ opacity:1; transform:translateY(0); } }
+
+/* Lightweight confirm dialog — replaces confirm() */
+.confirm-overlay{ position:fixed; inset:0; background:rgba(20,21,26,0.5); z-index:250; display:flex; align-items:center; justify-content:center; padding:20px; }
+.confirm-box{ background:var(--paper-1); border-radius:var(--r-lg); max-width:380px; width:100%; padding:20px 22px; box-shadow:var(--shadow-lg); }
+.confirm-box h4{ font-size:var(--text-md); margin-bottom:6px; }
+.confirm-box p{ font-size:var(--text-sm); color:var(--muted); margin:0 0 16px; line-height:1.5; }
+.confirm-actions{ display:flex; justify-content:flex-end; gap:8px; }
+
+/* ==========================================================================
+   EMPTY / LOADING / ERROR STATES  — one system
+   ========================================================================== */
+.state-block{ padding:56px 24px; text-align:center; color:var(--muted); }
+.state-block .state-icon{ font-size:26px; margin-bottom:10px; opacity:0.4; }
+.state-block .state-title{ font-family:var(--font-display); font-size:var(--text-md); font-weight:700; color:var(--ink-800); margin-bottom:4px; }
+.state-block .state-body{ font-size:var(--text-sm); max-width:360px; margin:0 auto; line-height:1.5; }
+.state-block.state-error .state-title{ color:var(--status-bad); }
+
+.skeleton{ background:linear-gradient(90deg,var(--line-2) 25%,var(--line) 37%,var(--line-2) 63%); background-size:400% 100%; animation:skeleton-shine 1.4s ease infinite; border-radius:var(--r-sm); }
+@keyframes skeleton-shine{ 0%{ background-position:100% 0; } 100%{ background-position:0 0; } }
+
+/* ==========================================================================
+   PAGINATION / FILTER BAR (shared pattern used by tables across the app)
+   ========================================================================== */
+.filter-bar{ display:flex; align-items:center; gap:9px; flex-wrap:wrap; }
+.filter-bar select, .filter-bar input[type="text"], .filter-bar input[type="search"]{
+  padding:7px 11px; border:1px solid var(--line); border-radius:var(--r-sm);
+  font-size:11.5px; font-family:var(--font-display); background:var(--paper-1); color:var(--ink-800);
+}
+.pagination{ display:flex; align-items:center; gap:6px; justify-content:flex-end; margin-top:14px; }
+.pagination button{
+  min-width:30px; height:30px; padding:0 8px; border:1px solid var(--line); border-radius:var(--r-sm);
+  background:var(--paper-1); color:var(--ink-700); font-family:var(--font-display); font-size:11.5px; cursor:pointer;
+}
+.pagination button.active{ background:var(--ink-900); color:#fff; border-color:var(--ink-900); }
+.pagination button:disabled{ opacity:0.4; cursor:not-allowed; }
+
+/* ==========================================================================
+   RESPONSIVE — shared breakpoints for content grids
+   ========================================================================== */
+@media (max-width:900px){
+  .app-content{ padding:18px 16px 40px; }
+  .field-row{ grid-template-columns:1fr; }
+}
+@media (max-width:640px){
+  .kpi-grid{ grid-template-columns:1fr 1fr; }
+  .app-topbar{ padding:12px 16px; }
+  .app-user-meta{ display:none; }
+}
+
+/* ==========================================================================
+   NEW ADDITIVE COMPONENTS — used by the redesigned Dashboard; harmless no-ops
+   on any page that doesn't reference these classes yet
+   ========================================================================== */
+.greet-row{ display:flex; align-items:flex-end; justify-content:space-between; gap:20px; margin-bottom:24px; flex-wrap:wrap; }
+.greet-title{ font-size:27px; letter-spacing:-0.02em; }
+.greet-sub{ font-size:var(--text-md); color:var(--muted); margin-top:5px; max-width:560px; }
+.greet-date{ font-size:var(--text-sm); color:var(--ink-700); text-align:right; font-weight:600; background:var(--paper-1); border:1px solid var(--line-2); padding:8px 14px; border-radius:var(--r-pill); box-shadow:var(--shadow-card); }
+@media (max-width:640px){ .greet-row{ flex-direction:column; align-items:flex-start; } .greet-date{ text-align:left; } .greet-title{ font-size:22px; } }
+
+.qa-tile{ display:flex; align-items:center; gap:13px; background:var(--paper-1); border:1px solid var(--line-2); border-radius:var(--r-lg); padding:16px 18px; cursor:pointer; transition:border-color .15s ease, box-shadow .15s ease, transform .15s ease; min-width:200px; flex:1 1 200px; max-width:280px; font-family:inherit; text-align:left; box-shadow:var(--shadow-card); }
+.qa-tile > span:last-child{ display:flex; flex-direction:column; }
+.qa-tile:hover{ border-color:var(--brand-orange-100); box-shadow:var(--shadow-md); transform:translateY(-2px); }
+.qa-tile.primary{ background:var(--ink-900); border-color:var(--ink-900); }
+.qa-tile.primary .qa-icon{ background:var(--brand-orange); color:#fff; }
+.qa-tile.primary .qa-label, .qa-tile.primary .qa-sub{ color:#fff; }
+.qa-icon{ width:40px; height:40px; border-radius:var(--r-md); background:var(--brand-orange-100); color:var(--brand-orange); display:flex; align-items:center; justify-content:center; font-size:17px; flex-shrink:0; }
+.qa-label{ font-family:var(--font-display); font-weight:700; font-size:13px; }
+.qa-sub{ font-size:11px; color:var(--muted); margin-top:1px; }
+
+.locked-note{ display:flex; align-items:center; gap:10px; padding:20px 4px; color:var(--muted); font-size:11.5px; }
+.locked-note .lk{ width:32px; height:32px; border-radius:50%; background:var(--paper-0); display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+
+/* ==========================================================================
+   SCROLL AFFORDANCE — right-edge shadow hint for horizontally-scrollable
+   strips/tables (quick-action rows, wide tables, Gantt charts, milestone
+   sheets). Wired dynamically by sipsWireScrollHints() in sips-shell.js,
+   which toggles .at-scroll-end once there's nothing further to scroll to —
+   so the hint only shows when it's actually true. Works on the scrolling
+   element itself, no extra wrapper markup needed.
+   ========================================================================== */
+.scroll-hint-x{
+  background-image: linear-gradient(to left, rgba(20,21,26,0.14), rgba(20,21,26,0) 28px);
+  background-repeat: no-repeat;
+  background-size: 40px 100%;
+  background-position: 100% 0;
+  background-attachment: scroll;
+  transition: background-image .15s ease;
+}
+.scroll-hint-x.at-scroll-end{ background-image: none; }

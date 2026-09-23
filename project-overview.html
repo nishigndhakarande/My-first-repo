@@ -1,0 +1,1210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Project Overview — Kinder Sports</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="sips-design-system.css">
+<link rel="stylesheet" href="sips-mobile.css">
+<script src="sips-shell.js"></script>
+<script src="sips-mobile.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+<script src="auth-guard.js"></script>
+<style>
+*{box-sizing:border-box;} html,body{margin:0;padding:0;}
+body{background:var(--paper-0);color:var(--ink-800);font-family:var(--font-body);-webkit-font-smoothing:antialiased;}
+a{text-decoration:none;color:inherit;}
+::-webkit-scrollbar{width:9px;} ::-webkit-scrollbar-thumb{background:#D7DAE0;border-radius:6px;}
+
+/* (unused .crumb/.header-title/.header-sub rules removed — this page
+   actually uses the shared .app-crumb/.app-title/.app-subtitle classes) */
+.header-actions{display:flex;gap:8px;flex-wrap:wrap;}
+.btn{font-family:var(--font-display);font-size:12px;font-weight:600;padding:9px 14px;border-radius:var(--r-sm);border:1px solid var(--line);background:var(--paper-1);cursor:pointer;color:var(--ink-800);transition:border-color .15s ease, background .15s ease;}
+.btn:hover{border-color:var(--muted-2);background:var(--paper-0);}
+.btn.dark{background:var(--ink-900);color:#fff;border-color:var(--ink-900);}
+.btn.dark:hover{background:var(--brand-orange);border-color:var(--brand-orange);}
+
+.main{max-width:1480px;margin:0 auto;padding:26px 32px 60px 32px;}
+
+.proj-card{background:var(--paper-1);border:1px solid var(--line);border-radius:var(--r-lg);padding:0;display:flex;flex-wrap:wrap;margin-bottom:20px;overflow:hidden;box-shadow:var(--shadow-sm);}
+.proj-thumb{width:260px;min-height:170px;flex-shrink:0;background-size:cover;background-position:center;position:relative;}
+.proj-thumb::after{content:'';position:absolute;inset:0;background:linear-gradient(90deg, rgba(0,0,0,0) 60%, rgba(0,0,0,0.05) 100%);}
+.proj-card-body{flex:1;min-width:260px;padding:22px 26px;}
+.proj-card h2{font-family:var(--font-display);font-size:21px;margin:0 0 12px 0;}
+.proj-meta{display:flex;gap:32px;flex-wrap:wrap;font-size:12px;}
+.proj-meta div span{display:block;color:var(--muted);font-size:10.5px;margin-bottom:3px;letter-spacing:.3px;text-transform:uppercase;}
+.proj-meta div b{font-size:13.5px;}
+.status-pill{font-size:10.5px;font-weight:700;padding:4px 11px;border-radius:var(--r-pill);background:var(--status-good-bg);color:var(--brand-green);}
+.status-pill.progress{background:var(--status-watch-bg);color:var(--status-watch);}
+.status-pill.ready{background:var(--status-info-bg);color:var(--status-info);}
+.status-pill.completed{background:var(--status-good-bg);color:var(--brand-green);}
+.btn.xs{padding:5px 10px;font-size:10.5px;border-radius:var(--r-sm);}
+
+.kpi-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin-bottom:18px;}
+@media(max-width:1200px){.kpi-grid{grid-template-columns:repeat(3,1fr);}}
+@media(max-width:640px){
+  .kpi-grid{grid-template-columns:repeat(2,1fr);}
+  .proj-card{flex-direction:column;}
+  .proj-thumb{width:100%;height:150px;}
+  .proj-card-body{min-width:0;padding:18px 18px;}
+  .proj-meta{gap:16px;}
+}
+.kpi{background:var(--paper-1);border:1px solid var(--line);border-radius:var(--r-md);padding:16px;transition:box-shadow .15s ease, transform .15s ease, border-color .15s ease;}
+.kpi:hover{box-shadow:var(--shadow-md);transform:translateY(-2px);border-color:var(--muted-2);}
+.kpi .l{font-size:11px;color:var(--muted);font-weight:600;letter-spacing:.3px;text-transform:uppercase;}
+.kpi .v{font-family:var(--font-display);font-size:22px;font-weight:700;margin:6px 0;color:var(--ink-900);}
+.kpi .v.big{font-size:30px;color:var(--brand-green);}
+.kpi .sub{font-size:10.5px;color:var(--muted);}
+.kpi .sub.up{color:var(--brand-green);}
+.kpi .sub.down{color:var(--status-bad);}
+.bar-track{height:6px;background:var(--line-2);border-radius:4px;overflow:hidden;margin-top:6px;}
+.bar-fill{height:100%;background:var(--brand-green);}
+
+.grid2{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr);gap:18px;margin-bottom:18px;}
+@media(max-width:1000px){.grid2{grid-template-columns:minmax(0,1fr);}}
+.card{background:var(--paper-1);border:1px solid var(--line);border-radius:var(--r-lg);padding:18px;box-shadow:var(--shadow-sm);transition:box-shadow .15s ease, border-color .15s ease;}
+.card:hover{box-shadow:var(--shadow-md);border-color:var(--muted-2);}
+.card h3{font-family:var(--font-display);font-size:14px;margin:0 0 14px 0;display:flex;justify-content:space-between;align-items:center;color:var(--ink-900);}
+.card h3 a{font-size:11px;color:var(--brand-orange);font-family:var(--font-display);font-weight:600;}
+.card h3 .hint{font-size:10px;color:var(--muted);font-weight:500;font-family:var(--font-body);}
+
+.milestones{display:flex;align-items:flex-start;justify-content:space-between;position:relative;padding:6px 4px 0 4px;}
+.milestones::before{content:'';position:absolute;top:19px;left:24px;right:24px;height:2px;background:var(--line);}
+.mstone{position:relative;z-index:1;flex:1;text-align:center;font-size:11px;}
+.mstone .dot{width:38px;height:38px;border-radius:50%;background:var(--paper-1);border:2px solid var(--line);display:flex;align-items:center;justify-content:center;margin:0 auto 8px auto;font-family:var(--font-display);font-weight:700;font-size:13px;color:var(--muted);}
+.mstone.done .dot{background:var(--brand-green);border-color:var(--brand-green);color:#fff;}
+.mstone.active .dot{background:var(--brand-orange);border-color:var(--brand-orange);color:#fff;}
+.mstone b{display:block;font-size:11.5px;margin-bottom:2px;}
+.mstone .st{font-size:10px;color:var(--muted);}
+.mstone.done .st{color:var(--brand-green);}
+.mstone.active .st{color:var(--brand-orange);}
+.current-strip{margin-top:16px;padding:12px 14px;background:var(--paper-0);border-radius:9px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;font-size:11.5px;}
+.current-strip b{display:block;font-size:13px;}
+
+.donut-row{display:flex;align-items:center;gap:20px;flex-wrap:wrap;}
+.donut{width:150px;height:150px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;position:relative;}
+.donut-hole{width:96px;height:96px;background:var(--paper-1);border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;}
+.donut-hole .n{font-family:var(--font-mono);font-weight:600;font-size:14px;}
+.donut-hole .l{font-size:9px;color:var(--muted);}
+.donut-legend{flex:1;min-width:150px;font-size:11.5px;}
+.dl-row{display:flex;align-items:center;gap:8px;padding:5px 0;}
+.dl-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0;}
+.dl-row b{margin-left:auto;font-family:var(--font-mono);}
+
+.list-row{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--line);font-size:12px;}
+.list-row:last-child{border-bottom:none;}
+.list-row b{font-size:12.5px;}
+.list-row .sub{font-size:10.5px;color:var(--muted);}
+.pill{font-size:9.5px;font-weight:700;padding:3px 8px;border-radius:9px;white-space:nowrap;}
+.pill.open{background:#FDEAEA;color:var(--status-bad);}
+.pill.closed{background:#E7F7ED;color:var(--brand-green);}
+.pill.pending{background:#FEF3E2;color:#B45309;}
+.pill.approved{background:#E7F7ED;color:var(--brand-green);}
+.empty{padding:16px;text-align:center;color:var(--muted);font-size:12px;}
+/* Drawings & Media card — category summary look-and-feel */
+.dm-cat-row{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--line);}
+.dm-cat-row:last-of-type{border-bottom:none;}
+.dm-cat-row.zero{opacity:.5;}
+.dm-icon{width:28px;height:28px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0;}
+.dm-icon.draw{background:#EAF1FE;color:var(--status-info);}
+.dm-icon.photo{background:#FEF3E2;color:var(--brand-orange);}
+.dm-icon.doc{background:var(--paper-0);color:var(--muted);border:1px solid var(--line);}
+/* Schedule summary card — enterprise look */
+.sch-overall{margin-bottom:14px;padding-bottom:14px;border-bottom:1px solid var(--line);}
+.sch-overall-top{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px;}
+.sch-overall-pct{font-family:var(--font-mono);font-weight:700;font-size:20px;}
+.sch-overall-sub{font-size:10.5px;color:var(--muted);}
+.sch-bar-track{height:8px;border-radius:6px;background:var(--paper-0);overflow:hidden;display:flex;}
+.sch-bar-track span{height:100%;}
+.sch-cat-row{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--line);}
+.sch-cat-row:last-of-type{border-bottom:none;}
+.sch-cat-row.zero{opacity:.5;}
+.sch-icon{width:28px;height:28px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0;font-weight:700;}
+.sch-icon.notstarted{background:var(--paper-0);color:var(--muted);border:1px solid var(--line);}
+.sch-icon.inprogress{background:#FEF3E2;color:#B45309;}
+.sch-icon.completed{background:#E7F7ED;color:var(--brand-green);}
+.sch-cat-label{font-size:12.5px;font-weight:600;flex:1;min-width:0;}
+.sch-cat-note{font-size:10.5px;color:var(--muted);margin-top:1px;}
+.sch-mini-bar{width:70px;height:6px;border-radius:4px;background:var(--paper-0);overflow:hidden;flex-shrink:0;}
+.sch-mini-bar span{display:block;height:100%;}
+.sch-cat-count{font-family:var(--font-mono);font-weight:700;font-size:15px;width:26px;text-align:right;flex-shrink:0;}
+.sch-overdue{margin-top:10px;padding:8px 10px;background:#FDEAEA;border-radius:8px;font-size:11px;color:var(--status-bad);font-weight:600;}
+.sch-overdue::before{content:'⚠ ';}
+.sch-upcoming-wrap{margin-top:12px;padding:10px 12px;background:var(--paper-0);border-radius:9px;}
+.sch-upcoming-title{font-size:10.5px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px;}
+.sch-upcoming-row{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:6px 6px;border-radius:7px;transition:background .12s;}
+.sch-upcoming-row:hover{background:#FEF3E2;}
+.sch-upcoming-row b{font-size:12px;}
+.sch-upcoming-row .sub{font-size:10px;color:var(--muted);margin-top:1px;}
+.dm-cat-label{font-size:12.5px;font-weight:600;flex:1;min-width:0;}
+.dm-cat-count{font-family:var(--font-mono);font-weight:700;font-size:15px;}
+.dm-cat-note{font-size:10.5px;color:var(--muted);margin-top:1px;}
+.dm-cat-note.warn{color:var(--status-bad);font-weight:600;}
+.dm-cat-note.warn::before{content:'⚠ ';}
+.dm-recent-wrap{margin-top:12px;padding:10px 12px;background:var(--paper-0);border-radius:9px;}
+.dm-recent-title{font-size:10.5px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px;}
+.dm-recent-row{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:6px 6px;border-radius:7px;transition:background .12s;}
+.dm-recent-row:hover{background:#FEF3E2;}
+.dm-recent-row b{font-size:12px;}
+.dm-recent-row .sub{font-size:10px;color:var(--muted);margin-top:1px;}
+
+.task-status-select{
+  font-family:var(--font-display);font-size:10.5px;font-weight:700;
+  padding:5px 8px;border-radius:8px;border:1px solid var(--line);
+  cursor:pointer;flex-shrink:0;background:var(--paper-0);color:var(--ink-700);
+}
+.task-status-select.not_started{background:#F1F2F4;color:var(--muted);border-color:#E8EAED;}
+.task-status-select.in_progress{background:#FEF3E2;color:#B45309;border-color:#FEF3E2;}
+.task-status-select.completed{background:#E7F7ED;color:var(--brand-green);border-color:#E7F7ED;}
+.task-status-select:disabled{opacity:.6;cursor:wait;}
+.list-row.task-row{align-items:center;}
+.list-row.task-row .left{flex:1;min-width:0;}
+.list-row.task-row .left b{display:block;white-space:normal;}
+
+.doc-strip{display:flex;gap:14px;flex-wrap:wrap;background:var(--paper-1);border:1px solid var(--line);border-radius:var(--r-lg);padding:18px;align-items:center;box-shadow:var(--shadow-sm);}
+.doc-strip h3{font-family:var(--font-display);font-size:14px;margin:0;flex-basis:100%;color:var(--ink-900);}
+.doc-chip{display:flex;align-items:center;gap:10px;background:var(--paper-0);border-radius:var(--r-md);padding:10px 16px;flex:1;min-width:120px;}
+.doc-chip .ic{width:34px;height:34px;border-radius:var(--r-sm);background:var(--brand-orange);color:#fff;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;}
+.doc-chip .n{font-family:var(--font-display);font-weight:700;font-size:16px;color:var(--ink-900);}
+.doc-chip .l{font-size:10.5px;color:var(--muted);}
+</style>
+</head>
+<body>
+
+<div id="sips-sidebar-mount"></div>
+
+<div class="app-main">
+  <div class="app-lanes"><span class="l1"></span><span class="l2"></span><span class="l3"></span><span class="l4"></span></div>
+  <div class="app-topbar">
+    <div style="display:flex;align-items:center;gap:12px;">
+      <button class="app-hamburger" id="app-hamburger-btn" aria-label="Toggle menu">&#9776;</button>
+      <div>
+      <div class="app-crumb">Projects › <span id="crumbName">—</span></div>
+      <div class="app-title">Project overview</div>
+      <div class="app-subtitle">Real-time overview of project progress and key metrics</div>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;">
+      <div class="app-topbar-actions">
+        <button class="btn" id="openImportSchedule">⬆ Import Schedule</button>
+        <button class="btn" id="openImportBudget">⬆ Import Budget</button>
+        <button class="btn" id="btnClientActions">◔ View Progress</button>
+        <button class="btn" id="btnExportReports">⬇ Reports</button>
+        <button class="btn dark" id="btnCollabChat" onclick="location.href='collaboration.html?project='+currentProj.id">&#128172; Chat / AI</button>
+        <input type="file" id="scheduleFileInput" accept=".xlsx,.xls,.csv" style="display:none">
+        <input type="file" id="budgetFileInput" accept=".xlsx,.xls,.csv" style="display:none">
+      </div>
+      <div class="app-user-chip">
+        <div class="app-user-avatar" id="userAvatar">–</div>
+        <div class="app-user-meta">
+          <div class="app-user-name" id="userName">—</div>
+          <div class="app-user-role" id="userRole">—</div>
+        </div>
+        <button class="app-logout-btn" id="logoutBtn">Log out</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="main">
+    <div class="proj-card" id="projCard"><div class="empty">Loading project…</div></div>
+
+    <div class="kpi-grid" id="kpiGrid"></div>
+
+    <div class="grid2">
+      <div class="card" style="cursor:pointer" onclick="location.href='schedule.html?id='+currentProj.id">
+        <h3>Milestone Progress</h3>
+        <div id="milestoneTrack"><div class="empty">Loading…</div></div>
+      </div>
+      <div class="card" style="cursor:pointer" onclick="location.href='budget.html?id='+currentProj.id">
+        <h3>Budget Summary</h3>
+        <div id="budgetSummary"><div class="empty">Loading…</div></div>
+      </div>
+    </div>
+
+    <div class="grid2">
+      <div class="card" style="cursor:pointer" onclick="location.href='schedule.html?id='+currentProj.id">
+        <h3>Schedule (Tasks by Status)</h3>
+        <div id="scheduleList"><div class="empty">Loading…</div></div>
+      </div>
+      <div class="card" style="cursor:pointer" onclick="location.href='drawings.html?id='+currentProj.id">
+        <h3>Drawings &amp; Media</h3>
+        <div id="drawingList"><div class="empty">Loading…</div></div>
+      </div>
+    </div>
+
+    <div class="grid2">
+      <div class="card" style="cursor:pointer" onclick="location.href='quality.html?id='+currentProj.id">
+        <h3>Quality</h3>
+        <div class="empty">View NCRs and quality checks →</div>
+      </div>
+      <div class="card" style="cursor:pointer" onclick="location.href='vendors.html?id='+currentProj.id">
+        <h3>Vendor Scorecard</h3>
+        <div class="empty">View vendor ratings →</div>
+      </div>
+    </div>
+
+    <div class="doc-strip" id="docStrip">
+      <h3>Document Summary</h3>
+      <div class="doc-chip"><div class="ic">▤</div><div><div class="n" id="drawCount">0</div><div class="l">Drawings</div></div></div>
+      <div class="doc-chip"><div class="ic">▦</div><div><div class="n" id="taskCount">0</div><div class="l">Tasks</div></div></div>
+    </div>
+  </div>
+</div>
+
+<script>
+let currentProj = null;
+let reportData = null; // loadOverview() nantar populate hoto — generateReport() hyachach vapar karta
+// KinderSports logo icon (ring mark, transparent bg, PNG) — PDF header band madhe embed karayla.
+const KINDERSPORTS_LOGO_B64 = 'assets/logo-mark-sm.png';
+const DEFAULT_PROJECT_IMAGE = 'https://images.unsplash.com/photo-1461896836934-ffe607ba8211?w=900&q=70';
+
+/* Same bucketing logic as drawings.html, kept in sync so Overview cha "Drawings & Media"
+   card counts match the Drawings page exactly — na ki raw `drawings` table cha length. */
+function isImage(name){ return /\.(png|jpe?g|gif|webp|bmp|heic)$/i.test(name||''); }
+function bucketOf(d){
+  const t = (d.file_type||'').toLowerCase();
+  if(t==='drawing') return 'drawing';
+  if(t==='document') return 'document';
+  if(t==='progress' || t==='photo') return 'progress';
+  return isImage(d.name) ? 'progress' : 'document';
+}
+function timeAgo(dateStr){
+  if(!dateStr) return '—';
+  const d = new Date(dateStr); if(isNaN(d)) return '—';
+  const diffDays = Math.floor((Date.now()-d.getTime())/86400000);
+  if(diffDays<=0) return 'Today';
+  if(diffDays===1) return 'Yesterday';
+  if(diffDays<30) return diffDays+' days ago';
+  return d.toLocaleDateString('en-IN',{day:'numeric',month:'short'});
+}
+
+/* Fix sidebar nav links to carry the current project's ?id= IMMEDIATELY,
+   using the URL's own id param, before any network/auth calls resolve.
+   This closes the race window where a fast click on a sidebar link
+   (e.g. Drawings) could fire before loadOverview()'s async rewrite ran,
+   sending the user to a link without ?id= and landing on the default project. */
+(function fixSidebarLinksNow(){
+  const params = new URLSearchParams(window.location.search);
+  const projectId = params.get('id');
+  if(!projectId) return;
+  document.querySelectorAll('.app-nav-item[href]').forEach(a=>{
+    const href = a.getAttribute('href');
+    if(href && href.endsWith('.html') && href!=='dashboard.html'){
+      a.setAttribute('href', href.split('?')[0] + '?id=' + projectId);
+    }
+  });
+})();
+
+/* Project-level "Status" pill (hybrid approach):
+   1) AUTO: sagle tasks complete zale ki pill "Ready for Handover" dakhavto — proj.status
+      manually "completed" zalyashivay he kadhich khara "Completed" mhanat nahi (misleading nako).
+   2) MANUAL: ekhi jababdar (PM/Director) "Mark as Completed" button click karun proj.status
+      ला DB madhe khara "completed" set karto — te final sign-off.
+   proj.status DB madhe kadhich apoap "completed" set hot nahi — fakt button click var. */
+function renderProjectStatus(proj, allTasks){
+  const pillEl = document.getElementById('projStatusPill');
+  const actionsEl = document.getElementById('projStatusActions');
+  if(!pillEl) return;
+
+  const total = allTasks.length;
+  const completed = allTasks.filter(t=>t.status==='completed').length;
+  const allTasksDone = total>0 && completed===total;
+  const rawStatus = (proj.status||'').toLowerCase();
+  const isManuallyCompleted = rawStatus==='completed' || rawStatus==='closed';
+
+  let label, cls;
+  if(isManuallyCompleted){
+    label = 'Completed'; cls = 'completed';
+  } else if(allTasksDone){
+    label = 'Ready for Handover'; cls = 'ready';
+  } else {
+    label = proj.status || 'In Progress'; cls = 'progress';
+  }
+  pillEl.textContent = label;
+  pillEl.className = 'status-pill ' + cls;
+
+  if(actionsEl){
+    actionsEl.innerHTML = (allTasksDone && !isManuallyCompleted)
+      ? `<button class="btn xs" id="markCompletedBtn">✓ Mark as Completed</button>`
+      : '';
+    const btn = document.getElementById('markCompletedBtn');
+    if(btn) btn.onclick = (e)=>{ e.stopPropagation(); markProjectCompleted(); };
+  }
+}
+
+async function markProjectCompleted(){
+  if(!currentProj) return;
+  const ok = await sipsConfirm(
+    'Mark project as Completed?',
+    '"'+currentProj.name+'" will be marked fully Completed. This is a final sign-off — use it once handover, documentation and client approval are all done.',
+    'Mark Completed'
+  );
+  if(!ok) return;
+  const { error } = await sb.from('projects').update({ status: 'completed' }).eq('id', currentProj.id);
+  if(error){ sipsToast('Status update fail: ' + error.message, 'error'); return; }
+  currentProj.status = 'completed';
+  renderProjectStatus(currentProj, reportData ? reportData.allTasks : []);
+  sipsToast('Project marked as Completed.', null);
+}
+
+async function refreshKpisAndMilestones(proj, allTasks, ncrs, drawings, cos, liveContract, liveUtilized){
+  const completed = allTasks.filter(t=>t.status==='completed').length;
+  const inProgress = allTasks.filter(t=>t.status==='in_progress').length;
+  const total = allTasks.length;
+  const progressPct = total ? Math.round((completed/total)*100) : (proj.progress_pct||0);
+  const openNcrs = (ncrs||[]).filter(n=>n.status!=='closed' && n.status!=='resolved');
+  const criticalNcrs = openNcrs.filter(n=>n.severity==='critical').length;
+
+  // "Drawings" KPI = actual technical drawings only (bucketOf==='drawing'),
+  // site photos/documents hyat count karayche nahit — mislead avoid kar.
+  const drawingsOnly = (drawings||[]).filter(d=>bucketOf(d)==='drawing');
+  const drawPending = drawingsOnly.filter(d=>d.status!=='approved').length;
+
+  document.getElementById('kpiGrid').innerHTML = `
+    <div class="kpi"><div class="l">Overall Progress</div><div class="v">${progressPct}%</div><div class="bar-track"><div class="bar-fill" style="width:${progressPct}%"></div></div></div>
+    <div class="kpi"><div class="l">Tasks Completed</div><div class="v big">${completed}</div><div class="sub">of ${total} total tasks</div></div>
+    <div class="kpi"><div class="l">In Progress</div><div class="v">${inProgress}</div><div class="sub">tasks active</div></div>
+    <div class="kpi"><div class="l">Budget Spent</div><div class="v">₹${Math.round(liveUtilized||0).toLocaleString('en-IN')}</div><div class="sub">${liveContract ? 'of ₹'+Number(liveContract).toLocaleString('en-IN')+' approved' : 'approved budget not set'}</div></div>
+    <div class="kpi"><div class="l">Drawings</div><div class="v">${drawingsOnly.length}</div><div class="sub">${drawPending ? drawPending+' pending approval' : 'all approved'}</div></div>`;
+
+  let milestoneNames = [...new Set(allTasks.map(t=> t.milestone || (t.task||'').split(' — ')[0]).filter(Boolean))].slice(0,6);
+  if(milestoneNames.length===0) milestoneNames = ['Foundation','Structure','Finishing','Handover'];
+
+  // FIX: prati milestone cha status tyachya swataच्या tasks varun kadhto — overall %
+  // varun kadhlela index (activeIdx) vaparat navhta, tyamule shevatcha milestone
+  // kadhich "Completed" dakhavat navhta, sagle tasks 100% zale tari.
+  const milestoneStates = milestoneNames.map(m=>{
+    const mTasks = allTasks.filter(t=> (t.milestone || (t.task||'').split(' — ')[0]) === m);
+    if(!mTasks.length) return 'upcoming';
+    const allDone = mTasks.every(t=> t.status==='completed');
+    const anyStarted = mTasks.some(t=> t.status==='completed' || t.status==='in_progress');
+    if(allDone) return 'done';
+    if(anyStarted) return 'active';
+    return 'upcoming';
+  });
+  // "Currently" strip sathi — pahila milestone jo purna zala nahi, to current.
+  // Sagle done asतील tar shevatcha milestone dakhav.
+  let currentIdx = milestoneStates.findIndex(s=> s!=='done');
+  if(currentIdx===-1) currentIdx = milestoneNames.length-1;
+
+  document.getElementById('milestoneTrack').innerHTML = `
+    <div class="milestones">
+      ${milestoneNames.map((m,i)=>{
+        const state = milestoneStates[i]==='done' ? 'done' : (milestoneStates[i]==='active' ? 'active' : '');
+        const label = milestoneStates[i]==='done' ? 'Completed' : (milestoneStates[i]==='active' ? 'In Progress' : 'Upcoming');
+        const icon = milestoneStates[i]==='done' ? '✓' : (i+1);
+        return `<div class="mstone ${state}"><div class="dot">${icon}</div><b>${m}</b><div class="st">${label}</div></div>`;
+      }).join('')}
+    </div>
+    <div class="current-strip">
+      <div><span style="color:var(--muted)">Currently:</span> <b>${milestoneStates[currentIdx]==='done' ? 'All milestones completed' : (milestoneNames[currentIdx]||'—')}</b></div>
+      <div style="color:var(--muted)">${completed}/${total} tasks completed project-wide</div>
+    </div>`;
+
+  document.getElementById('taskCount').textContent = total;
+}
+
+function renderScheduleList(allTasks){
+  const list = document.getElementById('scheduleList');
+  if(!allTasks.length){ list.innerHTML = '<div class="empty">Ajun konteech task add zale nahi.</div>'; return; }
+
+  const notStarted = allTasks.filter(t=>(t.status||'not_started')==='not_started').length;
+  const inProgress = allTasks.filter(t=>t.status==='in_progress').length;
+  const completed = allTasks.filter(t=>t.status==='completed').length;
+  const total = allTasks.length;
+  const pct = n => total ? Math.round((n/total)*100) : 0;
+  const overallPct = pct(completed);
+
+  const today = new Date().toISOString().slice(0,10);
+  const overdue = allTasks.filter(t=> t.due_date && t.due_date < today && t.status!=='completed').length;
+
+  const viewAllUrl = 'schedule.html' + (currentProj ? ('?id='+currentProj.id) : '');
+
+  const catRow = (iconCls, icon, label, count, colorVar) => `
+    <div class="sch-cat-row${count===0?' zero':''}">
+      <div class="sch-icon ${iconCls}">${icon}</div>
+      <div class="sch-cat-label">${label}<div class="sch-cat-note">${pct(count)}% of total</div></div>
+      <div class="sch-mini-bar"><span style="width:${pct(count)}%;background:${colorVar};"></span></div>
+      <div class="sch-cat-count">${count}</div>
+    </div>`;
+
+  const rows = [
+    catRow('notstarted', '○', 'Not started', notStarted, 'var(--muted)'),
+    catRow('inprogress', '◐', 'In progress', inProgress, '#B45309'),
+    catRow('completed', '✓', 'Completed', completed, 'var(--brand-green)')
+  ].join('');
+
+  const upcoming = allTasks
+    .filter(t=> t.status!=='completed' && t.due_date)
+    .sort((a,b)=> new Date(a.due_date) - new Date(b.due_date))
+    .slice(0,3);
+  const fmtShort = d => { const x=new Date(d); return isNaN(x) ? d : x.toLocaleDateString('en-IN',{day:'numeric',month:'short'}); };
+  const upcomingHtml = upcoming.map(t=>{
+    const isOverdue = t.due_date < today;
+    return `<div class="sch-upcoming-row"><div><b>${(t.task||t.milestone||'Task').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}</b><div class="sub">${t.milestone||''}</div></div><span class="pill ${isOverdue?'open':'pending'}">${fmtShort(t.due_date)}</span></div>`;
+  }).join('');
+
+  list.innerHTML = `
+    <div class="sch-overall">
+      <div class="sch-overall-top"><span style="font-size:11px;color:var(--muted);font-weight:600;">Overall Completion</span><span class="sch-overall-pct">${overallPct}%</span></div>
+      <div class="sch-bar-track"><span style="width:${overallPct}%;background:var(--brand-green);"></span></div>
+      <div class="sch-overall-sub">${completed}/${total} tasks completed</div>
+    </div>
+    ${rows}
+    ${overdue ? `<div class="sch-overdue">${overdue} task${overdue>1?'s':''} overdue</div>` : ''}
+    ${upcoming.length ? `<div class="sch-upcoming-wrap"><div class="sch-upcoming-title">Upcoming</div>${upcomingHtml}</div>` : ''}
+    <div style="text-align:center;margin-top:14px;">
+      <a href="${viewAllUrl}" class="btn dark" style="display:inline-block;">View all tasks →</a>
+    </div>`;
+}
+
+async function loadOverview(){
+  const params = new URLSearchParams(window.location.search);
+  const projectId = params.get('id');
+  let query = sb.from('projects').select('*');
+  query = projectId ? query.eq('id', projectId) : query.eq('name','Sama Sports Complex');
+  const { data: proj } = await query.single();
+  if(!proj){ document.getElementById('projCard').innerHTML = '<div class="empty">Project sapadla nahi.</div>'; return; }
+  currentProj = proj;
+
+  // Sidebar links la current project cha ?id= jodto, nahitar te default (Sama) project ughadtat.
+  document.querySelectorAll('.app-nav-item[href]').forEach(a=>{
+    const href = a.getAttribute('href');
+    if(href && href.endsWith('.html') && href!=='dashboard.html'){
+      a.setAttribute('href', href.split('?')[0] + '?id=' + proj.id);
+    }
+  });
+
+  document.getElementById('crumbName').textContent = proj.name;
+  const bannerUrl = proj.image_url || DEFAULT_PROJECT_IMAGE;
+  document.getElementById('projCard').innerHTML = `
+    <div class="proj-thumb" style="background-image:url('${bannerUrl}')"></div>
+    <div class="proj-card-body">
+      <h2>${proj.name}</h2>
+      <div class="proj-meta">
+        <div><span>Location</span><b>${proj.location||'—'}</b></div>
+        <div><span>Start Date</span><b>${proj.start_date? new Date(proj.start_date).toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'}):'—'}</b></div>
+        <div><span>End Date</span><b>${proj.end_date? new Date(proj.end_date).toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'}):'—'}</b></div>
+        <div><span>Status</span><span style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;"><span class="status-pill" id="projStatusPill">${proj.status||'In Progress'}</span><span id="projStatusActions"></span></span></div>
+        ${proj.description ? `<div><span>Description</span><b>${proj.description}</b></div>` : ''}
+      </div>
+    </div>`;
+
+  const [{data:tasks}, {data:ncrs}, {data:drawings}, {data:cos}, {data:bitems}, {data:ptxs}] = await Promise.all([
+    sb.from('schedule_tasks').select('*').eq('project_id', proj.id),
+    sb.from('ncrs').select('*').eq('project_id', proj.id),
+    sb.from('drawings').select('*').eq('project_id', proj.id),
+    sb.from('change_orders').select('*').eq('project_id', proj.id),
+    sb.from('budget_items').select('id,total_amount,gross_amount,qty,rate,status').eq('project_id', proj.id),
+    sb.from('payment_transactions').select('budget_item_id,amount,final_amount,status').eq('project_id', proj.id)
+  ]);
+
+  const allTasks = tasks||[];
+  renderProjectStatus(proj, allTasks);
+
+  // Budget summary budget_items madhun kadhto (approved = sum total_amount,
+  // spent = live sum of active/non-reversed payment_transactions per item — same
+  // calculation budget.html uses, so this stays in sync with every Advance/Full
+  // payment, GST correction, edit, or reversal made there). Items nasel tar projects table var fallback.
+  const items = bitems || [];
+  const txs = ptxs || [];
+  const paidByItem = {};
+  txs.forEach(t=>{
+    if(t.status==='reversed') return;
+    const amt = Number(t.final_amount!=null ? t.final_amount : (t.amount||0));
+    paidByItem[t.budget_item_id] = (paidByItem[t.budget_item_id]||0) + amt;
+  });
+  const amt = i => (i.total_amount!=null && i.total_amount!=='') ? Number(i.total_amount)
+                 : (i.gross_amount!=null && i.gross_amount!=='') ? Number(i.gross_amount)
+                 : (Number(i.qty)||0)*(Number(i.rate)||0);
+  const contract = items.length ? items.reduce((s,i)=>s+amt(i),0) : (proj.contract_value || 0);
+  const utilized = items.length ? items.reduce((s,i)=>s+(paidByItem[i.id]||0),0)
+                                : (proj.budget_spent || proj.budget_utilized || 0);
+  const committed = items.length ? 0 : (proj.budget_committed || 0);
+  const remaining = Math.max(contract - utilized - committed, 0);
+  const utilPct = contract ? Math.round((utilized/contract)*100) : 0;
+  const commPct = contract ? Math.round((committed/contract)*100) : 0;
+  const remPct = Math.max(100-utilPct-commPct,0);
+
+  await refreshKpisAndMilestones(proj, allTasks, ncrs, drawings, cos, contract, utilized);
+  if(contract){
+    document.getElementById('budgetSummary').innerHTML = `
+    <div class="donut-row">
+      <div class="donut" style="background:conic-gradient(var(--brand-green) 0% ${utilPct}%, var(--status-info) ${utilPct}% ${utilPct+commPct}%, var(--line) ${utilPct+commPct}% 100%);">
+        <div class="donut-hole"><div class="n">₹${Math.round(contract).toLocaleString('en-IN')}</div><div class="l">Total Budget</div></div>
+      </div>
+      <div class="donut-legend">
+        <div class="dl-row"><span class="dl-dot" style="background:var(--brand-green)"></span>Utilized<b>${utilPct}%</b></div>
+        <div class="dl-row"><span class="dl-dot" style="background:var(--status-info)"></span>Committed<b>${commPct}%</b></div>
+        <div class="dl-row"><span class="dl-dot" style="background:var(--line)"></span>Remaining<b>${remPct}%</b></div>
+      </div>
+    </div>`;
+  } else if(utilized){
+    document.getElementById('budgetSummary').innerHTML = `
+    <div style="text-align:center;padding:10px 0;">
+      <div style="font-family:var(--font-mono);font-size:26px;font-weight:600;">₹${Math.round(utilized).toLocaleString('en-IN')}</div>
+      <div style="font-size:11px;color:var(--muted);margin-top:4px;">Spent so far (approved budget ajun set nahi, tyamule % utilization nahi dakhavat)</div>
+    </div>`;
+  } else {
+    document.getElementById('budgetSummary').innerHTML = `<div class="empty">Budget data ajun set nahi.</div>`;
+  }
+
+  renderScheduleList(allTasks);
+  renderDrawingsMediaSummary(drawings||[]);
+
+  document.getElementById('drawCount').textContent = (drawings||[]).filter(d=>bucketOf(d)==='drawing').length;
+
+  // Report generation sathi sagla data ekatr save karto — navin query lagat nahi,
+  // vaparlela loadOverview() data reuse hoto.
+  reportData = {
+    proj, allTasks, ncrs: ncrs||[], cos: cos||[],
+    drawings: (drawings||[]).filter(d=>bucketOf(d)==='drawing'),
+    photos: (drawings||[]).filter(d=>bucketOf(d)==='progress'),
+    docs: (drawings||[]).filter(d=>bucketOf(d)==='document'),
+    contract, utilized, committed, remaining, utilPct, commPct, remPct
+  };
+}
+
+/* "Drawings & Media" card = 3-category summary (Drawings / Site Photos / Documents),
+   na ki raw filenames cha list. Har category cha count + pending/last-update line,
+   khali "Recent" madhe fakt discipline+type label dakhavto — filename kadhich nahi. */
+function renderDrawingsMediaSummary(all){
+  const drawingsOnly = all.filter(d=>bucketOf(d)==='drawing');
+  const photosOnly   = all.filter(d=>bucketOf(d)==='progress');
+  const docsOnly     = all.filter(d=>bucketOf(d)==='document');
+
+  if(!all.length){
+    document.getElementById('drawingList').innerHTML = '<div class="empty">Ajun konteech drawing, site photo, ki document upload zale nahi.</div>';
+    return;
+  }
+
+  const drawPending = drawingsOnly.filter(d=>d.status!=='approved').length;
+  const lastPhoto = photosOnly.slice().sort((a,b)=> new Date(b.site_date||b.created_at) - new Date(a.site_date||a.created_at))[0];
+
+  const catRow = (iconCls, icon, label, count, note, isWarn) => `
+    <div class="dm-cat-row${count===0?' zero':''}">
+      <div class="dm-icon ${iconCls}">${icon}</div>
+      <div class="dm-cat-label">${label}${note ? `<div class="dm-cat-note${isWarn?' warn':''}">${note}</div>` : ''}</div>
+      <div class="dm-cat-count">${count}</div>
+    </div>`;
+
+  const rows = [
+    catRow('draw', '📐', 'Drawings', drawingsOnly.length, drawPending ? `${drawPending} pending approval` : (drawingsOnly.length ? 'all approved' : ''), !!drawPending),
+    catRow('photo', '📷', 'Site Photos', photosOnly.length, photosOnly.length ? 'last upload: '+timeAgo(lastPhoto && (lastPhoto.site_date||lastPhoto.created_at)) : '', false),
+    catRow('doc', '📄', 'Documents', docsOnly.length, '', false)
+  ].join('');
+
+  // Recent uploads — sagle types ekत्र, sarvat navin 4, filename ऐवजी "Discipline · Type" label.
+  const typeLabel = d => bucketOf(d)==='drawing' ? 'Drawing' : (bucketOf(d)==='progress' ? 'Site Photo' : 'Document');
+  const recent = all.slice().sort((a,b)=> new Date(b.created_at) - new Date(a.created_at)).slice(0,4);
+  const recentHtml = recent.map(d=>{
+    const label = `${esc(d.discipline||'General')} · ${typeLabel(d)}`;
+    const pill = bucketOf(d)==='drawing'
+      ? `<span class="pill ${d.status==='approved'?'approved':'pending'}">${d.status||'pending'}</span>`
+      : '';
+    return `<div class="dm-recent-row"><div><b>${label}</b><div class="sub">${fmtDateShort(d.site_date||d.created_at)}</div></div>${pill}</div>`;
+  }).join('');
+
+  document.getElementById('drawingList').innerHTML = `
+    ${rows}
+    ${recent.length ? `<div class="dm-recent-wrap"><div class="dm-recent-title">Recent uploads</div>${recentHtml}</div>` : ''}`;
+}
+function esc(s){ return String(s||'').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function fmtDateShort(d){ if(!d) return '—'; const x=new Date(d); if(isNaN(x)) return '—'; return x.toLocaleDateString('en-IN',{day:'numeric',month:'short'}); }
+
+document.getElementById('openImportSchedule').addEventListener('click', ()=> document.getElementById('scheduleFileInput').click());
+document.getElementById('openImportBudget').addEventListener('click', ()=> document.getElementById('budgetFileInput').click());
+document.getElementById('btnClientActions').addEventListener('click', ()=> sipsToast('View progress ajun wire nahi kela. Add karायला sanga.', null));
+document.getElementById('btnExportReports').addEventListener('click', generateReport);
+
+/* ---------- PDF Report (enterprise 9-page layout) ---------- */
+// Sagla data reportData (loadOverview() ne populate kelela) vaparto, navin query nahi.
+// jsPDF + jspdf-autotable CDN madhun load hote (<head> madhe add kelele). No new dependencies.
+function generateReport(){
+  const btn = document.getElementById('btnExportReports');
+  if(!reportData || !reportData.proj){ sipsToast('Project data ajun load zala nahi. Page reload kar, mag Reports try kar.', 'error'); return; }
+  if(typeof window.jspdf === 'undefined'){ sipsToast('PDF library load nahi zali (internet/CDN block). Page reload karun parat try kar.', null); return; }
+
+  btn.disabled = true;
+  const prevLabel = btn.textContent;
+  btn.textContent = 'Generating…';
+
+  try{
+    const { proj, allTasks, ncrs, cos, drawings, photos, docs, contract, utilized, committed, remaining, utilPct, commPct, remPct } = reportData;
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ unit:'pt', format:'a4' });
+    const pageW = doc.internal.pageSize.getWidth();
+    const pageH = doc.internal.pageSize.getHeight();
+    const margin = 42;
+    const ink = [20,35,26], muted = [138,133,119], line = [228,222,205], paper = [247,244,236];
+    const orange = [242,96,12], green = [47,143,91], blue = [46,108,166], red = [211,64,44], neutral = [200,196,180];
+    const rs = n => 'Rs. ' + Math.round(n||0).toLocaleString('en-IN');
+    const fmtD = d => d ? new Date(d).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}) : '—';
+    const today = new Date().toISOString().slice(0,10);
+    const chunk2 = arr => { const o=[]; for(let i=0;i<arr.length;i+=2) o.push([arr[i], arr[i+1]||['','']]); return o; };
+
+    // ---- derived data (single source, reused across sections) ----
+    const total = allTasks.length;
+    const completed = allTasks.filter(t=>t.status==='completed').length;
+    const inProgress = allTasks.filter(t=>t.status==='in_progress').length;
+    const notStarted = Math.max(total-completed-inProgress,0);
+    const overallPct = total ? Math.round((completed/total)*100) : 0;
+    const overdueTasks = allTasks.filter(t=> (t.due_date||t.planned_end) && (t.due_date||t.planned_end) < today && t.status!=='completed');
+    const upcomingTasks = allTasks.filter(t=> t.status!=='completed' && (t.due_date||t.planned_end) >= today)
+      .sort((a,b)=> (a.due_date||a.planned_end||'').localeCompare(b.due_date||b.planned_end||'')).slice(0,8);
+    const drawPending = drawings.filter(d=>d.status!=='approved').length;
+    const ncrOpen = ncrs.filter(n=> n.status!=='closed' && n.status!=='resolved').length;
+    const ncrClosed = ncrs.length - ncrOpen;
+    const ncrCritical = ncrs.filter(n=> n.severity==='critical' && n.status!=='closed' && n.status!=='resolved').length;
+    const coOpen = cos.filter(c=>c.status!=='approved').length;
+
+    const milestoneMap = {};
+    allTasks.forEach(t=>{ const m=t.milestone||'Unassigned'; (milestoneMap[m]=milestoneMap[m]||[]).push(t); });
+    const milestones = Object.entries(milestoneMap).map(([name,tasks])=>{
+      const done = tasks.filter(t=>t.status==='completed').length;
+      const pct = tasks.length ? Math.round(done/tasks.length*100) : 0;
+      const starts = tasks.map(t=>t.baseline_start).filter(Boolean).sort();
+      const ends = tasks.map(t=>t.planned_end||t.due_date).filter(Boolean).sort();
+      return { name, total:tasks.length, done, pct, start:starts[0]||null, end:ends[ends.length-1]||null,
+        status: pct===100?'Completed':(pct>0?'In Progress':'Not Started') };
+    });
+    const riskLevel = (ncrCritical>0 || overdueTasks.length>5) ? 'HIGH' : ((ncrOpen>0||overdueTasks.length>0) ? 'MEDIUM' : 'LOW');
+    const riskColor = riskLevel==='HIGH'?red:(riskLevel==='MEDIUM'?orange:green);
+
+    let pageNo = 1;
+    function newPage(){ doc.addPage(); pageNo++; }
+    function sectionHeader(title, sub){
+      doc.setFillColor(...ink); doc.rect(0,0,pageW,54,'F');
+      doc.setFillColor(...orange); doc.rect(0,54,pageW,3,'F');
+      doc.setTextColor(255,255,255); doc.setFont('helvetica','bold'); doc.setFontSize(14);
+      doc.text(title, margin, 28);
+      doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(215,215,205);
+      doc.text(String(sub||proj.name||''), margin, 42);
+      doc.setFont('helvetica','bold'); doc.setFontSize(8); doc.setTextColor(255,255,255);
+      doc.text('KINDERSPORTS', pageW-margin, 28, {align:'right'});
+      return 82;
+    }
+    function kpiCard(x,y,w,h,label,value,color,note){
+      doc.setFillColor(...paper); doc.setDrawColor(...line); doc.setLineWidth(0.6); doc.roundedRect(x,y,w,h,4,4,'FD');
+      doc.setFillColor(...(color||orange)); doc.roundedRect(x,y,3,h,1,1,'F');
+      doc.setFont('helvetica','bold'); doc.setFontSize(7.6); doc.setTextColor(...muted);
+      doc.text(label.toUpperCase(), x+11, y+15, {maxWidth:w-18});
+      doc.setFont('helvetica','bold'); doc.setFontSize(16.5); doc.setTextColor(...(color||ink));
+      doc.text(String(value), x+11, y+h-15);
+      if(note){ doc.setFont('helvetica','normal'); doc.setFontSize(7); doc.setTextColor(...muted); doc.text(String(note), x+11, y+h-5, {maxWidth:w-18}); }
+    }
+    function barChart(x,y,w,h,segs){
+      const totalV = segs.reduce((s,v)=>s+(v.value||0),0)||1;
+      doc.setDrawColor(...line); doc.setLineWidth(0.6); doc.roundedRect(x,y,w,h,3,3,'S');
+      let cx=x;
+      segs.forEach(s=>{ const sw=(s.value/totalV)*w; if(sw>0.3){ doc.setFillColor(...s.color); doc.rect(cx,y,sw,h,'F'); } cx+=sw; });
+    }
+    function legendRow(x,y,items){
+      let cx=x;
+      items.forEach(it=>{
+        doc.setFillColor(...it.color); doc.circle(cx+3,y-3,3,'F');
+        doc.setFont('helvetica','normal'); doc.setFontSize(8.5); doc.setTextColor(...ink);
+        const txt = `${it.label}: ${it.value}`;
+        doc.text(txt, cx+11, y);
+        cx += doc.getTextWidth(txt) + 30;
+      });
+      return y+16;
+    }
+    function tableSection(title, head, body, headColor, startY){
+      if(startY > pageH-140){ newPage(); startY = sectionHeader(title.toUpperCase()+' (contd.)',''); }
+      doc.setFont('helvetica','bold'); doc.setFontSize(11); doc.setTextColor(...ink);
+      doc.text(title, margin, startY);
+      doc.autoTable({
+        startY: startY+8, theme:'striped', margin:{left:margin,right:margin},
+        styles:{fontSize:8.8,cellPadding:6,lineColor:line,lineWidth:0.5,textColor:[50,50,50]},
+        alternateRowStyles:{fillColor:paper}, headStyles:{fillColor:headColor,textColor:255,fontStyle:'bold',fontSize:8.8},
+        columnStyles:{0:{fontStyle:'bold',textColor:ink}}, head:[head], body
+      });
+      return doc.lastAutoTable.finalY + 26;
+    }
+
+    // ================= PAGE 1 — COVER =================
+    doc.setFillColor(...ink); doc.rect(0,0,pageW,pageH,'F');
+    try{ doc.addImage(KINDERSPORTS_LOGO_B64,'PNG',pageW/2-32,66,64,64); }catch(e){}
+    doc.setTextColor(255,255,255); doc.setFont('helvetica','bold'); doc.setFontSize(11);
+    doc.text('KINDERSPORTS LLP', pageW/2, 158, {align:'center'});
+    doc.setFont('helvetica','normal'); doc.setFontSize(8.5); doc.setTextColor(190,190,180);
+    doc.text('PROJECT MANAGEMENT SYSTEM', pageW/2, 172, {align:'center'});
+
+    doc.setDrawColor(...orange); doc.setLineWidth(1.2);
+    doc.line(pageW/2-70, 200, pageW/2+70, 200);
+    doc.setFont('helvetica','bold'); doc.setFontSize(27); doc.setTextColor(255,255,255);
+    doc.text('PROJECT STATUS REPORT', pageW/2, 250, {align:'center'});
+    doc.setDrawColor(...orange); doc.line(pageW/2-70, 262, pageW/2+70, 262);
+
+    doc.setFont('helvetica','bold'); doc.setFontSize(17); doc.setTextColor(255,255,255);
+    doc.text(String(proj.name||'—'), pageW/2, 320, {align:'center', maxWidth: pageW-140});
+    doc.setFont('helvetica','normal'); doc.setFontSize(10.5); doc.setTextColor(205,205,195);
+    doc.text(proj.location||'—', pageW/2, 340, {align:'center'});
+
+    const boxY = 400, boxW = 320;
+    doc.setDrawColor(70,80,70); doc.setLineWidth(0.6);
+    doc.line(pageW/2-boxW/2, boxY, pageW/2+boxW/2, boxY);
+    let cy = boxY+26;
+    [
+      ['Reporting Period', (proj.start_date?fmtD(proj.start_date):'—') + '  —  ' + (proj.end_date?fmtD(proj.end_date):'—')],
+      ['Report Generated', fmtD(new Date())],
+      ['Prepared By', 'Project Management Team'],
+      ['Reviewed By', 'Director']
+    ].forEach(([k,v])=>{
+      doc.setFont('helvetica','bold'); doc.setFontSize(8.5); doc.setTextColor(150,155,145);
+      doc.text(k.toUpperCase(), pageW/2-boxW/2, cy);
+      doc.setFont('helvetica','normal'); doc.setFontSize(10); doc.setTextColor(255,255,255);
+      doc.text(String(v), pageW/2+boxW/2, cy, {align:'right'});
+      cy += 24;
+    });
+    doc.line(pageW/2-boxW/2, cy, pageW/2+boxW/2, cy);
+
+    doc.setFillColor(...orange); doc.rect(0,pageH-46,pageW,46,'F');
+    doc.setFont('helvetica','bold'); doc.setFontSize(9); doc.setTextColor(255,255,255);
+    doc.text('C O N F I D E N T I A L', pageW/2, pageH-23, {align:'center'});
+
+    // ================= PAGE 2 — EXECUTIVE DASHBOARD =================
+    newPage();
+    let y = sectionHeader('EXECUTIVE DASHBOARD', 'Overall project health at a glance');
+    const cw = (pageW-2*margin-24)/4, ch = 60;
+    kpiCard(margin, y, cw, ch, 'Overall Progress', overallPct+'%', green);
+    kpiCard(margin+(cw+8), y, cw, ch, 'Total Tasks', total, blue, completed+' completed');
+    kpiCard(margin+2*(cw+8), y, cw, ch, 'Overdue Tasks', overdueTasks.length, overdueTasks.length?red:green);
+    kpiCard(margin+3*(cw+8), y, cw, ch, 'Open NCRs', ncrOpen, ncrOpen?red:green, ncrCritical?ncrCritical+' critical':'clear');
+    y += ch+14;
+    kpiCard(margin, y, cw, ch, 'Budget Utilized', contract? utilPct+'%':'—', orange, rs(utilized));
+    kpiCard(margin+(cw+8), y, cw, ch, 'Budget Remaining', contract? rs(remaining):'—', green);
+    kpiCard(margin+2*(cw+8), y, cw, ch, 'Drawings', drawings.length, blue, drawPending?drawPending+' pending':'all approved');
+    kpiCard(margin+3*(cw+8), y, cw, ch, 'Change Orders', cos.length, coOpen?orange:green, coOpen+' pending');
+    y += ch+30;
+
+    doc.setFont('helvetica','bold'); doc.setFontSize(11); doc.setTextColor(...ink);
+    doc.text('Task Status Breakdown', margin, y); y+=12;
+    barChart(margin, y, pageW-2*margin, 18, [{value:completed,color:green},{value:inProgress,color:orange},{value:notStarted,color:neutral}]);
+    y+=30;
+    y = legendRow(margin, y, [{label:'Completed',value:completed,color:green},{label:'In Progress',value:inProgress,color:orange},{label:'Not Started',value:notStarted,color:neutral}]);
+    y+=12;
+    if(contract){
+      doc.setFont('helvetica','bold'); doc.setFontSize(11); doc.setTextColor(...ink);
+      doc.text('Budget Utilization', margin, y); y+=12;
+      barChart(margin, y, pageW-2*margin, 18, [{value:utilized,color:orange},{value:committed,color:blue},{value:Math.max(remaining,0),color:green}]);
+      y+=30;
+      legendRow(margin, y, [{label:'Utilized ('+utilPct+'%)',value:rs(utilized),color:orange},{label:'Committed ('+commPct+'%)',value:rs(committed),color:blue},{label:'Remaining ('+remPct+'%)',value:rs(remaining),color:green}]);
+    }
+
+    // ================= PAGE 3 — PROJECT INFORMATION =================
+    newPage();
+    y = sectionHeader('PROJECT INFORMATION', proj.name);
+    const infoPairs = [
+      ['Project Name', proj.name||'—'], ['Location', proj.location||'—'],
+      ['Status', proj.status||'In Progress'], ['Overall Progress', overallPct+'%'],
+      ['Start Date', fmtD(proj.start_date)], ['End Date', fmtD(proj.end_date)],
+      ['Duration', (proj.start_date&&proj.end_date) ? Math.round((new Date(proj.end_date)-new Date(proj.start_date))/86400000)+' days' : '—'],
+      ['Total Tasks', String(total)]
+    ];
+    doc.autoTable({
+      startY: y, theme:'plain', margin:{left:margin,right:margin},
+      styles:{fontSize:9.5,cellPadding:8},
+      columnStyles:{0:{fontStyle:'bold',textColor:muted,cellWidth:110},1:{textColor:ink,fontStyle:'bold',cellWidth:(pageW-2*margin)/2-110},2:{fontStyle:'bold',textColor:muted,cellWidth:110},3:{textColor:ink,fontStyle:'bold'}},
+      body: chunk2(infoPairs).map(pair=> [pair[0][0], pair[0][1], pair[1][0], pair[1][1]])
+    });
+    y = doc.lastAutoTable.finalY + 24;
+    if(proj.description){
+      doc.setFont('helvetica','bold'); doc.setFontSize(10.5); doc.setTextColor(...ink);
+      doc.text('Description', margin, y); y+=14;
+      doc.setFont('helvetica','normal'); doc.setFontSize(9.5); doc.setTextColor(70,70,70);
+      doc.text(doc.splitTextToSize(proj.description, pageW-2*margin), margin, y);
+    }
+
+    // ================= PAGE 4 — MILESTONE & PROGRESS =================
+    newPage();
+    y = sectionHeader('MILESTONE & PROGRESS', 'Milestone-wise planned dates and completion status');
+    tableSection('Milestones', ['Milestone','Planned Start','Planned End','Tasks Done','Progress','Status'],
+      milestones.length? milestones.map(m=>[m.name, fmtD(m.start), fmtD(m.end), m.done+'/'+m.total, m.pct+'%', m.status]) : [['No milestones defined','—','—','—','—','—']],
+      blue, y);
+
+    // ================= PAGE 5 — SCHEDULE PERFORMANCE =================
+    newPage();
+    y = sectionHeader('SCHEDULE PERFORMANCE', 'Task status, overdue and upcoming work');
+    y = tableSection('Task Status Summary', ['Status','Count','% of Total'],
+      [['Not Started', notStarted, total?Math.round(notStarted/total*100)+'%':'0%'],
+       ['In Progress', inProgress, total?Math.round(inProgress/total*100)+'%':'0%'],
+       ['Completed', completed, total?Math.round(completed/total*100)+'%':'0%']],
+      blue, y);
+    y = tableSection('Overdue Tasks ('+overdueTasks.length+')', ['Task','Milestone','Due Date','Status'],
+      overdueTasks.length? overdueTasks.slice(0,15).map(t=>[t.task,t.milestone||'—',fmtD(t.due_date||t.planned_end),t.status]) : [['No overdue tasks','—','—','—']],
+      red, y);
+    tableSection('Upcoming Tasks', ['Task','Milestone','Due Date'],
+      upcomingTasks.length? upcomingTasks.map(t=>[t.task,t.milestone||'—',fmtD(t.due_date||t.planned_end)]) : [['No upcoming tasks','—','—']],
+      green, y);
+
+    // ================= PAGE 6 — FINANCIAL / BUDGET SUMMARY =================
+    newPage();
+    y = sectionHeader('FINANCIAL / BUDGET SUMMARY', 'Contract value, utilization and remaining budget');
+    y = tableSection('Budget Overview', ['Item','Amount','% of Contract'],
+      [['Total Contract Value', contract?rs(contract):'—','100%'],
+       ['Utilized', rs(utilized), contract?utilPct+'%':'—'],
+       ['Committed', rs(committed), contract?commPct+'%':'—'],
+       ['Remaining', contract?rs(remaining):'—', contract?remPct+'%':'—']],
+      green, y);
+    doc.setFont('helvetica','bold'); doc.setFontSize(11); doc.setTextColor(...ink);
+    doc.text('Utilization Breakdown', margin, y); y+=12;
+    barChart(margin, y, pageW-2*margin, 20, [{value:utilized,color:orange},{value:committed,color:blue},{value:Math.max(remaining,0),color:green}]);
+    y+=34;
+    legendRow(margin, y, [{label:'Utilized',value:rs(utilized),color:orange},{label:'Committed',value:rs(committed),color:blue},{label:'Remaining',value:contract?rs(remaining):'—',color:green}]);
+
+    // ================= PAGE 7 — DRAWINGS & DOCUMENTATION =================
+    newPage();
+    y = sectionHeader('DRAWINGS & DOCUMENTATION', 'Drawing approvals, site photos and documents');
+    y = tableSection('Summary', ['Category','Count','Note'],
+      [['Drawings', drawings.length, drawPending?drawPending+' pending approval':(drawings.length?'all approved':'—')],
+       ['Site Photos', photos.length, '—'],
+       ['Documents', docs.length, '—']],
+      orange, y);
+    const pendingDrawings = drawings.filter(d=>d.status!=='approved');
+    tableSection('Pending Drawing Approvals ('+pendingDrawings.length+')', ['Discipline','Status','Uploaded'],
+      pendingDrawings.length? pendingDrawings.slice(0,15).map(d=>[d.discipline||'General', d.status||'pending', fmtD(d.site_date||d.created_at)]) : [['No pending drawings','—','—']],
+      red, y);
+
+    // ================= PAGE 8 — QUALITY & RISK SUMMARY =================
+    newPage();
+    y = sectionHeader('QUALITY & RISK SUMMARY', 'NCRs, quality issues and change order risk');
+    y = tableSection('NCR / Quality Summary', ['Metric','Count'],
+      [['Total NCRs', ncrs.length],['Open', ncrOpen],['Closed', ncrClosed],['Critical (Open)', ncrCritical]], red, y);
+    y = tableSection('Change Orders', ['Metric','Count'],
+      [['Total Change Orders', cos.length],['Pending Approval', coOpen],['Approved', Math.max(cos.length-coOpen,0)]], blue, y);
+    if(y > pageH-90){ newPage(); y = sectionHeader('QUALITY & RISK SUMMARY (contd.)',''); }
+    doc.setFillColor(...riskColor); doc.roundedRect(margin, y, 170, 26, 4, 4, 'F');
+    doc.setTextColor(255,255,255); doc.setFont('helvetica','bold'); doc.setFontSize(10);
+    doc.text('OVERALL RISK LEVEL: '+riskLevel, margin+85, y+17, {align:'center'});
+
+    // ================= PAGE 9 — MANAGEMENT SUMMARY =================
+    newPage();
+    y = sectionHeader('MANAGEMENT SUMMARY', 'Key achievements, concerns and priorities');
+    function bulletBlock(title, items, color){
+      if(y > pageH-100){ newPage(); y = sectionHeader('MANAGEMENT SUMMARY (contd.)',''); }
+      doc.setFont('helvetica','bold'); doc.setFontSize(11); doc.setTextColor(...ink);
+      doc.text(title, margin, y); y+=16;
+      doc.setFont('helvetica','normal'); doc.setFontSize(9.5); doc.setTextColor(50,50,50);
+      items.forEach(it=>{
+        doc.setFillColor(...color); doc.circle(margin+4,y-3,2.2,'F');
+        const lines = doc.splitTextToSize(it, pageW-2*margin-16);
+        doc.text(lines, margin+14, y);
+        y += lines.length*12 + 6;
+      });
+      y += 10;
+    }
+    const achievements = milestones.filter(m=>m.status==='Completed').map(m=>'"'+m.name+'" milestone completed');
+    if(!achievements.length && completed>0) achievements.push(completed+' of '+total+' scheduled tasks completed to date');
+    if(!achievements.length) achievements.push('Project execution underway — no milestones completed yet');
+    const concerns = [];
+    if(overdueTasks.length) concerns.push(overdueTasks.length+' task(s) overdue, requiring immediate attention');
+    if(ncrCritical) concerns.push(ncrCritical+' critical NCR(s) currently open');
+    if(contract && utilPct>90) concerns.push('Budget utilization at '+utilPct+'% of approved contract value');
+    if(drawPending) concerns.push(drawPending+' drawing(s) pending approval');
+    if(!concerns.length) concerns.push('No major concerns at this time');
+    const priorities = upcomingTasks.slice(0,5).map(t=> t.task+(t.milestone?' ('+t.milestone+')':''));
+    if(!priorities.length) priorities.push('No upcoming scheduled tasks');
+    const attention = [];
+    if(riskLevel==='HIGH') attention.push('Project risk level is HIGH — Director review recommended');
+    if(overdueTasks.length>3) attention.push('Multiple overdue tasks may impact overall completion timeline');
+    if(coOpen) attention.push(coOpen+' change order(s) pending approval');
+    if(!attention.length) attention.push('No critical items currently flagged for management attention');
+
+    bulletBlock('Key Achievements', achievements, green);
+    bulletBlock('Current Concerns', concerns, orange);
+    bulletBlock('Upcoming Priorities', priorities, blue);
+    bulletBlock('Management Attention Required', attention, red);
+
+    // ---- Header underline + footer on every page except the cover ----
+    const pageCount = doc.internal.getNumberOfPages();
+    for(let p=2; p<=pageCount; p++){
+      doc.setPage(p);
+      doc.setDrawColor(...line); doc.setLineWidth(0.75);
+      doc.line(margin, pageH-34, pageW-margin, pageH-34);
+      doc.setFont('helvetica','normal'); doc.setFontSize(7.5); doc.setTextColor(...muted);
+      doc.text('KinderSports LLP | Project Management System | Confidential', margin, pageH-20);
+      doc.text('Page '+p+' of '+pageCount, pageW-margin, pageH-20, {align:'right'});
+    }
+
+    const safeName = (proj.name||'Project').replace(/[^a-zA-Z0-9 _-]/g,'').trim().replace(/\s+/g,'-');
+    doc.save(`${safeName}-Report-${new Date().toISOString().slice(0,10)}.pdf`);
+  } catch(err){
+    console.error(err);
+    sipsToast('Report generate karताना error ala: ' + (err.message || err), 'error');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = prevLabel;
+  }
+}
+
+document.getElementById('scheduleFileInput').addEventListener('change', async (e)=>{
+  const file = e.target.files[0];
+  if(!file) return;
+  if(typeof XLSX === 'undefined'){ sipsToast('XLSX library load nahi zali. Page reload kar.', null); e.target.value=''; return; }
+  if(typeof sb === 'undefined' || !sb){ sipsToast('Database (sb) taiyar nahi — auth-guard.js load nahi zala.', 'success'); e.target.value=''; return; }
+  if(!currentProj){ sipsToast('Project ajun load nahi zala. Page reload kar, mag import kar.', 'success'); e.target.value=''; return; }
+  try{
+    const buf = await file.arrayBuffer();
+    const wb = XLSX.read(buf, { type:'array' });
+    const raw = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header:1, defval:'', raw:false });
+    const norm = s => String(s||'').toLowerCase().replace(/[^a-z]/g,'');
+
+    // Header row = "No | Milestone | Task | Task | Task ..." (milestone x date grid).
+    const hIdx = raw.findIndex(r => { const c=r.map(norm); return c.includes('milestone') && c.filter(x=>x==='task').length>=3; });
+    if(hIdx === -1){ sipsToast('Schedule sheet cha format olakhta ala nahi. Header row madhe "Milestone" ani multiple "Task" columns pahije.', 'error'); e.target.value=''; return; }
+
+    const isDate = v => /^\d{1,2}\/\d{1,2}\/\d{2,4}$/.test(String(v||'').trim()) || /^\d{4}-\d\d-\d\d/.test(String(v||'').trim());
+    // Header chya varchya row madhun sarvat jast date-cells asleli row = date axis.
+    let dateRowIdx=-1, best=0;
+    for(let i=0;i<hIdx;i++){ const cnt=raw[i].filter(isDate).length; if(cnt>best){best=cnt;dateRowIdx=i;} }
+    const dates = dateRowIdx>=0 ? raw[dateRowIdx] : [];
+    const toISO = s => { s=String(s||'').trim(); let m=s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})$/); if(m){ let[,d,mo,y]=m; if(y.length===2)y='20'+y; return y+'-'+String(mo).padStart(2,'0')+'-'+String(d).padStart(2,'0'); } m=s.match(/^(\d{4}-\d\d-\d\d)/); return m?m[1]:null; };
+
+    const header = raw[hIdx].map(norm);
+    const cMile = header.indexOf('milestone');
+    const firstTaskCol = header.indexOf('task');
+    const skip = v => { const t=String(v||'').trim().toLowerCase(); return !t || t.startsWith('no work'); };
+    const today = new Date().toISOString().slice(0,10);
+
+    // Pratyek task cha SARVA date-column occurrences goळa kar (milestone+task key ne group kar),
+    // mag first valid date = baseline_start, last valid date = due_date/planned_end.
+    // Ek task chya multiple date-columns var ✓ asel tar ek ch row banel, multiple nahi.
+    // Milestone sequence: raw[] la top->bottom scan kartana curMile Excel madhlya order ne badalto,
+    // ani JS Map keys nehmi insertion-order madhech iterate hotात, mhanun groups/rows chi order
+    // Excel madhlya milestone/task cha first-seen order ne exact preserve hote (no sort anywhere).
+    const groups = new Map(); // key -> { milestone, task, dates: [] }
+    const milestoneOrder = new Map(); // milestone name -> 1-based first-seen position in Excel
+    let curMile='';
+    for(let i=hIdx+1;i<raw.length;i++){
+      const r=raw[i]; const m=String(r[cMile]||'').trim(); if(m)curMile=m; if(!curMile) continue;
+      if(!milestoneOrder.has(curMile)) milestoneOrder.set(curMile, milestoneOrder.size+1);
+      for(let c=firstTaskCol;c<r.length;c++){
+        const v=String(r[c]||'').trim(); if(skip(v)) continue;
+        const key=curMile+'||'+v.toLowerCase();
+        const due=toISO(dates[c]);
+        if(!due) continue;
+        if(!groups.has(key)) groups.set(key, { milestone: curMile, task: v, dates: [] });
+        groups.get(key).dates.push(due);
+      }
+    }
+    const rows = [];
+    for(const { milestone, task, dates: ds } of groups.values()){
+      if(!ds.length) continue;
+      ds.sort();
+      const start = ds[0];
+      const end = ds[ds.length-1];
+      rows.push({
+        project_id: currentProj.id,
+        milestone: milestone,
+        milestone_order: milestoneOrder.get(milestone) || null,
+        task: task,
+        baseline_start: start,
+        due_date: end,
+        planned_end: end,
+        status: 'not_started'
+      });
+    }
+
+    if(!rows.length){ sipsToast('Ekhi valid task sapadla nahi.', 'error'); e.target.value=''; return; }
+
+    const byM={}; rows.forEach(r=> byM[r.milestone]=(byM[r.milestone]||0)+1);
+    const summary = Object.entries(byM).map(([m,n])=> '• '+m+': '+n).join('\n');
+    if(!(await sipsConfirm(rows.length+' tasks found', summary.replace(/\n/g,', ')+'. This will replace '+currentProj.name+'\'s existing schedule tasks.', 'Replace schedule'))){ e.target.value=''; return; }
+
+    // There can be a reference in EITHER direction between schedule_tasks and
+    // schedule_change_requests, depending on how the schema was set up:
+    //   (a) schedule_tasks.pending_request_id -> schedule_change_requests.id
+    //       (constraint "schedule_tasks_pending_request_id_fkey")
+    //   (b) schedule_change_requests.task_id -> schedule_tasks.id
+    // Clear both before deleting, so whichever direction actually exists in this
+    // database doesn't block the delete. If a column/constraint from one direction
+    // doesn't exist here, Postgres returns error code 42703 ("column does not
+    // exist") — safe to ignore, it just means that direction isn't in use.
+    const oldTasks = await sb.from('schedule_tasks').select('id').eq('project_id', currentProj.id);
+    if(oldTasks.error) throw oldTasks.error;
+    const oldIds = (oldTasks.data||[]).map(r=>r.id);
+
+    const clearRefs = await sb.from('schedule_tasks')
+      .update({ pending_request_id: null })
+      .eq('project_id', currentProj.id);
+    if(clearRefs.error && clearRefs.error.code !== '42703') throw clearRefs.error;
+
+    if(oldIds.length){
+      const delReqs = await sb.from('schedule_change_requests').delete().in('task_id', oldIds);
+      if(delReqs.error && delReqs.error.code !== '42703') throw delReqs.error;
+
+      // Delete can silently remove 0 rows if RLS blocks it (no JS error, but rows
+      // stay). If that happens, fall back to just nulling task_id instead of
+      // deleting — UPDATE often has a different RLS policy than DELETE, so this
+      // still clears the reference and lets the schedule_tasks delete go through.
+      const { data: stillThere, error: verifyErr } = await sb
+        .from('schedule_change_requests').select('id').in('task_id', oldIds);
+      if(verifyErr && verifyErr.code !== '42703') throw verifyErr;
+      if(stillThere && stillThere.length){
+        const nullifyReqs = await sb.from('schedule_change_requests')
+          .update({ task_id: null }).in('task_id', oldIds);
+        if(nullifyReqs.error && nullifyReqs.error.code !== '42703') throw nullifyReqs.error;
+      }
+    }
+
+    const del = await sb.from('schedule_tasks').delete().eq('project_id', currentProj.id);
+    if(del.error) throw del.error;
+    const ins = await sb.from('schedule_tasks').insert(rows);
+    if(ins.error) throw ins.error;
+
+    await loadOverview();
+    sipsToast('Schedule import zala — '+rows.length+' tasks. Schedule page var distla.', null);
+    e.target.value='';
+  } catch(err){
+    sipsToast('Schedule import madhe error ala: ' + (err.message || err), 'error');
+    e.target.value = '';
+  }
+});
+
+document.getElementById('budgetFileInput').addEventListener('change', async (e)=>{
+  const file = e.target.files[0];
+  if(!file){ return; }
+  if(typeof XLSX === 'undefined'){
+    sipsToast('XLSX library load nahi zali (internet/CDN block). Page reload karun parat try kar.', null);
+    e.target.value = ''; return;
+  }
+  if(typeof sb === 'undefined' || !sb){
+    sipsToast('Database connection (sb) taiyar nahi — auth-guard.js load nahi zala disatoy. F12 → Console madhe error bagh.', 'error');
+    e.target.value = ''; return;
+  }
+  if(!currentProj){
+    sipsToast('Project ajun load nahi zala, tyamule budget kuthe update karaycha te mahit nahi. Page purna load hou de (Console madhe error nasel na bagh), mag parat import kar.', 'error');
+    e.target.value = ''; return;
+  }
+  try{
+    const buf = await file.arrayBuffer();
+    const wb = XLSX.read(buf, { type: 'array' });
+    const sheet = wb.Sheets[wb.SheetNames[0]];
+    const raw = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
+
+    const norm = s => String(s||'').toLowerCase().replace(/[^a-z]/g,'');
+    const toNum = v => {
+      if(typeof v === 'number') return v;
+      if(v === '' || v == null) return NaN;
+      const cleaned = String(v).replace(/[^0-9.\-]/g, '');
+      return cleaned === '' ? NaN : parseFloat(cleaned);
+    };
+
+    // Line-item header row shodh (Milestones / Sub Tasks / Qty / Rate / Sub Total / Vendor).
+    // Sheet chya varti project info + milestone list asto, tyamule header row 1 var nasto.
+    const headerRowIdx = raw.findIndex((r, i) => {
+      if(i > 40) return false;
+      const cells = r.map(norm);
+      return cells.includes('subtasks') && (cells.includes('subtotal') || cells.includes('rate'));
+    });
+
+    if(headerRowIdx === -1){
+      sipsToast('Budget sheet cha format olakhta ala nahi. Line-item header row madhe he columns pahije: Milestones, Sub Tasks, Qty, Unit, Rate, Sub Total, Vendor.', 'error');
+      e.target.value = ''; return;
+    }
+
+    const header = raw[headerRowIdx].map(norm);
+    const col = (...names) => { for(const n of names){ const idx = header.indexOf(n); if(idx >= 0) return idx; } return -1; };
+    const cMile = col('milestones','milestone');
+    const cTask = col('subtasks','subtask','task');
+    const cQty  = col('qty','quantity');
+    const cUnit = col('unit');
+    const cRate = col('rate');
+    const cSub  = col('subtotal','amount');
+    const cVend = col('vendor');
+
+    const cell = (r, i) => (i >= 0 && r[i] !== '' && r[i] != null) ? r[i] : null;
+
+    // Line items parse kar. Milestone naav fakt group chya pahilya row var asto,
+    // mhanun te khalchya sub-rows var forward-fill karto.
+    const items = [];
+    let curMile = '';
+    let sortIdx = 0;
+    for(let i = headerRowIdx + 1; i < raw.length; i++){
+      const r = raw[i];
+      const mileCell = cMile >= 0 ? String(r[cMile]||'').trim() : '';
+      if(mileCell) curMile = mileCell;
+      const task = cTask >= 0 ? String(r[cTask]||'').trim() : '';
+      const sub  = cSub >= 0 ? toNum(r[cSub]) : NaN;
+      // Valid line item = Sub Task ahe AND numeric Sub Total ahe.
+      // He milestone-total / grand-total / rikami rows apoap skip karto.
+      if(!task || isNaN(sub)) continue;
+      const rateN = cRate >= 0 ? toNum(r[cRate]) : NaN;
+      const qv = cell(r, cQty);
+      const qtyIsNum = typeof qv==='number' || (typeof qv==='string' && /^\s*[\d.,]+\s*$/.test(qv));
+      items.push({
+        project_id: currentProj.id,
+        sr_no: ++sortIdx,
+        sort_order: sortIdx,
+        milestone: curMile || null,
+        item: task,
+        qty: qtyIsNum ? toNum(qv) : null,
+        area_unit: cell(r, cUnit) != null ? String(cell(r, cUnit)) : null,
+        rate: isNaN(rateN) ? null : rateN,
+        gross_amount: sub,
+        gst_amount: 0,
+        total_amount: sub,
+        vendor: cell(r, cVend) != null ? String(cell(r, cVend)) : null,
+        remarks: (qv != null && !qtyIsNum) ? String(qv) : null,
+        status: 'unpaid'
+      });
+    }
+
+    if(!items.length){
+      sipsToast('File madhe ekhi valid line item sapadla nahi. Sub Task ani Sub Total aslele row pahije.', 'error');
+      e.target.value = ''; return;
+    }
+
+    const grandTotal = items.reduce((s,i)=> s + (i.total_amount||0), 0);
+    const fmt = n => '₹' + Math.round(n||0).toLocaleString('en-IN');
+
+    if(!(await sipsConfirm(items.length + ' line items found', 'Total budget: ' + fmt(grandTotal) + '. This will replace ' + currentProj.name + '\'s existing budget items and update the project total.', 'Replace budget'))){
+      e.target.value = ''; return;
+    }
+
+    // Juna items kadhun taak (re-import var duplicate honyachi nako), mag fresh insert.
+    const del = await sb.from('budget_items').delete().eq('project_id', currentProj.id);
+    if(del.error) throw del.error;
+
+    const ins = await sb.from('budget_items').insert(items);
+    if(ins.error) throw ins.error;
+
+    // Projects total pan sync thev, jenekarun Overview cha donut + KPI pan dista.
+    const upd = await sb.from('projects').update({ contract_value: grandTotal }).eq('id', currentProj.id);
+    if(upd.error) throw upd.error;
+
+    await loadOverview();
+    sipsToast('Budget import zala — ' + items.length + ' items, total ' + fmt(grandTotal) + '. Budget page var breakdown disel.', null);
+    e.target.value = '';
+  } catch(err){
+    sipsToast('Budget import madhe error ala: ' + (err.message || err), 'error');
+    e.target.value = '';
+  }
+});
+
+(async function(){
+  const auth = await requireAuth();
+  if(!auth) return;
+
+  /* ---- Topbar user chip (new, purely presentational — matches every other page) ---- */
+  const roleLabels = { director:'Director', pm:'Project Manager', engineer:'Site Engineer', vendor:'Vendor', client:'Client', accounts:'Accounts' };
+  const emailName = (auth.session.user.email || 'Signed in').split('@')[0];
+  document.getElementById('userName').textContent = emailName;
+  document.getElementById('userRole').textContent = roleLabels[auth.role] || auth.role || '—';
+  document.getElementById('userAvatar').textContent = emailName.charAt(0).toUpperCase();
+  document.getElementById('logoutBtn').addEventListener('click', async ()=>{ await sb.auth.signOut(); window.location.href = 'login.html'; });
+
+  await loadOverview();
+})();
+</script>
+<script>
+sipsRenderShell({ activeHref: "project-overview.html" });
+</script>
+</body>
+</html>

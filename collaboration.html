@@ -1,0 +1,1615 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Collaboration — Kinder Sports</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="auth-guard.js"></script>
+<link rel="stylesheet" href="sips-design-system.css">
+<link rel="stylesheet" href="sips-mobile.css">
+<script src="sips-shell.js"></script>
+<script src="sips-mobile.js"></script>
+<style>
+/* ---- Page-specific additions only — shared system untouched ---- */
+.collab-shell{ display:flex; flex-direction:column; height:100vh; }
+.collab-body{ flex:1; display:grid; grid-template-columns:280px minmax(0,1fr) 300px; min-height:0; }
+@media (max-width:1100px){ .collab-body{ grid-template-columns:260px minmax(0,1fr); } .collab-right{ position:fixed; top:0; right:0; bottom:0; width:320px; max-width:86vw; z-index:90; transform:translateX(100%); transition:transform var(--dur-base) var(--ease); box-shadow:var(--shadow-lg); }
+  .collab-right.open{ transform:translateX(0); }
+  .ctx-toggle{ display:inline-flex !important; } }
+@media (max-width:760px){ .collab-body{ grid-template-columns:minmax(0,1fr); } .collab-left{ display:none; } .collab-left.show{ display:flex; } .collab-center.hide{ display:none; } }
+
+.collab-left, .collab-right{ background:var(--paper-1); border-right:1px solid var(--line); display:flex; flex-direction:column; min-height:0; }
+.collab-right{ border-right:none; border-left:1px solid var(--line); }
+.collab-center{ display:flex; flex-direction:column; min-height:0; background:var(--paper-0); }
+.ctx-backdrop{ display:none; position:fixed; inset:0; background:rgba(20,21,26,0.4); z-index:85; }
+.ctx-backdrop.show{ display:block; }
+
+.cl-search{ padding:14px; border-bottom:1px solid var(--line); }
+.cl-search-wrap{ position:relative; }
+.cl-search-wrap .ic{ position:absolute; left:11px; top:50%; transform:translateY(-50%); color:var(--muted-2); font-size:13px; pointer-events:none; }
+.cl-search input{ width:100%; padding:9px 12px 9px 32px; border:1px solid var(--line); border-radius:var(--r-pill); font-size:12.5px; font-family:inherit; background:var(--paper-0); }
+.cl-search input:focus{ background:var(--paper-1); }
+.cl-new{ margin:0 14px 12px; display:flex; align-items:center; justify-content:center; gap:7px; background:var(--brand-orange); color:#fff; border:none; padding:10px 16px; border-radius:var(--r-md); font-family:var(--font-display); font-weight:700; font-size:12.5px; cursor:pointer; transition:background .15s ease; }
+.cl-new:hover{ background:var(--brand-orange-600); }
+.cl-list{ flex:1; overflow-y:auto; padding:4px 0; }
+.cl-item{ display:flex; align-items:center; gap:11px; padding:11px 14px; cursor:pointer; border-left:3px solid transparent; position:relative; transition:background .12s ease; }
+.cl-item:hover{ background:var(--paper-0); }
+.cl-item.active{ background:var(--paper-0); border-left-color:var(--brand-orange); }
+.cl-avatar{ width:40px; height:40px; border-radius:50%; background:var(--ink-800); color:#fff; display:flex; align-items:center; justify-content:center; font-family:var(--font-display); font-weight:700; font-size:13.5px; flex-shrink:0; }
+.cl-avatar.ai{ background:var(--brand-orange); }
+.cl-meta{ flex:1; min-width:0; }
+.cl-name{ font-size:12.5px; font-weight:700; font-family:var(--font-display); display:flex; align-items:center; gap:6px; color:var(--ink-900); }
+.cl-sub{ font-size:11px; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-top:2px; }
+.cl-badge{ background:var(--brand-orange); color:#fff; font-size:9.5px; font-weight:700; border-radius:var(--r-pill); padding:1px 6px; font-family:var(--font-mono); flex-shrink:0; min-width:17px; text-align:center; }
+.cl-role-tag{ font-size:9px; color:var(--muted); background:var(--line-2); border-radius:4px; padding:1px 5px; font-weight:600; text-transform:uppercase; }
+
+.ch-head{ display:flex; align-items:center; gap:11px; padding:13px 18px; border-bottom:1px solid var(--line); background:var(--paper-1); }
+.ch-head .cl-avatar{ width:36px; height:36px; font-size:12.5px; }
+.ch-head-name{ font-size:13.5px; font-weight:700; font-family:var(--font-display); color:var(--ink-900); }
+.ch-head-sub{ font-size:10.5px; color:var(--muted); }
+.ch-back{ display:none; background:none; border:none; font-size:17px; cursor:pointer; color:var(--ink-800); padding:4px; }
+@media (max-width:760px){ .ch-back{ display:inline-block; } }
+.ctx-toggle{ display:none; margin-left:auto; align-items:center; justify-content:center; width:32px; height:32px; border-radius:50%; border:1px solid var(--line); background:var(--paper-1); color:var(--ink-700); cursor:pointer; font-size:13px; }
+.ctx-toggle:hover{ border-color:var(--brand-orange); color:var(--brand-orange); }
+.ctx-close{ display:none; margin-left:auto; background:none; border:none; font-size:18px; cursor:pointer; color:var(--muted); padding:8px; line-height:1; }
+@media (max-width:1100px){ .ctx-close{ display:inline-block; } }
+
+.ch-scroll{ flex:1; overflow-y:auto; padding:20px; display:flex; flex-direction:column; gap:12px; }
+.msg-row{ display:flex; }
+.msg-row.mine{ justify-content:flex-end; }
+.msg-bubble{ max-width:66%; padding:10px 13px; border-radius:14px; font-size:12.5px; line-height:1.5; background:var(--paper-1); border:1px solid var(--line); position:relative; }
+.msg-row.mine .msg-bubble{ background:var(--ink-900); color:#fff; border-color:var(--ink-900); border-bottom-right-radius:4px; }
+.msg-row:not(.mine) .msg-bubble{ border-bottom-left-radius:4px; }
+.msg-row.ai .msg-bubble{ background:var(--paper-1); border-color:var(--line); border-left:3px solid var(--brand-orange); }
+.msg-sender{ font-size:10px; font-weight:700; color:var(--brand-orange); margin-bottom:3px; font-family:var(--font-display); display:flex; align-items:center; gap:5px; }
+.msg-row.mine .msg-sender{ display:none; }
+.msg-time{ font-size:9.5px; color:var(--muted); margin-top:5px; text-align:right; }
+.msg-row.mine .msg-time{ color:rgba(255,255,255,0.6); }
+.msg-actions{ display:flex; gap:8px; margin-top:9px; }
+.msg-actions button{ font-family:var(--font-display); font-size:11px; font-weight:700; padding:6px 12px; border-radius:var(--r-sm); border:none; cursor:pointer; transition:opacity .15s ease; }
+.msg-actions button:hover{ opacity:0.88; }
+.msg-actions .ok{ background:var(--brand-orange); color:#fff; }
+.msg-actions .no{ background:var(--status-neutral-bg); color:var(--ink-700); }
+.msg-status-tag{ display:inline-block; font-size:9.5px; font-weight:700; margin-top:7px; padding:2px 8px; border-radius:var(--r-pill); }
+.msg-status-tag.executed{ background:var(--status-good-bg); color:var(--status-good); }
+.msg-status-tag.rejected{ background:var(--status-bad-bg); color:var(--status-bad); }
+
+.ch-input{ display:flex; gap:9px; padding:14px 18px; border-top:1px solid var(--line); background:var(--paper-1); align-items:center; }
+.ch-input input{ flex:1; padding:11px 16px; border:1px solid var(--line); border-radius:var(--r-pill); font-size:12.5px; font-family:inherit; background:var(--paper-0); }
+.ch-input input:focus{ background:var(--paper-1); }
+.ch-input button{ background:var(--brand-orange); color:#fff; border:none; width:40px; height:40px; border-radius:50%; cursor:pointer; font-size:15px; flex-shrink:0; transition:background .15s ease; }
+.ch-input button:hover{ background:var(--brand-orange-600); }
+.ch-empty{ flex:1; display:flex; align-items:center; justify-content:center; color:var(--muted); font-size:12.5px; text-align:center; padding:20px; }
+
+.cr-block{ padding:16px 18px; border-bottom:1px solid var(--line-2); }
+.cr-block h4{ font-family:var(--font-display); font-size:10.5px; text-transform:uppercase; letter-spacing:.4px; color:var(--muted); margin:0 0 12px; }
+.cr-row{ display:flex; justify-content:space-between; font-size:11.5px; padding:5px 0; }
+.cr-row b{ font-family:var(--font-mono); color:var(--ink-800); }
+.cr-empty{ font-size:11.5px; color:var(--muted); line-height:1.5; }
+.cr-pill{ font-size:9.5px; font-weight:700; padding:2px 7px; border-radius:var(--r-pill); }
+.cr-list li{ font-size:11.5px; margin-bottom:6px; line-height:1.4; }
+
+.new-chat-list{ max-height:320px; overflow-y:auto; }
+.new-chat-row{ display:flex; align-items:center; gap:10px; padding:9px 8px; border-radius:var(--r-sm); cursor:pointer; }
+.new-chat-row:hover{ background:var(--paper-0); }
+</style>
+</head>
+<body>
+
+<div id="sips-sidebar-mount"></div>
+
+<div class="app-main">
+  <div class="collab-shell">
+    <div class="app-topbar">
+      <div style="display:flex;align-items:center;gap:12px;">
+        <button class="app-hamburger" id="app-hamburger-btn" aria-label="Toggle menu">&#9776;</button>
+        <h3 style="margin:0;font-size:15px;">Collaboration</h3>
+      </div>
+      <div style="display:flex;align-items:center;gap:14px;">
+        <div class="app-user-chip">
+          <div class="app-user-avatar" id="userAvatar">—</div>
+          <div class="app-user-meta">
+            <div class="app-user-name" id="userName">Loading…</div>
+            <div class="app-user-role" id="userRole">—</div>
+          </div>
+          <button class="app-logout-btn" id="logoutBtn">Log out</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="collab-body">
+      <div class="collab-left" id="collabLeft">
+        <div class="cl-search"><div class="cl-search-wrap"><span class="ic">&#128269;</span><input type="text" id="convSearch" placeholder="Search conversations…"></div></div>
+        <button class="cl-new" id="newChatBtn"><span style="font-size:15px;line-height:1;">+</span> New chat</button>
+        <div class="cl-list" id="convList"><div class="cr-empty" style="padding:12px;">Loading…</div></div>
+      </div>
+
+      <div class="collab-center" id="collabCenter">
+        <div class="ch-empty" id="chEmpty">Select a conversation to start messaging.</div>
+
+        <div id="chActive" style="display:none;flex-direction:column;flex:1;min-height:0;display:none;">
+          <div class="ch-head">
+            <button class="ch-back" id="chBack">&#8592;</button>
+            <div class="cl-avatar" id="chAvatar">?</div>
+            <div>
+              <div class="ch-head-name" id="chName">—</div>
+              <div class="ch-head-sub" id="chSub">—</div>
+            </div>
+            <button class="ctx-toggle" id="ctxToggle" title="Project context">&#9432;</button>
+          </div>
+          <div class="ch-scroll" id="chScroll"></div>
+          <div class="ch-input">
+            <input type="text" id="chInput" placeholder="Message… (English / मराठी)">
+            <button id="chSend">&#10148;</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="collab-right" id="collabRight">
+        <div class="cr-block" style="display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--line);">
+          <h4 style="margin:0;">Context</h4>
+          <button class="ctx-close" id="ctxClose">&times;</button>
+        </div>
+        <div class="cr-block"><div class="cr-empty" id="ctxBody">Pick a conversation to see live project context here.</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="ctx-backdrop" id="ctxBackdrop"></div>
+
+<!-- New chat modal -->
+<div class="modal-overlay" id="newChatModal">
+  <div class="modal-box">
+    <div class="modal-head"><h3>Start a conversation</h3><button class="modal-close" id="closeNewChat">&times;</button></div>
+    <div class="modal-body">
+      <div class="field"><label>People</label><div class="new-chat-list" id="newChatList"></div></div>
+      <div class="field"><label>Group name (only needed for 2+ people)</label><input type="text" id="newChatTitle" placeholder="e.g. Site A coordination"></div>
+    </div>
+    <div class="modal-foot"><button class="btn" id="cancelNewChat">Cancel</button><button class="btn-add primary wide" id="submitNewChat">Start chat</button></div>
+  </div>
+</div>
+
+<script>
+/* ============================================================================
+   SIPS Collaboration + AI Action Center
+   Additive module. Reuses sb (auth-guard.js), sipsToast/sipsConfirm/sipsRenderShell
+   (sips-shell.js) and existing tables. New tables only: chat_conversations,
+   chat_messages, ai_action_log (see collaboration_schema.sql).
+   ============================================================================ */
+
+/* ---- Gemini-powered SIPS AI Assistant. Setting this activates the existing
+   callExternalUnderstand()/handleLlmPlan() path in runAiPipeline() below.
+   If this is unset, unreachable, or returns an error/empty result, the
+   existing regex-based classifier is used automatically — the chatbot
+   never breaks because of this. Replace the placeholder with your actual
+   deployed Edge Function URL. ---- */
+window.SIPS_AI_UNDERSTAND_URL = 'https://tlorepamqatsmrdpsttx.supabase.co/functions/v1/sips-ai';
+
+let ME = null;            // { id, fullName, role }
+let PROFILES = [];        // all profiles (directory)
+let PROJECTS = [];        // all projects (role-visible)
+let CONVERSATIONS = [];
+let ACTIVE_CONV = null;
+let MSG_CHANNEL = null;
+const ROLE_LABELS = { director:'Director', pm:'Project Manager', engineer:'Site Engineer', accounts:'Accounts', vendor:'Vendor', client:'Client' };
+// 'accounts' matches the role string used everywhere else in SIPS
+// (schedule.html, quality.html, budget.html, etc.) — corrected from an
+// earlier 'accountant' key that never matched any real profiles.role value.
+const CAN_SEE_BUDGET = r => r === 'director' || r === 'pm' || r === 'accounts';
+const CAN_SEE_REPORT = r => r === 'director' || r === 'pm';
+
+/* ---- AI action/module permission matrix — mirrors ROLE_MODULES in
+   user-management.html (single source of truth for who sees what).
+   Every AI action/read-query checks this BEFORE touching data, not after.
+   Additive: original 6 entries are untouched; new read-only capabilities
+   are added so the broader NLU below has something to gate against without
+   ever bypassing the existing security model. ---- */
+const AI_PERMISSIONS = {
+  task_status_update:     ['director','pm','engineer'],
+  schedule_shift_request: ['director','pm','engineer'],
+  risk_query:              ['director','pm','engineer','vendor'],
+  budget_query:            ['director','pm','accounts'],
+  daily_report:            ['director','pm'],
+  pending_work:            ['director','pm','engineer','vendor','client'],
+  today_tasks:             ['director','pm','engineer','vendor'],
+  overdue_tasks:           ['director','pm','engineer','vendor'],
+  delayed_projects:        ['director','pm'],
+  approvals_pending:       ['director','pm'],
+  quality_issues:          ['director','pm','engineer'],
+  company_pulse:           ['director','pm']
+};
+function canDo(action, role){ return (AI_PERMISSIONS[action]||[]).includes(role); }
+function denyMessage(action, role){
+  const roleLabel = ROLE_LABELS[role] || role;
+  const what = {
+    task_status_update: 'update task status',
+    schedule_shift_request: 'raise a schedule-change request',
+    risk_query: 'view project risk/status details',
+    company_pulse: 'view company-wide project status',
+    budget_query: 'view budget or financial figures',
+    daily_report: "generate the portfolio-wide daily report",
+    today_tasks: "view today's task list",
+    overdue_tasks: 'view overdue task details',
+    delayed_projects: 'view portfolio-wide delayed project status',
+    approvals_pending: 'view pending approvals',
+    quality_issues: 'view quality issue (NCR) details'
+  }[action] || 'perform this action';
+  return `Sorry, this is beyond your access. As a ${roleLabel}, you're not authorized to ${what}. Please reach out to your Director or Project Manager if you need this.`;
+}
+
+function esc(s){ return (s||'').toString().replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function todayISO(){ return new Date().toISOString().slice(0,10); }
+function initials(name){ return (name||'?').trim().split(/\s+/).slice(0,2).map(w=>w[0]).join('').toUpperCase(); }
+
+/* ---------------------------------------------------------------- boot ---- */
+(async function(){
+  const auth = await requireAuth();
+  if(!auth) return;
+  const { session, role, fullName } = auth;
+  ME = { id: session.user.id, fullName: fullName || (session.user.email||'').split('@')[0], role };
+
+  document.getElementById('userName').textContent = ME.fullName;
+  document.getElementById('userRole').textContent = ROLE_LABELS[role] || role;
+  document.getElementById('userAvatar').textContent = ME.fullName.charAt(0).toUpperCase();
+  document.getElementById('logoutBtn').onclick = async ()=>{ await sb.auth.signOut(); location.href='login.html'; };
+
+  sipsRenderShell({ activeHref: 'collaboration.html' });
+
+  const [{data:profiles}, {data:projects}] = await Promise.all([
+    sb.from('profiles').select('id, full_name, role, is_active'),
+    sb.from('projects').select('*')
+  ]);
+  PROFILES = (profiles||[]).filter(p=>p.is_active !== false);
+  PROJECTS = projects || [];
+
+  await ensureAiConversation();
+  await loadConversations();
+
+  const qp = new URLSearchParams(location.search);
+  const projectId = qp.get('project') || qp.get('id');
+  if(projectId){
+    const aiConv = CONVERSATIONS.find(c=>c.type==='ai' && String(c.project_id)===String(projectId));
+    if(aiConv) openConversation(aiConv.id);
+    else {
+      const proj = PROJECTS.find(p=>String(p.id)===String(projectId));
+      if(proj) openConversation(await createConversation('ai', [ME.id], `SIPS AI — ${proj.name}`, proj.id));
+      else openConversation(CONVERSATIONS.find(c=>c.type==='ai')?.id);
+    }
+  } else {
+    const firstAi = CONVERSATIONS.find(c=>c.type==='ai' && !c.project_id);
+    if(firstAi) openConversation(firstAi.id);
+  }
+
+  wireGlobalUI();
+})();
+
+/* ---------------------------------------------------- conversation list --- */
+async function ensureAiConversation(){
+  const { data } = await sb.from('chat_conversations').select('*').eq('type','ai').is('project_id', null).contains('member_ids', [ME.id]);
+  if(!data || !data.length){ await createConversation('ai', [ME.id], 'SIPS AI', null); }
+}
+
+async function createConversation(type, memberIds, title, projectId){
+  const row = { type, member_ids: memberIds, title: title||null, project_id: projectId||null, created_by: ME.id, last_message_at: new Date().toISOString() };
+  const { data, error } = await sb.from('chat_conversations').insert(row).select().single();
+  if(error){ sipsToast('Could not start conversation: '+error.message, 'error'); return null; }
+  return data.id;
+}
+
+async function loadConversations(){
+  const { data, error } = await sb.from('chat_conversations').select('*').contains('member_ids', [ME.id]).order('last_message_at', {ascending:false});
+  if(error){ sipsToast('Could not load conversations: '+error.message,'error'); return; }
+  CONVERSATIONS = data || [];
+  renderConvList();
+}
+
+function convDisplayName(c){
+  if(c.type==='ai') return c.title || 'SIPS AI';
+  if(c.type==='group') return c.title || 'Group chat';
+  const otherId = (c.member_ids||[]).find(id=>id!==ME.id);
+  const other = PROFILES.find(p=>p.id===otherId);
+  return other ? other.full_name : 'Direct message';
+}
+function convSub(c){
+  if(c.type==='ai') return c.project_id ? 'Project-scoped AI assistant' : 'Ask about tasks, schedule, risk & reports';
+  if(c.type==='group') return `${(c.member_ids||[]).length} members`;
+  const otherId = (c.member_ids||[]).find(id=>id!==ME.id);
+  const other = PROFILES.find(p=>p.id===otherId);
+  return other ? (ROLE_LABELS[other.role]||other.role) : '';
+}
+function convUnread(c){
+  return (c._msgCache||[]).filter(m=> m.sender_id!==ME.id && !(m.read_by||[]).includes(ME.id)).length;
+}
+
+function renderConvList(){
+  const q = (document.getElementById('convSearch').value||'').toLowerCase();
+  const list = document.getElementById('convList');
+  const rows = CONVERSATIONS.filter(c=> convDisplayName(c).toLowerCase().includes(q) || convSub(c).toLowerCase().includes(q));
+  if(!rows.length){ list.innerHTML = '<div class="cr-empty" style="padding:12px;">No conversations yet.</div>'; return; }
+  list.innerHTML = rows.map(c=>{
+    const name = convDisplayName(c);
+    const unread = c._unread || 0;
+    return `<div class="cl-item${ACTIVE_CONV && ACTIVE_CONV.id===c.id?' active':''}" data-id="${c.id}">
+      <div class="cl-avatar${c.type==='ai'?' ai':''}">${c.type==='ai' ? 'AI' : esc(initials(name))}</div>
+      <div class="cl-meta">
+        <div class="cl-name">${esc(name)}${c.project_id?` <span class="cl-role-tag">${esc((PROJECTS.find(p=>p.id===c.project_id)||{}).name||'')}</span>`:''}</div>
+        <div class="cl-sub">${esc(c.last_preview || convSub(c))}</div>
+      </div>
+      ${unread ? `<span class="cl-badge">${unread}</span>` : ''}
+    </div>`;
+  }).join('');
+  list.querySelectorAll('.cl-item').forEach(el=> el.onclick = ()=> openConversation(el.dataset.id));
+  refreshUnreadCounts();
+}
+
+async function refreshUnreadCounts(){
+  // lightweight: unread = messages after this user's last visit, tracked client-side via read_by array
+  for(const c of CONVERSATIONS){
+    const { data } = await sb.from('chat_messages').select('id, sender_id, read_by').eq('conversation_id', c.id);
+    c._unread = (data||[]).filter(m=> m.sender_id!==ME.id && !(m.read_by||[]).includes(ME.id)).length;
+  }
+  document.querySelectorAll('.cl-item').forEach(el=>{
+    const c = CONVERSATIONS.find(x=>String(x.id)===el.dataset.id);
+    const badge = el.querySelector('.cl-badge');
+    if(c && c._unread){ if(!badge){ el.querySelector('.cl-meta').insertAdjacentHTML('afterend', `<span class="cl-badge">${c._unread}</span>`); } else badge.textContent = c._unread; }
+    else if(badge) badge.remove();
+  });
+  const sideBadge = document.getElementById('sideNotifBadge'); // unrelated existing badge, untouched
+  const total = CONVERSATIONS.reduce((s,c)=>s+(c._unread||0),0);
+  const navBadge = document.querySelector('#collabNavBadge');
+  if(navBadge){ navBadge.style.display = total ? '' : 'none'; navBadge.textContent = total; }
+}
+
+/* ------------------------------------------------------------ open chat --- */
+async function openConversation(id){
+  if(!id) return;
+  const c = CONVERSATIONS.find(x=>String(x.id)===String(id));
+  if(!c) return;
+  ACTIVE_CONV = c;
+  document.getElementById('chEmpty').style.display = 'none';
+  const active = document.getElementById('chActive');
+  active.style.display = 'flex';
+  document.getElementById('collabLeft').classList.remove('show');
+  document.getElementById('collabCenter').classList.remove('hide');
+
+  document.getElementById('chAvatar').textContent = c.type==='ai' ? 'AI' : initials(convDisplayName(c));
+  document.getElementById('chAvatar').className = 'cl-avatar' + (c.type==='ai' ? ' ai' : '');
+  document.getElementById('chName').textContent = convDisplayName(c);
+  document.getElementById('chSub').textContent = convSub(c);
+
+  renderConvList();
+  await loadMessages(c.id);
+
+  if(c.type === 'ai' && !c.project_id){
+    try{
+      const { data: existing } = await sb.from('chat_messages').select('id').eq('conversation_id', c.id).limit(1);
+      if(!existing || !existing.length) await postProactiveBrief();
+    }catch(e){ /* proactive brief is best-effort only, never blocks the chat */ }
+  }
+
+  renderContextPanel(c);
+  subscribeToConversation(c.id);
+}
+
+async function loadMessages(convId){
+  const { data, error } = await sb.from('chat_messages').select('*').eq('conversation_id', convId).order('created_at');
+  if(error){ sipsToast('Could not load messages: '+error.message,'error'); return; }
+  const msgs = data || [];
+  renderMessages(msgs);
+  const unreadIds = msgs.filter(m=> m.sender_id!==ME.id && !(m.read_by||[]).includes(ME.id)).map(m=>m.id);
+  for(const mid of unreadIds){
+    const m = msgs.find(x=>x.id===mid);
+    await sb.from('chat_messages').update({ read_by: [...(m.read_by||[]), ME.id] }).eq('id', mid);
+  }
+  if(unreadIds.length) loadConversations();
+}
+
+function renderMessages(msgs){
+  const scroll = document.getElementById('chScroll');
+  scroll.innerHTML = msgs.map(m=>{
+    const mine = m.sender_id === ME.id;
+    const cls = mine ? 'mine' : (m.is_ai ? 'ai' : '');
+    let actionHtml = '';
+    if(m.ai_action && m.ai_action.type==='batch_control' && m.ai_action.status==='pending'){
+      actionHtml = `<div class="msg-actions"><button class="ok" data-confirmall="${m.id}">Confirm All</button></div>`;
+    } else if(m.ai_action && m.ai_action.type==='batch_control' && m.ai_action.status==='resolved'){
+      actionHtml = `<span class="msg-status-tag executed">Batch resolved</span>`;
+    } else if(m.ai_action && m.ai_action.status==='proposed'){
+      actionHtml = `<div class="msg-actions"><button class="ok" data-confirm="${m.id}">Confirm</button><button class="no" data-cancel="${m.id}">Cancel</button></div>`;
+    } else if(m.ai_action && (m.ai_action.status==='executed'||m.ai_action.status==='confirmed')){
+      actionHtml = `<span class="msg-status-tag executed">✓ Action completed</span>`;
+    } else if(m.ai_action && m.ai_action.status==='rejected'){
+      actionHtml = `<span class="msg-status-tag rejected">✕ Cancelled</span>`;
+    }
+    return `<div class="msg-row ${cls}"><div class="msg-bubble">
+      ${!mine ? `<div class="msg-sender">${m.is_ai ? '<span style="color:var(--brand-orange);">&#10022;</span> ' : ''}${esc(m.sender_name)}</div>` : ''}
+      <div>${esc(m.body).replace(/\n/g,'<br>')}</div>
+      ${actionHtml}
+      <div class="msg-time">${new Date(m.created_at).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}</div>
+    </div></div>`;
+  }).join('');
+  scroll.scrollTop = scroll.scrollHeight;
+  scroll.querySelectorAll('[data-confirm]').forEach(b=> b.onclick = ()=> resolveAiAction(b.dataset.confirm, true));
+  scroll.querySelectorAll('[data-cancel]').forEach(b=> b.onclick = ()=> resolveAiAction(b.dataset.cancel, false));
+  scroll.querySelectorAll('[data-confirmall]').forEach(b=> b.onclick = ()=> confirmAllBatch(b.dataset.confirmall));
+}
+
+function subscribeToConversation(convId){
+  if(MSG_CHANNEL) sb.removeChannel(MSG_CHANNEL);
+  MSG_CHANNEL = sb.channel('conv-'+convId)
+    .on('postgres_changes', { event:'INSERT', schema:'public', table:'chat_messages', filter:`conversation_id=eq.${convId}` }, ()=>{
+      if(ACTIVE_CONV && ACTIVE_CONV.id===convId) loadMessages(convId);
+    }).subscribe();
+}
+
+/* --------------------------------------------------------- sending msgs --- */
+document.getElementById('chSend').addEventListener('click', sendMessage);
+document.getElementById('chInput').addEventListener('keydown', e=>{ if(e.key==='Enter') sendMessage(); });
+document.getElementById('chBack').addEventListener('click', ()=>{
+  document.getElementById('collabLeft').classList.add('show');
+  document.getElementById('collabCenter').classList.add('hide');
+});
+
+async function sendMessage(){
+  const input = document.getElementById('chInput');
+  const text = input.value.trim();
+  if(!text || !ACTIVE_CONV) return;
+  input.value = '';
+  const conv = ACTIVE_CONV;
+  const row = { conversation_id: conv.id, sender_id: ME.id, sender_name: ME.fullName, sender_role: ME.role, body: text };
+  const { error } = await sb.from('chat_messages').insert(row);
+  if(error){ sipsToast('Send failed: '+error.message,'error'); return; }
+  await sb.from('chat_conversations').update({ last_message_at: new Date().toISOString(), last_preview: text.slice(0,80) }).eq('id', conv.id);
+  await loadMessages(conv.id);
+  loadConversations();
+
+  if(conv.type === 'ai'){
+    try{
+      await runAiPipeline(text, conv);
+    }catch(e){
+      console.error('[SIPS AI] pipeline error:', e);
+      await postAiMessage("I couldn't complete that just now. No changes were made — please try again in a moment, or rephrase your request.");
+    }
+  }
+}
+
+async function postAiMessage(body, aiAction){
+  const row = { conversation_id: ACTIVE_CONV.id, sender_id: null, sender_name:'SIPS AI', sender_role:'ai', body, is_ai:true, ai_action: aiAction||null };
+  const { data, error } = await sb.from('chat_messages').insert(row).select().single();
+  if(!error){
+    await sb.from('chat_conversations').update({ last_message_at: new Date().toISOString(), last_preview: body.slice(0,80) }).eq('id', ACTIVE_CONV.id);
+    await loadMessages(ACTIVE_CONV.id);
+    loadConversations();
+  }
+  return data;
+}
+
+/* ==========================================================================
+   AI AGENT — Understand → Identify → Permission-check → Read SIPS data →
+   Analyze → (Plan) → Confirm → Execute → Verify → Reply.
+
+   NLU layer: broad pattern/score-based matching across English + Marathi +
+   mixed phrasing (NOT an exact-keyword list — many phrasings map to the same
+   intent, and a message can match several intents at once, which is what
+   drives the multi-step "review + prepare actions" workflow below). This is
+   the safe, zero-external-calls fallback so the chatbot always works standalone
+   against Supabase. If a real LLM becomes available in this project (e.g. a
+   Supabase Edge Function that proxies an LLM with the key held server-side —
+   NEVER put an API key in this client file), point
+   window.SIPS_AI_UNDERSTAND_URL at it: callExternalUnderstand() is tried
+   first and this rule-based classifier is the fallback on any error/absence,
+   so the chatbot never breaks. Either path still routes every write through
+   the same execute_ai_action() RPC and the same AI_PERMISSIONS gate.
+
+   Conversation context: AI_CONTEXT_BY_CONV remembers the last project/task
+   discussed per AI conversation so follow-ups ("Why?", "which task is
+   causing it?", "move that task to tomorrow") resolve correctly.
+   ========================================================================== */
+
+const AI_CONTEXT_BY_CONV = {};
+function getAiContext(convId){ return AI_CONTEXT_BY_CONV[convId] || (AI_CONTEXT_BY_CONV[convId] = {}); }
+
+const INTENT_PATTERNS = {
+  today_tasks:      [/\bmy tasks?\b/i, /\btoday'?s? (task|work|schedule)\b/i, /what.*(do i have|is on).*today/i, /show.*(my )?(schedule|work).*today/i, /aaj.*kaam/i, /आज.*काम/i, /majh.*kaam/i, /आजची\s*कामे?/i],
+  overdue_tasks:    [/\boverdue\b/i, /behind schedule/i, /delayed task/i, /which task.*(delay|late|caus)/i, /what.*(causing|is causing)/i],
+  pending_work:     [/\bpending\b/i, /what.*(pending|left|is left)/i, /show my work/i, /majhi.*kaam/i, /माझी.*कामं?\b/i, /what is pending/i],
+  risk_query:       [/\b(problem|issue|risk)\b/i, /delay reason/i, /status of/i, /why.*(delay|wrong|behind|bad|trouble)/i, /kay problem/i, /अडचण/i, /समस्या/i, /गडबड/i, /^\s*why\??\s*$/i, /\bmadhe kay problem\b/i],
+  company_pulse:    [/सगळे\s*(projects?|प्रोजेक्ट्?स?)/i, /all projects?.*(going|doing|status)/i, /company[- ]?wide/i, /overall company/i, /company.*(status|overview|performance)/i, /how.*(all|every) project/i],
+  project_pulse:    [/kasa\s*chal(la|at|to)?/i, /चालतंय/i, /चाललंय/i, /सगळं?\s*ठीक/i, /ठीक\s*आहे\s*का/i, /कुठे\s*(problem|मागे)/i, /लक्षात\s*घ्यायला/i,
+                     /is everything (ok|okay|on track|alright|fine)/i, /on track\??/i, /what'?s happening/i, /anything i should know/i, /how'?s? (it|this|the project) (going|doing)/i],
+  delayed_projects: [/which projects?.*(delay|attention|need)/i, /projects? that need attention/i, /complete status of all/i, /management summary/i, /major risks?/i],
+  approvals_pending:[/pending approvals?/i, /approvals? (pending|awaiting)/i, /awaiting approval/i, /show pending approvals/i],
+  quality_issues:   [/quality issue/i, /\bncr(s)?\b/i, /\bdefect/i, /non[- ]?conformance/i],
+  budget_query:     [/\b(budget|expense|cost|profit|margin|payment|contract value|invoice)\b/i, /खर्च/i, /नफा/i, /बिल/i],
+  daily_report:     [/\b(daily|today'?s|project|management|site|schedule status|progress) report\b/i, /prepare.*report/i, /report.*ready/i, /summary report/i, /prepare today'?s progress report/i],
+  shift:            [/\bshift\b/i, /\bpostpone\b/i, /\bpush\b/i, /move.*(task|it).*(tomorrow|forward|back|to)/i, /पुढे/i, /ढकल/i, /मागे/i, /\badvance\b/i, /shift.*(kar|karo)/i],
+  done:             [/\b(complete|completed|done|finished)\b/i, /mark.*(as )?complete/i, /झाल/i, /पूर्ण/i, /complete kar/i],
+  project_review:   [/complete review/i, /full review/i, /\breview kar/i, /check kar.*(pending|delayed|schedule)/i, /prepare.*action/i, /required updates? pan kar/i]
+};
+function scoreIntents(text){
+  const hits = [];
+  for(const [intent, patterns] of Object.entries(INTENT_PATTERNS)){
+    const matched = patterns.filter(p=>p.test(text));
+    if(matched.length) hits.push({ intent, score: matched.length });
+  }
+  return hits.sort((a,b)=>b.score-a.score).map(h=>h.intent);
+}
+const PRONOUN_TASK_RE = /\b(it|that task|this task|te kaam|ते काम)\b/i;
+
+/* ---- conversational layer — small talk is handled on its own, separate
+   from the task/data intent classifier above, so "hi" is recognized as a
+   greeting rather than falling through to the unknown-intent fallback.
+   Kept deliberately simple/pattern-based (not a fixed keyword whitelist —
+   these are common regional variants and greetings, not "the only things
+   you can say") and is only consulted when scoreIntents() found nothing,
+   so a message that mixes small talk with a real request ("hi, why is
+   Project ABC delayed?") still answers the real request. ---- */
+const SMALL_TALK_PATTERNS = {
+  greeting:    [/^\s*(hi+|hello+|hey+|yo)\b/i, /good (morning|afternoon|evening)/i, /नमस्कार/i, /\bnamaste\b/i, /\bnamaskar\b/i],
+  how_are_you: [/how are you/i, /how'?s it going/i, /kasa\s*ahe(s)?\b/i, /kase\s*ahat\b/i, /कसे आहात/i, /कसा आहेस/i],
+  thanks:      [/\bthanks?\b/i, /thank\s*you/i, /thank\s*u\b/i, /\bdhanyawad\b/i, /धन्यवाद/i, /\bshukriya\b/i],
+  ack:         [/^\s*(ok|okay|k|kk|got it|understood|theek\s*(aahe|ahe)|thik\s*ahe)\s*[.!]?\s*$/i, /^\s*ठीक\s*आहे\s*[.!]?\s*$/i]
+};
+function classifySmallTalk(text){
+  for(const [type, patterns] of Object.entries(SMALL_TALK_PATTERNS)){
+    if(patterns.some(p=>p.test(text))) return type;
+  }
+  return null;
+}
+
+/* ---- what each role can be told they can ask about — used in greetings
+   and the generic fallback. Deliberately phrased as "or anything else
+   available to you" so it never reads as a fixed whitelist. ---- */
+const ROLE_SCOPE_TEXT = {
+  director:   'company projects, delays, progress, risks, schedules, approvals, budgets, reports, or anything else available to you',
+  pm:         'your projects, schedule, tasks, progress, delays, dependencies, risks, quality, approvals, or anything else available to you',
+  engineer:   'your tasks, schedule, progress, pending work, delays, site issues, quality, or anything else available to you',
+  vendor:     'your tasks, deadlines, schedule, pending work, progress, or anything else available to you',
+  accounts:   'budgets, project financial status, expenses, or anything else available to you',
+  client:     "your project's progress, schedule, milestones, completed work, or anything else available to you"
+};
+function roleScopeText(){ return ROLE_SCOPE_TEXT[ME.role] || 'the SIPS information available to you'; }
+
+/* ---- the three safe outcomes: understood (handled inline by each reply/
+   propose function), ambiguous (clarify), or not-enough-data (explain).
+   Nothing downstream of this point should ever hand the user a raw error,
+   an "undefined", or a flat "I don't understand". ---- */
+function clarifyMessage(understood){
+  return `I want to make sure I understood you correctly.\n\nI understood your request as:\n'${understood}'\n\nIs that what you mean?`;
+}
+function clarifyOptionsMessage(intro, options){
+  return `${intro}\n${options.map(o=>'• '+o).join('\n')}`;
+}
+function notEnoughDataMessage(subject){
+  return `I couldn't find enough information in the available SIPS data to answer that accurately${subject?' about '+subject:''}. I haven't made any changes. If you'd like, tell me which project or information you want me to look at.`;
+}
+function safeFailureMessage(){
+  return `I couldn't complete that right now. No changes were made — please try again in a moment, or let me know if you'd like help with something else.`;
+}
+
+/* ---- run a query safely: never let a raw Supabase/network error reach the
+   user. Returns null on failure (callers should treat null as "not enough
+   data" and respond professionally) instead of throwing. ---- */
+async function safeQuery(promise, label){
+  try{
+    const { data, error } = await promise;
+    if(error){ console.error('[SIPS AI] query failed:', label, error); return null; }
+    return data || [];
+  }catch(e){
+    console.error('[SIPS AI] query threw:', label, e);
+    return null;
+  }
+}
+
+function respondSmallTalk(type){
+  const roleLabel = ROLE_LABELS[ME.role] || 'there';
+  if(type === 'greeting'){
+    return postAiMessage(`Hello, ${roleLabel}! 👋\nI'm your SIPS AI Assistant. How can I help you today?\nYou can ask me about ${roleScopeText()}.`);
+  }
+  if(type === 'how_are_you'){
+    return postAiMessage(`I'm doing well, thanks for asking! Ready to help whenever you are — ask me anything about ${roleScopeText()}.`);
+  }
+  if(type === 'thanks'){
+    return postAiMessage(`You're welcome, ${roleLabel}! Let me know if there's anything else you need.`);
+  }
+  if(type === 'ack'){
+    return postAiMessage(`👍 I'm here if you need anything else.`);
+  }
+  return postAiMessage(genericHelpMessage());
+}
+
+/* ---- resolve a reply to a "do you want A or B?" clarification. Matches
+   semantically against the SPECIFIC options that were actually offered
+   (their descriptive words), plus ordinal references ("the first one",
+   "पहिलं") and bare affirmations ("yes", "हो") which confirm whichever
+   option was listed first (already ordered to match what the user said
+   originally) — not a fixed list of exact phrases. ---- */
+function resolveOptionChoice(text, options){
+  const raw = (text||'').trim();
+  const t = raw.toLowerCase();
+  if(/^\s*1\s*[.)]?\s*$/.test(raw) || /\b(first|1st)\b/i.test(t) || /पहिल/.test(raw)) return options[0] || null;
+  if(/^\s*2\s*[.)]?\s*$/.test(raw) || /\b(second|2nd)\b/i.test(t) || /दुसर/.test(raw)) return options[1] || null;
+  let best = null, bestScore = 0;
+  for(const opt of options){
+    const score = (opt.words||[]).filter(w=>t.includes(w.toLowerCase())).length;
+    if(score > bestScore){ bestScore = score; best = opt; }
+  }
+  if(best) return best;
+  const yes = /^\s*(yes|yeah|yep|sure|correct|right|that'?s (it|right|correct)|go ahead|proceed)\b/i.test(t) || /^\s*(होय|हो|बरोबर|हा)/.test(raw);
+  if(yes) return options[0] || null;
+  return null;
+}
+
+function findProjectInText(text){
+  const t = text.toLowerCase();
+  return PROJECTS.find(p=> p.name && t.includes(p.name.toLowerCase()));
+}
+function matchTasks(tasks, text){
+  const t = text.toLowerCase().replace(/[.,!?]/g,'');
+  const scored = tasks.map(task=>{
+    const name=(task.task||'').toLowerCase();
+    if(!name) return { task, score:0 };
+    let score = 0;
+    if(t.includes(name)) score = name.length + 5;
+    else { const words=name.split(/\s+/); score = words.filter(w=>w.length>2 && t.includes(w)).length; }
+    return { task, score };
+  }).filter(s=>s.score>0).sort((a,b)=>b.score-a.score);
+  if(!scored.length) return { task:null, candidates:[] };
+  const topScore = scored[0].score;
+  const tied = scored.filter(s=>s.score===topScore).map(s=>s.task);
+  if(tied.length > 1) return { task:null, candidates: tied };
+  return { task: scored[0].task, candidates: [] };
+}
+function extractDays(text){ const m = text.match(/(\d+)\s*(day|days|दिवस)/i); return m ? parseInt(m[1],10) : 1; }
+function shiftDirection(text){ return hasAnyStr(text, ['मागे','advance','pull','earlier']) ? -1 : 1; }
+function hasAnyStr(text, arr){ const t=text.toLowerCase(); return arr.some(k=>t.includes(k.toLowerCase())); }
+function addDaysISO(dateStr, n){ const d = new Date(dateStr); d.setDate(d.getDate()+n); return d.toISOString().slice(0,10); }
+
+/* ---- resolve a disambiguating follow-up ("the second one" / a task name /
+   just the task's name) back to the action that was waiting on it. Returns
+   the chosen candidate id, or null if this message doesn't look like an
+   answer to that question — in which case the pending clarification is
+   cleared and the message is processed normally instead of getting stuck. ---- */
+function resolvePendingClarification(text, ctx){
+  const pc = ctx.pendingClarification;
+  if(!pc) return null;
+  let chosenId = null;
+  const idxMatch = text.match(/^\s*(\d+)\s*[.)]?\s*$/);
+  if(idxMatch){
+    const idx = parseInt(idxMatch[1], 10) - 1;
+    if(pc.candidateIds[idx] !== undefined) chosenId = pc.candidateIds[idx];
+  } else {
+    const t = text.toLowerCase();
+    const hit = pc.candidateLabels.findIndex(label => label && t.includes(label.toLowerCase()));
+    if(hit >= 0) chosenId = pc.candidateIds[hit];
+  }
+  ctx.pendingClarification = null; // one attempt only — don't trap the user in a loop
+  return chosenId ? { chosenId, pc } : null;
+}
+
+/* ---- what this specific logged-in user is allowed to ask the AI to do —
+   derived live from AI_PERMISSIONS/canDo(), so a wired LLM backend is told
+   the same, always-current capability list the rule-based fallback enforces,
+   and can never be told (or infer) it has access to more than that. ---- */
+const TOOL_DESCRIPTIONS = {
+  today_tasks: "Get tasks due today, optionally scoped to a project",
+  overdue_tasks: "Get overdue tasks, optionally scoped to a project",
+  pending_work: "Get all pending (not completed) tasks, optionally scoped to a project",
+  risk_query: "Get a project's schedule/risk/quality/budget status plus a health assessment with concerns and a recommendation",
+  company_pulse: "Get a company-wide status summary across all projects plus a recommendation on what needs attention first",
+  delayed_projects: "List every company project currently delayed",
+  approvals_pending: "List pending schedule-change approvals across the company",
+  quality_issues: "List open quality issues (NCRs), optionally scoped to a project",
+  daily_report: "Generate a company-wide daily management report",
+  task_status_update: "Mark a task completed — state-changing, requires user confirmation",
+  schedule_shift_request: "Raise a schedule-change request to shift a task's dates — state-changing, requires user confirmation"
+};
+function buildToolCatalog(){
+  return Object.keys(AI_PERMISSIONS)
+    .filter(k => canDo(k, ME.role))
+    .map(k => ({ name:k, description: TOOL_DESCRIPTIONS[k] || k }));
+}
+
+/* ---- real-LLM integration point. Sends the message, recent conversation
+   history (so the LLM has actual context, not just this one line), and this
+   user's live tool catalog to a server-side endpoint SIPS ops configures via
+   window.SIPS_AI_UNDERSTAND_URL — inert (never called) until that's set, so
+   the chatbot is never broken by a missing integration. The endpoint must
+   hold its own model API key server-side (Supabase Edge Function or similar)
+   — never put a key in this client file. Expected response shape:
+   { reply?: string, actions?: [{type, target_table, target_id, payload, confirm_text}] } */
+async function callExternalUnderstand(text, ctx, scopeProject){
+  const history = await safeQuery(
+    sb.from('chat_messages').select('sender_role, body, is_ai').eq('conversation_id', ACTIVE_CONV.id).order('created_at', { ascending:false }).limit(10),
+    'callExternalUnderstand:history'
+  );
+  const data = await buildAiDataBundle(scopeProject);
+  const resp = await fetch(window.SIPS_AI_UNDERSTAND_URL, {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({
+      text, role: ME.role, project_id: scopeProject?.id || null, context: ctx,
+      history: (history||[]).reverse().map(m => ({ role: m.is_ai ? 'assistant' : 'user', content: m.body })),
+      tools: buildToolCatalog(),
+      data
+    })
+  });
+  if(!resp.ok) {
+    const errText = await resp.text();
+    console.error("EDGE FUNCTION ERROR:", resp.status, errText);
+    throw new Error('understand endpoint returned '+resp.status);
+  }
+  return await resp.json();
+}
+async function handleLlmPlan(result, scopeProject, ctx){
+  // The server-side endpoint does its own reasoning, but this client still
+  // re-checks AI_PERMISSIONS for every action and still routes every write
+  // through execute_ai_action() — the LLM never executes anything directly.
+  if(result.reply) await postAiMessage(result.reply);
+  if(Array.isArray(result.actions) && result.actions.length){
+    const batchId = 'batch_'+Date.now();
+    const ids = [];
+    for(const a of result.actions){
+      if(!canDo(a.type, ME.role)){ await postAiMessage(denyMessage(a.type, ME.role)); continue; }
+      const msg = await postAiMessage(a.confirm_text || `Proposed: ${a.type}`, { ...a, status:'proposed', batch_id:batchId });
+      if(msg) ids.push(msg.id);
+    }
+    if(ids.length > 1) await postAiMessage('Confirm each above individually, or **Confirm All**.', { type:'batch_control', status:'pending', batch_id:batchId, member_ids:ids });
+  }
+}
+
+
+function genericHelpMessage(){
+  return `I didn't quite catch what you need, but you can ask me anything about ${roleScopeText()} — not just a fixed list of topics. Try rephrasing, name a project, or ask things like "what should I focus on today?", "why is this delayed?" or "prepare a report" — in English, Marathi, or a mix of both.`;
+}
+
+async function runAiPipeline(text, conv){
+  const ctx = getAiContext(conv.id);
+  const mentionedProject = findProjectInText(text);
+  const scopeProject = conv.project_id ? PROJECTS.find(p=>p.id===conv.project_id) : (mentionedProject || ctx.project);
+  if(mentionedProject) ctx.project = mentionedProject;
+
+  // If we're waiting on an answer to "which task did you mean?", try to
+  // resolve it first. If this message isn't a plausible answer, the pending
+  // clarification is cleared and we fall through to normal processing below
+  // — so an unrelated new message never gets silently swallowed.
+  if(ctx.pendingClarification){
+    const pc = ctx.pendingClarification;
+    if(pc.actionType === 'confirm_scope_choice'){
+      const proj = PROJECTS.find(p=>p.id===pc.projectId);
+      ctx.pendingClarification = null;
+      const chosen = resolveOptionChoice(text, pc.options);
+      if(!proj){
+        return postAiMessage(notEnoughDataMessage());
+      }
+      ctx.project = proj; // preserve project context through the clarification
+      if(!chosen){
+        // still couldn't tell which one — re-offer once, using the same
+        // options (don't silently guess), rather than a generic fallback.
+        ctx.pendingClarification = { actionType:'confirm_scope_choice', projectId: proj.id, options: pc.options };
+        return postAiMessage(clarifyOptionsMessage(
+          `Sorry, just to make sure for ${proj.name} — do you want:`,
+          pc.options.map(o=>o.label)
+        ));
+      }
+      if(chosen.key === 'overall'){
+        if(!canDo('risk_query', ME.role)) return postAiMessage(denyMessage('risk_query', ME.role));
+        return replyRiskAnalysis(proj, ctx);
+      }
+      if(chosen.key === 'schedule'){
+        if(!canDo('overdue_tasks', ME.role)) return postAiMessage(denyMessage('overdue_tasks', ME.role));
+        return replyScheduleProgress(proj);
+      }
+    } else if(pc.actionType === 'confirm_pulse'){
+      const yes = /^\s*(yes|yeah|yep|sure|correct|right|go ahead|proceed)\b/i.test(text) || /^\s*(होय|हो|बरोबर|हा)/.test(text);
+      const no  = /^\s*(no|nah|not really)\b/i.test(text) || /^\s*(नाही)/.test(text);
+      ctx.pendingClarification = null;
+      if(yes){
+        const proj = PROJECTS.find(p=>p.id===pc.projectId);
+        if(proj) return replyRiskAnalysis(proj, ctx);
+      } else if(no){
+        return postAiMessage(`No problem — could you tell me what you'd like instead (schedule, tasks, risks, approvals${CAN_SEE_BUDGET(ME.role)?', budget':''}, etc.)?`);
+      }
+      // neither a clear yes nor no — fall through and treat this as a fresh message
+    } else {
+      const resolved = resolvePendingClarification(text, ctx);
+      if(resolved){
+        const tasksTable = await safeQuery(sb.from('schedule_tasks').select('*'), 'resolvePendingClarification:tasks');
+        const task = (tasksTable||[]).find(t=>t.id===resolved.chosenId);
+        if(task){
+          return resolved.pc.actionType === 'shift'
+            ? proposeScheduleShiftForTask(task, resolved.pc.originalText, ctx)
+            : proposeTaskCompleteForTask(task, ctx);
+        }
+      }
+    }
+  }
+
+  const intents = scoreIntents(text);
+
+  // Small talk is resolved first, but only when nothing else in the message
+  // matched a real data/action intent — so "hi" gets a natural greeting,
+  // while "hi, why is Project ABC delayed?" still answers the real question.
+  if(intents.length === 0){
+    const smallTalk = classifySmallTalk(text);
+    if(smallTalk) return respondSmallTalk(smallTalk);
+  }
+
+  // Optional real-LLM path — tried next, falls through to the rule-based
+  // classifier below on any error or if no endpoint is configured.
+  if(window.SIPS_AI_UNDERSTAND_URL){
+    try{
+      const llmResult = await callExternalUnderstand(text, ctx, scopeProject);
+      const hasContent = llmResult && (
+        (typeof llmResult.reply === 'string' && llmResult.reply.trim() !== '') ||
+        (Array.isArray(llmResult.actions) && llmResult.actions.length > 0)
+      );
+      if(hasContent) return handleLlmPlan(llmResult, scopeProject, ctx);
+      // empty/malformed result — fall through to the regex classifier below
+    }catch(e){ 
+      console.error("AI Edge Function Error:", e);
+      alert("AI Server Error: " + (e.message || JSON.stringify(e)));
+      /* fall through - chatbot must not break if the endpoint is down */ 
+    }
+  }
+
+  const wantsAction = intents.includes('done') || intents.includes('shift');
+  const wantsReview = intents.includes('project_review') || intents.length >= 3;
+
+  if(intents.length === 0){
+    if(scopeProject){
+      const options = [
+        { key:'overall',  label:'an overall project assessment', words:['overall','assessment','summary','everything','general','complete','entire','whole'] },
+        { key:'schedule', label:'a schedule and progress review', words:['schedule','progress','timeline','tasks','dates','plan','pending','overdue'] }
+      ];
+      // Order by which option actually resembles what the user said, so a
+      // later bare "yes"/"हो" naturally confirms the interpretation closest
+      // to their own wording rather than an arbitrary fixed order.
+      const t0 = text.toLowerCase();
+      options.sort((a,b)=> b.words.filter(w=>t0.includes(w)).length - a.words.filter(w=>t0.includes(w)).length);
+      ctx.pendingClarification = { actionType:'confirm_scope_choice', projectId: scopeProject.id, options };
+      return postAiMessage(clarifyOptionsMessage(
+        `I can help with that for ${scopeProject.name}. Do you want:`,
+        options.map(o=>o.label)
+      ));
+    }
+    return postAiMessage(`I want to make sure I understand — could you tell me which project, or what information (schedule, progress, risks, approvals${CAN_SEE_BUDGET(ME.role)?', budget':''}, etc.) you'd like me to look at?`);
+  }
+
+  if(wantsReview && scopeProject) return runProjectReviewWorkflow(scopeProject, wantsAction, ctx);
+
+  // Budget is checked first & independently — a message that also matches
+  // another intent must never leak financial data to an unauthorized role.
+  if(intents.includes('budget_query') && !canDo('budget_query', ME.role)){
+    return postAiMessage(denyMessage('budget_query', ME.role));
+  }
+
+  for(const intent of intents){
+    switch(intent){
+      case 'daily_report':
+        if(!canDo('daily_report', ME.role)) return postAiMessage(denyMessage('daily_report', ME.role));
+        return replyDailyReport();
+      case 'delayed_projects':
+        if(!canDo('delayed_projects', ME.role)) return postAiMessage(denyMessage('delayed_projects', ME.role));
+        return replyDelayedProjects();
+      case 'approvals_pending':
+        if(!canDo('approvals_pending', ME.role)) return postAiMessage(denyMessage('approvals_pending', ME.role));
+        return replyApprovalsPending();
+      case 'quality_issues':
+        if(!canDo('quality_issues', ME.role)) return postAiMessage(denyMessage('quality_issues', ME.role));
+        return replyQualityIssues(scopeProject);
+      case 'today_tasks':
+        if(!canDo('today_tasks', ME.role)) return postAiMessage(denyMessage('today_tasks', ME.role));
+        return replyTodayTasks(scopeProject);
+      case 'overdue_tasks':
+        if(!canDo('overdue_tasks', ME.role)) return postAiMessage(denyMessage('overdue_tasks', ME.role));
+        return replyOverdueTasks(scopeProject, ctx);
+      case 'pending_work':
+        if(!canDo('pending_work', ME.role)) return postAiMessage(denyMessage('pending_work', ME.role));
+        return replyPendingWork(scopeProject);
+      case 'company_pulse':
+        if(!canDo('company_pulse', ME.role)) return postAiMessage(denyMessage('company_pulse', ME.role));
+        return replyCompanyPulse();
+      case 'risk_query':
+        if(!canDo('risk_query', ME.role)) return postAiMessage(denyMessage('risk_query', ME.role));
+        if(!scopeProject) return postAiMessage(`I'd be glad to look into that — which project would you like me to check?`);
+        return replyRiskAnalysis(scopeProject, ctx);
+      case 'project_pulse':
+        if(!canDo('risk_query', ME.role)) return postAiMessage(denyMessage('risk_query', ME.role));
+        if(!scopeProject) return postAiMessage(`I'd be glad to check on that — which project would you like me to look at?`);
+        ctx.pendingClarification = { actionType:'confirm_pulse', projectId: scopeProject.id };
+        return postAiMessage(clarifyMessage(`You want an overall status/progress check on the ${scopeProject.name} project.`));
+      case 'shift':
+        if(!canDo('schedule_shift_request', ME.role)) return postAiMessage(denyMessage('schedule_shift_request', ME.role));
+        return proposeScheduleShift(text, scopeProject, ctx);
+      case 'done':
+        if(!canDo('task_status_update', ME.role)) return postAiMessage(denyMessage('task_status_update', ME.role));
+        return proposeTaskComplete(text, scopeProject, ctx);
+    }
+  }
+  return postAiMessage(genericHelpMessage());
+}
+
+/* ---- 1. Task status update ---- */
+async function proposeTaskComplete(text, scopeProject, ctx){
+  let q = sb.from('schedule_tasks').select('*').neq('status','completed');
+  if(scopeProject) q = q.eq('project_id', scopeProject.id);
+  const tasks = await safeQuery(q, 'proposeTaskComplete:tasks');
+  if(tasks === null) return postAiMessage(notEnoughDataMessage('your tasks'));
+
+  const { task: matched, candidates } = matchTasks(tasks, text);
+  let task = matched;
+  if(!task && ctx && ctx.lastTaskId && PRONOUN_TASK_RE.test(text)){
+    task = tasks.find(t=>t.id===ctx.lastTaskId) || null;
+  }
+  if(!task && candidates.length > 1){
+    if(ctx) ctx.pendingClarification = { actionType:'done', candidateIds: candidates.map(c=>c.id), candidateLabels: candidates.map(c=>c.task), originalText: text };
+    const names = candidates.slice(0,5).map(t=>`"${t.task}"`).join(', ');
+    return postAiMessage(`I can do that, but I found more than one possible task matching that: ${names}. Which one would you like to mark completed?`);
+  }
+  if(!task){ return postAiMessage(`I couldn't find a task matching that description${scopeProject? ' in '+scopeProject.name:''}. Could you tell me the task name?`); }
+  return proposeTaskCompleteForTask(task, ctx);
+}
+async function proposeTaskCompleteForTask(task, ctx){
+  if(ctx) ctx.lastTaskId = task.id;
+  const proj = PROJECTS.find(p=>p.id===task.project_id);
+  return postAiMessage(
+    `I understood that you want to mark "${task.task}"${proj?' ('+proj.name+')':''} as completed. Shall I proceed?`,
+    { type:'task_status_update', status:'proposed', target_table:'schedule_tasks', target_id: String(task.id), payload:{ task_name:task.task, project_id:task.project_id, status: 'completed', reason: null } }
+  );
+}
+
+/* ---- 2. Schedule shift request (mirrors schedule.html's own workflow) ---- */
+async function proposeScheduleShift(text, scopeProject, ctx){
+  let q = sb.from('schedule_tasks').select('*');
+  if(scopeProject) q = q.eq('project_id', scopeProject.id);
+  const tasks = await safeQuery(q, 'proposeScheduleShift:tasks');
+  if(tasks === null) return postAiMessage(notEnoughDataMessage('the schedule'));
+
+  const { task: matched, candidates } = matchTasks(tasks, text);
+  let task = matched;
+  if(!task && ctx && ctx.lastTaskId && PRONOUN_TASK_RE.test(text)){
+    task = tasks.find(t=>t.id===ctx.lastTaskId) || null;
+  }
+  if(!task && candidates.length > 1){
+    if(ctx) ctx.pendingClarification = { actionType:'shift', candidateIds: candidates.map(c=>c.id), candidateLabels: candidates.map(c=>c.task), originalText: text };
+    const names = candidates.slice(0,5).map(t=>`"${t.task}"`).join(', ');
+    return postAiMessage(`I can do that, but I found more than one possible task matching that: ${names}. Which one would you like to shift?`);
+  }
+  if(!task){ return postAiMessage(`I couldn't identify which task to shift${scopeProject? ' in '+scopeProject.name:''}. Could you tell me the task name?`); }
+  return proposeScheduleShiftForTask(task, text, ctx);
+}
+async function proposeScheduleShiftForTask(task, text, ctx){
+  if(ctx) ctx.lastTaskId = task.id;
+  const days = extractDays(text) * shiftDirection(text);
+  const origStart = task.baseline_start || task.due_date, origEnd = task.planned_end || task.due_date || origStart;
+  const propStart = addDaysISO(origStart, days), propEnd = addDaysISO(origEnd, days);
+  const deps = await safeQuery(sb.from('schedule_tasks').select('id, task').eq('depends_on', task.id), 'proposeScheduleShift:deps');
+  const impactList = (deps||[]).map(d=>d.task);
+  return postAiMessage(
+    `I understood that you want to move "${task.task}" by ${days>0?'+':''}${days} day(s) → ${propStart} to ${propEnd}.${impactList.length? '\nDependent tasks affected: '+impactList.join(', '):''}\nThis will be sent to the Director as a schedule-change request. Shall I proceed?`,
+    { type:'schedule_shift_request', status:'proposed', target_table:'schedule_tasks', target_id:String(task.id),
+      payload:{ task_id:task.id, task_name:task.task, original_start:origStart, original_end:origEnd, proposed_start:propStart, proposed_end:propEnd,
+                days_shifted:days, impacted_task_ids:(deps||[]).map(d=>d.id) } }
+  );
+}
+
+/* ---- cross-module data bundle for ONE project — this is the "combine
+   information across modules automatically" layer required for project-
+   health questions. Reused by the risk/status reply, the multi-step review
+   workflow, and (when wired) can be handed to a real LLM as its data context
+   — so there's exactly one place deciding which tables a health question
+   touches, instead of three separate copies of the same three queries. ---- */
+async function bundleProjectData(project){
+  const [tasks, reqs, ncrs] = await Promise.all([
+    safeQuery(sb.from('schedule_tasks').select('*').eq('project_id', project.id), 'bundleProjectData:tasks'),
+    safeQuery(sb.from('schedule_change_requests').select('*').eq('approval_status','pending'), 'bundleProjectData:reqs'),
+    safeQuery(sb.from('ncrs').select('*').eq('project_id', project.id).neq('status','closed'), 'bundleProjectData:ncrs')
+  ]);
+  if(tasks === null) return null;
+  const today = todayISO();
+  const overdue = tasks.filter(t=> t.status!=='completed' && (t.planned_end||t.due_date) && (t.planned_end||t.due_date) < today);
+  const pendingReqs = (reqs||[]).filter(r=> tasks.some(t=>t.id===r.task_id));
+  const total = tasks.length, done = tasks.filter(t=>t.status==='completed').length;
+  return {
+    project, tasks, overdue, pendingReqs, ncrs: ncrs||[],
+    progressPct: project.progress_pct ?? Math.round(done/(total||1)*100),
+    isDelayed: !!(project.is_delayed || project.schedule_status==='delayed'),
+    isOverBudget: project.budget_status === 'over-budget'
+  };
+}
+
+/* ---- proactive analysis over a project bundle — this is the "don't just
+   repeat data, reason over it" layer. It's rule-based (a real wired LLM,
+   see callExternalUnderstand above, would replace this with genuine
+   reasoning), but it genuinely combines multiple signals into a concern
+   list and ONE prioritized recommendation, and every concern cites the real
+   number behind it — never an invented fact. Facts (above, in the caller)
+   and this recommendation are always kept visually separate. ---- */
+function analyzeProjectHealth(bundle){
+  const concerns = [];
+  if(bundle.isDelayed) concerns.push(`the project is currently marked delayed`);
+  if(bundle.overdue.length) concerns.push(`${bundle.overdue.length} task(s) overdue`);
+  if(bundle.pendingReqs.length) concerns.push(`${bundle.pendingReqs.length} schedule-change request(s) awaiting approval`);
+  if(bundle.ncrs.length) concerns.push(`${bundle.ncrs.length} open quality issue(s)`);
+  if(CAN_SEE_BUDGET(ME.role) && bundle.isOverBudget) concerns.push(`the project is over budget`);
+  if(!concerns.length) return { concerns, recommendation: null };
+  let recommendation;
+  if(bundle.overdue.length && bundle.pendingReqs.length){
+    recommendation = `clear the pending approvals first — they're likely blocking progress on the overdue tasks — then re-baseline those tasks.`;
+  } else if(bundle.overdue.length){
+    recommendation = `review the overdue tasks with the site team and raise schedule-change requests where the dates are no longer realistic.`;
+  } else if(bundle.pendingReqs.length){
+    recommendation = `clear the pending schedule-change approvals so work already agreed on-site can proceed.`;
+  } else if(bundle.ncrs.length){
+    recommendation = `close out the open quality issues before they affect downstream tasks.`;
+  } else {
+    recommendation = `keep an eye on the budget position and flag it early if the trend continues.`;
+  }
+  return { concerns, recommendation };
+}
+
+/* ---- 3. Risk / status query (read-only, role-gated) ---- */
+async function replyRiskAnalysis(scopeProject, ctx){
+  const p = scopeProject;
+  const bundle = await bundleProjectData(p);
+  if(!bundle) return postAiMessage(notEnoughDataMessage(p ? p.name : 'that project'));
+  if(ctx && bundle.overdue[0]) ctx.lastTaskId = bundle.overdue[0].id; // so a follow-up "why?" / "move that task" resolves correctly
+  const lines = [`Status for ${p.name}:`];
+  lines.push(`• Schedule: ${p.schedule_status || (bundle.isDelayed?'delayed':'on-track')}${bundle.overdue.length?`, ${bundle.overdue.length} task(s) overdue (${bundle.overdue.slice(0,3).map(t=>t.task).join(', ')}${bundle.overdue.length>3?'…':''})`:''}`);
+  lines.push(`• Pending schedule-change approvals: ${bundle.pendingReqs.length}`);
+  lines.push(`• Open quality issues (NCRs): ${bundle.ncrs.length}`);
+  if(CAN_SEE_BUDGET(ME.role)){
+    lines.push(`• Budget: ${p.budget_status||'—'} — spent ₹${(p.budget_spent||0)} of ₹${(p.contract_value||0)}`);
+  }
+  const { concerns, recommendation } = analyzeProjectHealth(bundle);
+  lines.push(recommendation
+    ? `\nThis project needs attention. Main concern(s): ${concerns.join(', ')}.\nAI recommendation: ${recommendation}`
+    : '\nNo major risks detected right now.');
+  return postAiMessage(lines.join('\n'));
+}
+
+/* ---- 4. My pending work (role/scope aware) ---- */
+async function replyPendingWork(scopeProject){
+  let q = sb.from('schedule_tasks').select('*').neq('status','completed');
+  if(scopeProject) q = q.eq('project_id', scopeProject.id);
+  const tasks = await safeQuery(q, 'replyPendingWork');
+  if(tasks === null) return postAiMessage(notEnoughDataMessage('your pending work'));
+  const list = tasks.slice(0,8);
+  if(!list.length) return postAiMessage('No pending tasks found' + (scopeProject?' for '+scopeProject.name:'') + '. You\'re all caught up.');
+  const byProj = list.map(t=>{ const pr = PROJECTS.find(p=>p.id===t.project_id); return `• ${t.task} — ${pr?pr.name:'—'} (${t.status||'not started'})`; });
+  return postAiMessage(`Your pending work${scopeProject?' — '+scopeProject.name:''}:\n${byProj.join('\n')}`);
+}
+
+/* ---- 4b. Today's tasks ----
+   NOTE: schedule_tasks has no assignee/owner column in the uploaded schema
+   usage, so this is project-scoped like replyPendingWork, not per-person.
+   Flagging this rather than inventing an assignee column. ---- */
+async function replyTodayTasks(scopeProject){
+  const today = todayISO();
+  let q = sb.from('schedule_tasks').select('*').neq('status','completed');
+  if(scopeProject) q = q.eq('project_id', scopeProject.id);
+  const tasks = await safeQuery(q, 'replyTodayTasks');
+  if(tasks === null) return postAiMessage(notEnoughDataMessage("today's tasks"));
+  const dueToday = tasks.filter(t=> (t.planned_end||t.due_date) === today);
+  if(!dueToday.length) return postAiMessage(`Nothing due today${scopeProject?' in '+scopeProject.name:''}.`);
+  const lines = dueToday.map(t=>{ const p=PROJECTS.find(pr=>pr.id===t.project_id); return `• ${t.task} — ${p?p.name:'—'}`; });
+  return postAiMessage(`Due today${scopeProject?' — '+scopeProject.name:''}:\n${lines.join('\n')}`);
+}
+
+/* ---- 4c. Overdue tasks ---- */
+async function replyOverdueTasks(scopeProject, ctx){
+  const today = todayISO();
+  let q = sb.from('schedule_tasks').select('*').neq('status','completed');
+  if(scopeProject) q = q.eq('project_id', scopeProject.id);
+  const tasks = await safeQuery(q, 'replyOverdueTasks');
+  if(tasks === null) return postAiMessage(notEnoughDataMessage('overdue tasks'));
+  const overdue = tasks.filter(t=> (t.planned_end||t.due_date) && (t.planned_end||t.due_date) < today);
+  if(ctx && overdue[0]) ctx.lastTaskId = overdue[0].id;
+  if(!overdue.length) return postAiMessage(`No overdue tasks${scopeProject?' in '+scopeProject.name:''}.`);
+  const lines = overdue.map(t=>{ const p=PROJECTS.find(pr=>pr.id===t.project_id); return `• ${t.task} — ${p?p.name:'—'} (planned ${t.planned_end||t.due_date})`; });
+  return postAiMessage(`Overdue (${overdue.length})${scopeProject?' — '+scopeProject.name:''}:\n${lines.join('\n')}`);
+}
+
+/* ---- 4d. Portfolio-wide delayed projects (Director/PM) ---- */
+async function replyDelayedProjects(){
+  const projects = await safeQuery(sb.from('projects').select('*'), 'replyDelayedProjects');
+  if(projects === null) return postAiMessage(notEnoughDataMessage('project status across the company'));
+  const delayed = projects.filter(p=>p.is_delayed || p.schedule_status==='delayed');
+  if(!delayed.length) return postAiMessage('No projects are currently flagged as delayed.');
+  const lines = delayed.map(p=>`• ${p.name} — ${p.schedule_status||'delayed'}${CAN_SEE_BUDGET(ME.role) && p.budget_status==='over-budget' ? ', over-budget':''}`);
+  return postAiMessage(`Projects needing attention (${delayed.length}):\n${lines.join('\n')}`);
+}
+
+/* ---- company-wide data bundle — the portfolio-level analogue of
+   bundleProjectData(), reused by the company pulse below. ---- */
+async function bundleCompanyData(){
+  const [projects, reqs, ncrs] = await Promise.all([
+    safeQuery(sb.from('projects').select('*'), 'bundleCompanyData:projects'),
+    safeQuery(sb.from('schedule_change_requests').select('*').eq('approval_status','pending'), 'bundleCompanyData:reqs'),
+    safeQuery(sb.from('ncrs').select('*').neq('status','closed'), 'bundleCompanyData:ncrs')
+  ]);
+  if(projects === null) return null;
+  return {
+    projects,
+    delayed: projects.filter(p=>p.is_delayed || p.schedule_status==='delayed'),
+    overBudget: projects.filter(p=>p.budget_status==='over-budget'),
+    pendingApprovals: reqs || [],
+    ncrs: ncrs || []
+  };
+}
+
+/* ---- data bundle handed to the Gemini-powered sips-ai Edge Function, so it
+   reasons only over real, role-filtered SIPS data and never invents figures.
+   Reuses the SAME bundleProjectData()/bundleCompanyData() queries and the
+   SAME CAN_SEE_BUDGET() gate already used by the reply/*() functions above —
+   this only reshapes their output into a compact snapshot, and strips
+   budget fields entirely for roles not authorized to see them (rather than
+   sending zeroed/false values that could be mistaken for real data). ---- */
+function slimTask(t){
+  return { id:t.id, task:t.task, status:t.status||'not started', project_id:t.project_id,
+           due_date:t.planned_end||t.due_date||null, baseline_start:t.baseline_start||null };
+}
+function slimProject(p, includeBudget){
+  const base = { id:p.id, name:p.name, schedule_status:p.schedule_status||null,
+                 is_delayed: !!(p.is_delayed || p.schedule_status==='delayed'),
+                 progress_pct: p.progress_pct ?? null, next_milestone: p.next_milestone||null };
+  if(includeBudget){
+    base.budget_status = p.budget_status || null;
+    base.budget_spent = p.budget_spent ?? null;
+    base.contract_value = p.contract_value ?? null;
+  }
+  return base;
+}
+async function buildAiDataBundle(scopeProject){
+  const includeBudget = CAN_SEE_BUDGET(ME.role);
+  const today = todayISO();
+  if(scopeProject){
+    const bundle = await bundleProjectData(scopeProject);
+    if(!bundle) return null;
+    const pending = bundle.tasks.filter(t=>t.status!=='completed');
+    const dueToday = pending.filter(t=>(t.planned_end||t.due_date)===today);
+    
+    let budget_sheet = null;
+    if(includeBudget && ME.role === 'accounts') {
+      budget_sheet = await safeQuery(sb.from('budget_items').select('*').eq('project_id', scopeProject.id).order('sort_order').order('id'), 'buildAiData:budget');
+    }
+
+    return {
+      scope:'project', today,
+      project: slimProject(bundle.project, includeBudget),
+      total_tasks: bundle.tasks.length,
+      completed_tasks: bundle.tasks.length - pending.length,
+      progress_pct: bundle.progressPct,
+      tasks_due_today: dueToday.slice(0,20).map(slimTask),
+      overdue_tasks: bundle.overdue.slice(0,20).map(slimTask),
+      pending_tasks: pending.slice(0,30).map(slimTask),
+      pending_change_requests: bundle.pendingReqs.length,
+      open_quality_issues: bundle.ncrs.slice(0,20).map(n=>({ id:n.id, title:n.title||n.description||('NCR #'+n.id) })),
+      ...(includeBudget ? { is_over_budget: bundle.isOverBudget } : {}),
+      ...(budget_sheet ? { budget_sheet } : {})
+    };
+  }
+  const bundle = await bundleCompanyData();
+  if(!bundle) return null;
+  return {
+    scope:'company', today,
+    total_projects: bundle.projects.length,
+    delayed_projects: bundle.delayed.map(p=>slimProject(p, includeBudget)),
+    pending_approvals: bundle.pendingApprovals.length,
+    open_quality_issues: bundle.ncrs.length,
+    ...(includeBudget ? { over_budget_projects: bundle.overBudget.map(p=>slimProject(p,true)) } : {})
+  };
+}
+
+/* ---- "how's everything going?" for the whole company (Director/PM) — the
+   portfolio-level analogue of replyRiskAnalysis()/analyzeProjectHealth(). ---- */
+async function replyCompanyPulse(){
+  const bundle = await bundleCompanyData();
+  if(!bundle) return postAiMessage(notEnoughDataMessage('company-wide status'));
+  const lines = [`Company-wide status:`];
+  lines.push(`• ${bundle.delayed.length} of ${bundle.projects.length} project(s) delayed${bundle.delayed.length?': '+bundle.delayed.map(p=>p.name).join(', '):''}`);
+  lines.push(`• ${bundle.pendingApprovals.length} approval(s) pending`);
+  lines.push(`• ${bundle.ncrs.length} open quality issue(s)`);
+  if(CAN_SEE_BUDGET(ME.role)) lines.push(`• ${bundle.overBudget.length} project(s) over budget${bundle.overBudget.length?': '+bundle.overBudget.map(p=>p.name).join(', '):''}`);
+  const worst = bundle.delayed[0] || (CAN_SEE_BUDGET(ME.role) ? bundle.overBudget[0] : null);
+  if(worst){
+    const why = bundle.delayed.includes(worst) ? 'it is currently delayed' : 'it is currently over budget';
+    lines.push(`\nAI recommendation: review "${worst.name}" first — ${why} and is likely the highest-impact place to focus this week.`);
+  } else {
+    lines.push('\nNo major company-wide concerns right now.');
+  }
+  return postAiMessage(lines.join('\n'));
+}
+
+/* ---- 4e. Pending approvals across the portfolio ---- */
+async function replyApprovalsPending(){
+  const reqs = await safeQuery(sb.from('schedule_change_requests').select('*').eq('approval_status','pending'), 'replyApprovalsPending:reqs');
+  if(reqs === null) return postAiMessage(notEnoughDataMessage('pending approvals'));
+  if(!reqs.length) return postAiMessage('No pending approvals right now.');
+  const taskIds = reqs.map(r=>r.task_id).filter(Boolean);
+  const tasks = taskIds.length ? await safeQuery(sb.from('schedule_tasks').select('id, task, project_id').in('id', taskIds), 'replyApprovalsPending:tasks') : [];
+  const lines = reqs.map(r=>{
+    const t = (tasks||[]).find(x=>x.id===r.task_id);
+    const p = t ? PROJECTS.find(pr=>pr.id===t.project_id) : null;
+    return `• ${t ? t.task : 'Task #'+r.task_id}${p?' — '+p.name:''}`;
+  });
+  return postAiMessage(`Pending approvals (${reqs.length}):\n${lines.join('\n')}`);
+}
+
+/* ---- 4f. Open quality issues (NCRs) ---- */
+async function replyQualityIssues(scopeProject){
+  let q = sb.from('ncrs').select('*').neq('status','closed');
+  if(scopeProject) q = q.eq('project_id', scopeProject.id);
+  const ncrs = await safeQuery(q, 'replyQualityIssues');
+  if(ncrs === null) return postAiMessage(notEnoughDataMessage('quality issues'));
+  if(!ncrs.length) return postAiMessage(`No open quality issues${scopeProject?' for '+scopeProject.name:''}.`);
+  const lines = ncrs.slice(0,8).map(n=>{
+    const label = n.title || n.description || ('NCR #'+n.id);
+    const p = scopeProject ? null : PROJECTS.find(pr=>pr.id===n.project_id);
+    return `• ${label}${p?' — '+p.name:''}`;
+  });
+  return postAiMessage(`Open quality issues (NCRs)${scopeProject?' — '+scopeProject.name:''} (${ncrs.length}):\n${lines.join('\n')}`);
+}
+
+/* ---- 4g. Schedule & progress review (the other half of the "overall
+   assessment vs schedule review" clarification) ---- */
+async function replyScheduleProgress(scopeProject){
+  const today = todayISO();
+  const tasks = await safeQuery(sb.from('schedule_tasks').select('*').eq('project_id', scopeProject.id), 'replyScheduleProgress');
+  if(tasks === null) return postAiMessage(notEnoughDataMessage(scopeProject.name));
+  const total = tasks.length, done = tasks.filter(t=>t.status==='completed').length;
+  const overdue = tasks.filter(t=> t.status!=='completed' && (t.planned_end||t.due_date) && (t.planned_end||t.due_date) < today);
+  const upcoming = tasks.filter(t=> t.status!=='completed' && (t.planned_end||t.due_date) && (t.planned_end||t.due_date) >= today).slice(0,5);
+  const lines = [`Schedule & progress — ${scopeProject.name}:`];
+  lines.push(`• Progress: ${scopeProject.progress_pct ?? Math.round(done/(total||1)*100)}% (${done}/${total} tasks completed)`);
+  lines.push(`• Overdue: ${overdue.length}${overdue.length?' — '+overdue.slice(0,3).map(t=>t.task).join(', '):''}`);
+  lines.push(`• Upcoming: ${upcoming.length ? upcoming.map(t=>`${t.task} (${t.planned_end||t.due_date})`).join(', ') : 'none scheduled'}`);
+  return postAiMessage(lines.join('\n'));
+}
+
+/* ---- 5. Director/PM daily report ---- */
+async function replyDailyReport(){
+  if(!CAN_SEE_REPORT(ME.role)) return postAiMessage('Today\'s full project report is available to Directors and Project Managers.');
+  const [projects, reqs, ncrs] = await Promise.all([
+    safeQuery(sb.from('projects').select('*'), 'replyDailyReport:projects'),
+    safeQuery(sb.from('schedule_change_requests').select('*').eq('approval_status','pending'), 'replyDailyReport:reqs'),
+    safeQuery(sb.from('ncrs').select('*').neq('status','closed'), 'replyDailyReport:ncrs')
+  ]);
+  if(projects === null) return postAiMessage(notEnoughDataMessage("today's report"));
+  const delayed = projects.filter(p=>p.is_delayed || p.schedule_status==='delayed');
+  const overBudget = projects.filter(p=>p.budget_status==='over-budget');
+  const milestones = projects.filter(p=>p.next_milestone).slice(0,5).map(p=>`${p.name}: ${p.next_milestone}`);
+  const lines = [
+    `Today's report (${todayISO()}):`,
+    `• Projects delayed: ${delayed.length}${delayed.length?' — '+delayed.map(p=>p.name).join(', '):''}`,
+    `• Over-budget projects: ${overBudget.length}${overBudget.length?' — '+overBudget.map(p=>p.name).join(', '):''}`,
+    `• Pending schedule-change approvals: ${(reqs||[]).length}`,
+    `• Open quality issues (NCRs): ${(ncrs||[]).length}`,
+    milestones.length ? `• Upcoming milestones: ${milestones.join(' · ')}` : '• Upcoming milestones: none flagged'
+  ];
+  return postAiMessage(lines.join('\n'));
+}
+
+/* ---- 6. Multi-step workflow: "review Project X and prepare actions" ----
+   Read-only analysis always runs immediately (steps 1-6 of the safe action
+   pipeline). If the command also asked for actions (wantsAction) AND the
+   user's role is authorized for at least one write, we propose up to 3
+   schedule-change requests for the worst overdue tasks as individual,
+   independently confirmable messages (reusing the exact same proposed/
+   confirm/execute/verify machinery as a single action), plus a batch
+   "Confirm All" control. Nothing here invents new business logic — every
+   proposed action still goes through execute_ai_action(). ---- */
+async function runProjectReviewWorkflow(scopeProject, wantsAction, ctx){
+  ctx.project = scopeProject;
+  const p = scopeProject;
+  const bundle = await bundleProjectData(p);
+  if(!bundle) return postAiMessage(notEnoughDataMessage(p.name));
+  if(bundle.overdue[0]) ctx.lastTaskId = bundle.overdue[0].id;
+
+  const lines = [`Review — ${p.name}:`];
+  lines.push(`• Schedule: ${p.schedule_status || (bundle.isDelayed?'delayed':'on-track')}`);
+  lines.push(`• Overdue tasks: ${bundle.overdue.length}${bundle.overdue.length?' — '+bundle.overdue.slice(0,5).map(t=>t.task).join(', '):''}`);
+  lines.push(`• Pending schedule-change approvals: ${bundle.pendingReqs.length}`);
+  lines.push(`• Open quality issues (NCRs): ${bundle.ncrs.length}`);
+  if(CAN_SEE_BUDGET(ME.role)) lines.push(`• Budget: ${p.budget_status||'—'}`);
+  const { concerns, recommendation } = analyzeProjectHealth(bundle);
+  if(recommendation) lines.push(`\nThis project needs attention. Main concern(s): ${concerns.join(', ')}.\nAI recommendation: ${recommendation}`);
+  await postAiMessage(lines.join('\n'));
+
+  if(!wantsAction || !bundle.overdue.length) return;
+
+  if(!canDo('task_status_update', ME.role) && !canDo('schedule_shift_request', ME.role)){
+    return postAiMessage("I've flagged the issues above, but your role isn't authorized to action schedule/task changes — please route this to your PM or Director.");
+  }
+  if(!canDo('schedule_shift_request', ME.role)){
+    return postAiMessage("I've flagged the issues above — raising schedule-change requests needs PM/Director/Engineer access, so I can't propose actions from your role.");
+  }
+
+  const batchId = 'batch_'+Date.now();
+  const proposals = bundle.overdue.slice(0,3);
+  await postAiMessage(`Proposed actions to address the above (${proposals.length}):`);
+  const batchMsgIds = [];
+  for(const t of proposals){
+    const origStart = t.baseline_start || t.due_date, origEnd = t.planned_end || t.due_date || origStart;
+    const propStart = addDaysISO(origStart, 1), propEnd = addDaysISO(origEnd, 1);
+    const msg = await postAiMessage(
+      `Raise schedule-change request: shift "${t.task}" by +1 day → ${propStart} to ${propEnd}?`,
+      { type:'schedule_shift_request', status:'proposed', batch_id:batchId, target_table:'schedule_tasks', target_id:String(t.id),
+        payload:{ task_id:t.id, task_name:t.task, original_start:origStart, original_end:origEnd, proposed_start:propStart, proposed_end:propEnd, days_shifted:1, impacted_task_ids:[] } }
+    );
+    if(msg) batchMsgIds.push(msg.id);
+  }
+  if(batchMsgIds.length > 1){
+    await postAiMessage('Confirm each above individually, or **Confirm All** to raise every proposed schedule-change request in this batch.', { type:'batch_control', status:'pending', batch_id:batchId, member_ids:batchMsgIds });
+  }
+}
+
+/* ---- time-of-day greeting, never hardcoded ---- */
+function timeGreeting(){
+  const h = new Date().getHours();
+  if(h < 12) return 'Good morning';
+  if(h < 17) return 'Good afternoon';
+  return 'Good evening';
+}
+
+/* ---- 7. Proactive role-based welcome (posted once, first time the personal
+   AI conversation is opened — see openConversation()). Every number below is
+   a live query, never hardcoded. Best-effort: any failure here is swallowed
+   so it never blocks the chat from opening. Each role gets genuinely
+   different framing (Director = company-wide management view, not a
+   project-level user), per the requirement — not just a different number
+   plugged into one shared sentence. ---- */
+async function postProactiveBrief(){
+  const first = (ME.fullName||'').split(' ')[0] || ME.fullName;
+  const greeting = timeGreeting();
+  const today = todayISO();
+
+  if(ME.role === 'director'){
+    // Company-wide — intentionally NOT scoped to any single project.
+    const [{data:projects}, {data:reqs}, {data:ncrs}] = await Promise.all([
+      sb.from('projects').select('*'),
+      sb.from('schedule_change_requests').select('id').eq('approval_status','pending'),
+      sb.from('ncrs').select('id').neq('status','closed')
+    ]);
+    const delayed = (projects||[]).filter(p=>p.is_delayed || p.schedule_status==='delayed');
+    const overBudget = CAN_SEE_BUDGET(ME.role) ? (projects||[]).filter(p=>p.budget_status==='over-budget') : [];
+    const milestonesSoon = (projects||[]).filter(p=>p.next_milestone).length;
+    const attn = [
+      `• ${delayed.length} project(s) delayed`,
+      `• ${(ncrs||[]).length} open quality issue(s) across the company`,
+      `• ${(reqs||[]).length} approval(s) pending`
+    ];
+    if(CAN_SEE_BUDGET(ME.role)) attn.push(`• ${overBudget.length} project(s) over budget`);
+    if(milestonesSoon) attn.push(`• ${milestonesSoon} project(s) with an upcoming milestone flagged`);
+    return postAiMessage(
+      `${greeting}, ${first}. 👋\n\nI'm your SIPS AI Assistant. I can help you understand what's happening across the company — projects, progress, schedules, delays, risks, quality, approvals${CAN_SEE_BUDGET(ME.role)?', budget':''} and overall performance. Ask me anything about the SIPS information available to you; I can also analyse problems, compare projects, investigate delays, and prepare management reports.\n\n` +
+      `TODAY'S MANAGEMENT ATTENTION\n${attn.join('\n')}\n\n` +
+      `Examples (not a fixed list): "Which projects are delayed and why?", "Show me the overall company status", "Prepare today's management report".`
+    );
+  }
+
+  if(ME.role === 'pm'){
+    // NOTE: 'projects managed by this PM' would need a project owner/PM
+    // column, which wasn't visible in the uploaded schema — this shows the
+    // PM's accessible projects (via RLS) rather than filtering by ownership.
+    const [{data:projects}, {data:tasks}, {data:reqs}, {data:ncrs}] = await Promise.all([
+      sb.from('projects').select('*'),
+      sb.from('schedule_tasks').select('*').neq('status','completed'),
+      sb.from('schedule_change_requests').select('id').eq('approval_status','pending'),
+      sb.from('ncrs').select('id').neq('status','closed')
+    ]);
+    const delayed = (projects||[]).filter(p=>p.is_delayed || p.schedule_status==='delayed');
+    const overdue = (tasks||[]).filter(t=>(t.planned_end||t.due_date) && (t.planned_end||t.due_date) < today);
+    return postAiMessage(
+      `${greeting}, ${first}. 👋\n\nI'm your SIPS AI Assistant. I can help you monitor and manage your projects — schedule, tasks, progress, delays, dependencies, risks, quality, approvals and project activities. Ask me anything about the information available to you, investigate a problem, prepare a report, or ask me to perform an authorised SIPS action.\n\n` +
+      `TODAY\n• ${overdue.length} task(s) overdue\n• ${delayed.length} project(s) delayed\n• ${(reqs||[]).length} approval(s) pending\n• ${(ncrs||[]).length} open quality issue(s)\n\n` +
+      `Examples: "Which tasks are overdue?", "Why is this project delayed?", "Prepare today's project report".`
+    );
+  }
+
+  if(ME.role === 'engineer' || ME.role === 'vendor'){
+    const { data: tasks } = await sb.from('schedule_tasks').select('*').neq('status','completed');
+    const dueToday = (tasks||[]).filter(t=>(t.planned_end||t.due_date)===today);
+    const overdue = (tasks||[]).filter(t=>(t.planned_end||t.due_date) && (t.planned_end||t.due_date) < today);
+    const upcoming = (tasks||[]).filter(t=>(t.planned_end||t.due_date) && (t.planned_end||t.due_date) > today).length;
+    const roleLine = ME.role === 'engineer'
+      ? "I can help you with your day-to-day site work — tasks, schedule, progress, pending activities, delays, dependencies, site issues, quality and other project information available to you."
+      : "I can help you with the project and work information available to you — tasks, deadlines, schedule, pending activities, progress and related updates.";
+    return postAiMessage(
+      `${greeting}, ${first}. 👋\n\nI'm your SIPS AI Assistant. ${roleLine} Tell me what you need in your own words — ask questions, analyse a problem, request a report, or ask me to perform an authorised SIPS action.\n\n` +
+      `TODAY\n• ${dueToday.length} task(s) due today${overdue.length?`\n• ${overdue.length} task(s) overdue`:''}${upcoming?`\n• ${upcoming} upcoming task(s)`:''}\n\n` +
+      `Examples: "माझी आजची कामं काय आहेत?", "Excavation का delay आहे?", "हे task complete कर".`
+    );
+  }
+
+  if(ME.role === 'accounts'){
+    // NOTE: no invoices/payments table was visible in the uploaded schema, so
+    // this brief only draws on projects.budget_status — flag this if your
+    // real schema has a dedicated financial/invoices table to query instead.
+    const { data: projects } = await sb.from('projects').select('*');
+    const overBudget = (projects||[]).filter(p=>p.budget_status==='over-budget');
+    return postAiMessage(
+      `${greeting}, ${first}. 👋\n\nI'm your SIPS AI Assistant. I can help you understand and analyse the financial information available to you — budgets, project financial status and related accounts information. Ask me questions, compare financial data, identify concerns, or prepare financial summaries.\n\n` +
+      `TODAY\n• ${overBudget.length} project(s) over budget${overBudget.length?': '+overBudget.map(p=>p.name).join(', '):''}\n\n` +
+      `Examples: "Which projects are over budget?", "Project ABC चा खर्च किती आहे?", "Prepare today's financial summary".`
+    );
+  }
+
+  if(ME.role === 'client'){
+    const { data: projects } = await sb.from('projects').select('*'); // RLS should already scope this to the client's own project(s)
+    const withMilestone = (projects||[]).filter(p=>p.next_milestone);
+    return postAiMessage(
+      `${greeting}, ${first}. 👋\n\nI'm your SIPS AI Assistant. I can help you understand the project information available to you — progress, schedule, milestones, completed work, upcoming activities and important project updates. Ask me anything about your project and I'll find the relevant information available to you.\n\n` +
+      (withMilestone.length ? `Upcoming: ${withMilestone.slice(0,3).map(p=>`${p.name} — ${p.next_milestone}`).join(' · ')}\n\n` : '') +
+      `Examples: "What is the current project progress?", "What has been completed?", "Give me a project summary".`
+    );
+  }
+
+  return postAiMessage(`${greeting}, ${first}. 👋 I'm your SIPS AI Assistant. Ask me anything about your projects — I'll only show what you're authorized to see.`);
+}
+
+/* ---- confirm / cancel a proposed action ---- */
+async function resolveAiAction(messageId, confirmed){
+  try{
+    const { data: msg, error: fetchErr } = await sb.from('chat_messages').select('*').eq('id', messageId).single();
+    if(fetchErr || !msg || !msg.ai_action) throw (fetchErr || new Error('action message not found'));
+    const action = msg.ai_action;
+
+    // Client-side canDo() is kept purely so the UI can show a nice "you can't
+    // do that" message immediately without a round trip — the SIPS AI action
+    // is only ever actually executed by the execute_ai_action() RPC below,
+    // which re-checks role, conversation membership, and project access
+    // server-side and does the update + ai_action_log write as one atomic
+    // transaction (a manipulated target_id/messageId can't bypass this).
+    if(confirmed && !canDo(action.type, ME.role)){
+      await postAiMessage(denyMessage(action.type, ME.role));
+      return { ok:false };
+    }
+
+    const { error } = await sb.rpc('execute_ai_action', { p_message_id: messageId, p_confirmed: confirmed });
+    if(error) throw error;
+    await loadMessages(ACTIVE_CONV.id);
+
+    if(!confirmed){
+      await postAiMessage('Okay, cancelled.');
+      return { ok:true, cancelled:true };
+    }
+
+    // ---- verify: re-read the record instead of trusting the RPC blindly ----
+    const verified = await verifyAiAction(action);
+    if(!verified){
+      await postAiMessage(`Action could not be verified. No success confirmation will be shown — please check "${action.payload?.task_name||'the record'}" directly.`);
+      return { ok:false, unverified:true };
+    }
+    if(action.type === 'task_status_update'){
+      await postAiMessage(`✓ "${action.payload.task_name}" marked completed (verified).`);
+    } else if(action.type === 'schedule_shift_request'){
+      await postAiMessage(`✓ Schedule-change request submitted for "${action.payload.task_name}" — pending Director approval (see Approvals / Schedule page).`);
+    }
+    return { ok:true };
+  }catch(err){
+    console.error('[SIPS AI] resolveAiAction failed:', err);
+    try{ await loadMessages(ACTIVE_CONV.id); }catch(e){}
+    sipsToast('That action could not be completed.', 'error');
+    await postAiMessage(safeFailureMessage());
+    return { ok:false, error: 'internal' };
+  }
+}
+
+/* ---- verify a write actually took effect, per action type ---- */
+async function verifyAiAction(action){
+  try{
+    if(action.type === 'task_status_update'){
+      const { data } = await sb.from('schedule_tasks').select('status').eq('id', action.target_id).single();
+      return !!data && data.status === 'completed';
+    }
+    if(action.type === 'schedule_shift_request'){
+      const { data } = await sb.from('schedule_change_requests').select('id').eq('task_id', action.payload.task_id).eq('approval_status','pending').order('created_at', { ascending:false }).limit(1);
+      return !!(data && data.length);
+    }
+    return true; // no extra verification defined for this action type
+  }catch(e){
+    return false; // if we can't read it back, we can't claim success
+  }
+}
+
+/* ---- confirm every proposed action in a batch (multi-step workflow) ----
+   Executes sequentially so dependency order is respected; on the first
+   failure, remaining actions are reported as skipped rather than silently
+   attempted or silently declared successful. ---- */
+async function confirmAllBatch(controlMsgId){
+  try{
+    const { data: ctrl, error } = await sb.from('chat_messages').select('*').eq('id', controlMsgId).single();
+    if(error || !ctrl || !ctrl.ai_action || !Array.isArray(ctrl.ai_action.member_ids)) throw (error || new Error('batch control message not found'));
+    const ids = ctrl.ai_action.member_ids;
+    const results = { done:[], failed:[], skipped:[] };
+    let stop = false;
+    for(const id of ids){
+      if(stop){ results.skipped.push(id); continue; }
+      const r = await resolveAiAction(id, true);
+      if(r && r.ok) results.done.push(id);
+      else { results.failed.push(id); stop = true; }
+    }
+    await sb.from('chat_messages').update({ ai_action: { ...ctrl.ai_action, status:'resolved' } }).eq('id', controlMsgId);
+    await loadMessages(ACTIVE_CONV.id);
+    const parts = [`Batch result: ${results.done.length} completed`];
+    if(results.failed.length) parts.push(`${results.failed.length} failed`);
+    if(results.skipped.length) parts.push(`${results.skipped.length} skipped because of the earlier failure`);
+    return postAiMessage(parts.join(', ') + '.');
+  }catch(e){
+    console.error('[SIPS AI] confirmAllBatch failed:', e);
+    return postAiMessage(safeFailureMessage());
+  }
+}
+
+/* -------------------------------------------------------- context panel --- */
+async function renderContextPanel(conv){
+  const box = document.getElementById('ctxBody');
+  if(!conv.project_id){
+    box.innerHTML = conv.type==='ai'
+      ? `<div class="cr-empty">Mention a project name in your message, or open this AI chat from a project's overview page to scope it automatically.</div>`
+      : `<div class="cr-empty">Direct conversation — no project scope.</div>`;
+    return;
+  }
+  const p = PROJECTS.find(x=>x.id===conv.project_id);
+  if(!p){ box.innerHTML = '<div class="cr-empty">Project not found.</div>'; return; }
+  const [{data:tasks}, {data:reqs}] = await Promise.all([
+    sb.from('schedule_tasks').select('status').eq('project_id', p.id),
+    sb.from('schedule_change_requests').select('id').eq('approval_status','pending')
+  ]);
+  const total = (tasks||[]).length, done = (tasks||[]).filter(t=>t.status==='completed').length;
+  box.innerHTML = `
+    <div style="font-weight:700;font-family:var(--font-display);margin-bottom:8px;">${esc(p.name)}</div>
+    <div class="cr-row"><span>Progress</span><b>${p.progress_pct||Math.round(done/(total||1)*100)}%</b></div>
+    <div class="cr-row"><span>Schedule</span><b>${esc(p.schedule_status||'—')}</b></div>
+    ${CAN_SEE_BUDGET(ME.role) ? `<div class="cr-row"><span>Budget</span><b>${esc(p.budget_status||'—')}</b></div>` : ''}
+    <div class="cr-row"><span>Tasks</span><b>${done}/${total} done</b></div>
+    <div class="cr-row"><span>Pending approvals</span><b>${(reqs||[]).length}</b></div>
+    <div style="margin-top:10px;"><a class="btn" style="display:block;text-align:center;" href="project-overview.html?id=${p.id}">Open project overview →</a></div>`;
+}
+
+/* ------------------------------------------------------------- new chat --- */
+function wireGlobalUI(){
+  document.getElementById('convSearch').addEventListener('input', renderConvList);
+  document.getElementById('newChatBtn').addEventListener('click', openNewChatModal);
+  document.getElementById('closeNewChat').addEventListener('click', ()=> document.getElementById('newChatModal').classList.remove('open'));
+  document.getElementById('cancelNewChat').addEventListener('click', ()=> document.getElementById('newChatModal').classList.remove('open'));
+  document.getElementById('submitNewChat').addEventListener('click', submitNewChat);
+
+  /* ---- Context panel slide-over on tablet widths (<=1100px) — purely
+     presentational, renderContextPanel()/#ctxBody are unchanged, this just
+     toggles visibility of the same element via a CSS class + backdrop. ---- */
+  const openCtx = ()=>{ document.getElementById('collabRight').classList.add('open'); document.getElementById('ctxBackdrop').classList.add('show'); };
+  const closeCtx = ()=>{ document.getElementById('collabRight').classList.remove('open'); document.getElementById('ctxBackdrop').classList.remove('show'); };
+  document.getElementById('ctxToggle').addEventListener('click', openCtx);
+  document.getElementById('ctxClose').addEventListener('click', closeCtx);
+  document.getElementById('ctxBackdrop').addEventListener('click', closeCtx);
+}
+
+function openNewChatModal(){
+  const list = document.getElementById('newChatList');
+  const others = PROFILES.filter(p=>p.id!==ME.id);
+  list.innerHTML = others.map(p=>`<label class="new-chat-row"><input type="checkbox" value="${p.id}" style="margin-right:4px;"> <div class="cl-avatar" style="width:28px;height:28px;font-size:11px;">${esc(initials(p.full_name))}</div> <div>${esc(p.full_name)} <span class="cl-role-tag">${esc(ROLE_LABELS[p.role]||p.role)}</span></div></label>`).join('') || '<div class="cr-empty">No other users found.</div>';
+  document.getElementById('newChatModal').classList.add('open');
+}
+
+async function submitNewChat(){
+  const checked = Array.from(document.querySelectorAll('#newChatList input:checked')).map(c=>c.value);
+  if(!checked.length){ sipsToast('Pick at least one person.', 'error'); return; }
+  const title = document.getElementById('newChatTitle').value.trim();
+  const type = checked.length > 1 ? 'group' : 'dm';
+  if(type==='dm'){
+    const existing = CONVERSATIONS.find(c=>c.type==='dm' && (c.member_ids||[]).includes(checked[0]) && (c.member_ids||[]).includes(ME.id));
+    if(existing){ document.getElementById('newChatModal').classList.remove('open'); return openConversation(existing.id); }
+  }
+  const id = await createConversation(type, [ME.id, ...checked], type==='group' ? (title||'Group chat') : null, null);
+  document.getElementById('newChatModal').classList.remove('open');
+  document.getElementById('newChatTitle').value = '';
+  await loadConversations();
+  if(id) openConversation(id);
+}
+</script>
+</body>
+</html>

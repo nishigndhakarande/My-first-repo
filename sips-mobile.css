@@ -1,0 +1,119 @@
+/* ==========================================================================
+   SIPS MOBILE — premium phone reskin
+   STRICTLY scoped inside @media (max-width:900px). Desktop (>900px) is
+   completely untouched — this file adds zero rules outside the query.
+   Reskins existing shared classes only (app-topbar, kpi, card, pill, table,
+   modal, btn, forms) — no markup assumptions beyond what sips-shell.js /
+   sips-design-system.css already render on every page. No JS/business logic.
+   ========================================================================== */
+@media (max-width:900px){
+  :root{
+    --m-navy-950:#080B14; --m-navy-900:#0D1220; --m-navy-850:#111729;
+    --m-glass:rgba(255,255,255,0.08); --m-glass-brd:rgba(255,255,255,0.14);
+  }
+  html,body{ overflow-x:hidden; }
+  body{ padding-bottom:78px; background:var(--paper-0); }
+
+  /* ---- Topbar becomes a dark, glassy mobile hero ---- */
+  .app-topbar{
+    background:linear-gradient(160deg,var(--m-navy-850) 0%, var(--m-navy-900) 60%, #0c1122 100%) !important;
+    border:none !important; border-radius:0 0 var(--r-lg) var(--r-lg) !important;
+    box-shadow:0 12px 28px rgba(8,11,20,.28) !important;
+    padding:14px 16px 16px !important; margin:0 0 16px !important; top:0 !important;
+  }
+  .app-topbar .app-title{ color:#fff !important; font-size:19px !important; }
+  .app-topbar .app-subtitle{ color:#9AA2C0 !important; }
+  .app-topbar .app-crumb{ color:#7E86A8 !important; }
+  .app-topbar-brand-text{ color:#fff !important; }
+  .app-hamburger{
+    background:var(--m-glass) !important; border-color:var(--m-glass-brd) !important; color:#fff !important;
+    width:38px !important; height:38px !important; border-radius:50% !important;
+  }
+  .icon-btn{ background:var(--m-glass) !important; border-color:var(--m-glass-brd) !important; color:#fff !important; }
+  .icon-btn:hover{ background:rgba(255,90,0,.25) !important; color:#fff !important; }
+  .app-user-avatar{ box-shadow:0 6px 16px rgba(255,90,0,.35); }
+  .app-logout-btn{ background:var(--m-glass) !important; color:#fff !important; border-color:var(--m-glass-brd) !important; }
+  .app-user-name{ color:#fff !important; }
+  .app-user-role{ color:#9AA2C0 !important; }
+
+  /* ---- Sidebar drawer keeps existing off-canvas behavior; just refine ---- */
+  .app-sidebar{ border-radius:0 var(--r-xl) var(--r-xl) 0 !important; }
+
+  /* ---- Content wrapper ---- */
+  .app-content{ padding:0 12px 24px !important; }
+
+  /* ---- Cards / panels: softer, more elevated, rounder on phone ---- */
+  .card{ border-radius:var(--r-lg) !important; }
+  .card-head{ padding:14px 15px !important; }
+  .card-body{ padding:14px 15px !important; }
+
+  /* ---- KPI grid: 2-up, glanceable ---- */
+  .kpi-grid{ grid-template-columns:repeat(2,1fr) !important; gap:10px !important; }
+  .kpi{ padding:14px 14px !important; border-radius:var(--r-md) !important; }
+  .kpi-value{ font-size:20px !important; }
+
+  /* ---- Buttons: full tap targets ---- */
+  .btn{ min-height:40px; }
+  .btn.sm{ min-height:34px; }
+  .modal-foot .btn, .card-body .btn.block, .btn.block{ width:100%; }
+
+  /* ---- Tables → horizontally-scrolling, touch-friendly, sticky first col ---- */
+  .card-body:has(> table.data-table), .card:has(> table.data-table){ overflow-x:auto; -webkit-overflow-scrolling:touch; }
+  table.data-table{ font-size:12px !important; min-width:560px; }
+  table.data-table th, table.data-table td{ padding:9px 11px !important; white-space:nowrap; }
+  table.data-table td:first-child, table.data-table th:first-child{
+    position:sticky; left:0; background:var(--paper-1); z-index:2; box-shadow:2px 0 4px rgba(0,0,0,.04);
+  }
+
+  /* ---- Pills / tags: slightly larger tap-friendly ---- */
+  .pill{ font-size:10.5px !important; padding:5px 11px !important; }
+
+  /* ---- Modals become bottom sheets on phone ---- */
+  .modal-overlay{ align-items:flex-end !important; padding:0 !important; }
+  .modal-box{
+    max-width:100% !important; width:100% !important; border-radius:var(--r-xl) var(--r-xl) 0 0 !important;
+    animation:sipsSheetUp .26s cubic-bezier(.22,.8,.24,1);
+    max-height:88vh; display:flex; flex-direction:column;
+  }
+  .modal-body{ max-height:none !important; flex:1; overflow-y:auto; }
+  @keyframes sipsSheetUp{ from{ transform:translateY(24px); opacity:.5; } to{ transform:translateY(0); opacity:1; } }
+
+  /* ---- Forms: full-width, larger touch targets ---- */
+  .field input, .field select, .field textarea{ padding:11px 13px !important; font-size:13.5px !important; }
+  .field-row{ grid-template-columns:1fr !important; }
+
+  /* ---- Tabs: horizontal scroll, no wrap ---- */
+  .tabs{ flex-wrap:nowrap !important; overflow-x:auto; -webkit-overflow-scrolling:touch; border-bottom:none !important; }
+  .tab-btn{ flex-shrink:0; }
+
+  /* ---- Filter bars: horizontal scroll instead of wrap ---- */
+  .filter-bar{ flex-wrap:nowrap !important; overflow-x:auto; -webkit-overflow-scrolling:touch; padding-bottom:4px; }
+
+  /* ---- Toasts: full-width at bottom, above bottom nav ---- */
+  #toast-root{ left:12px; right:12px; bottom:86px; max-width:none; }
+
+  /* ==========================================================================
+     BOTTOM NAVIGATION — injected by sips-mobile.js (#sips-bottom-nav)
+     ========================================================================== */
+  #sips-bottom-nav{
+    position:fixed; left:10px; right:10px; bottom:10px; height:64px; z-index:150;
+    background:rgba(13,18,32,.94); backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px);
+    border-radius:24px; border:1px solid rgba(255,255,255,.08);
+    box-shadow:0 14px 34px rgba(0,0,0,.35);
+    display:flex; align-items:center; justify-content:space-around;
+  }
+  #sips-bottom-nav .snb-item{
+    display:flex; flex-direction:column; align-items:center; gap:3px; color:#7E86A8;
+    text-decoration:none; cursor:pointer; width:52px; font-family:var(--font-display);
+  }
+  #sips-bottom-nav .snb-item svg{ width:19px; height:19px; }
+  #sips-bottom-nav .snb-item span{ font-size:8.5px; font-weight:700; }
+  #sips-bottom-nav .snb-item.active{ color:#fff; }
+  #sips-bottom-nav .snb-item.active .snb-ic{ background:var(--brand-orange); box-shadow:0 6px 16px rgba(255,90,0,.4); }
+  #sips-bottom-nav .snb-ic{ width:32px; height:24px; border-radius:11px; display:flex; align-items:center; justify-content:center; }
+  #sips-bottom-nav .snb-badge{
+    position:absolute; top:-2px; right:8px; min-width:14px; height:14px; padding:0 3px; background:var(--brand-red);
+    color:#fff; font-size:8px; font-weight:800; border-radius:99px; display:flex; align-items:center; justify-content:center;
+    border:2px solid var(--m-navy-900);
+  }
+}

@@ -1,0 +1,740 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kinder Sports — Approvals</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="sips-design-system.css">
+<link rel="stylesheet" href="sips-mobile.css">
+<script src="sips-shell.js"></script>
+<script src="sips-mobile.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="auth-guard.js"></script>
+<style>
+*{box-sizing:border-box;} html,body{margin:0;padding:0;background:var(--paper-0);font-family:var(--font-body);color:var(--ink-800);}
+
+.content{padding:22px 28px 40px;max-width:1280px;}
+
+/* ---- summary strip ---- */
+.summary-row{display:grid;grid-template-columns:repeat(6,1fr);gap:12px;margin-bottom:20px;}
+.sum-card{background:var(--paper-1);border:1px solid var(--line);border-radius:var(--r-lg);padding:15px 17px;transition:box-shadow .15s ease;}
+.sum-card:hover{box-shadow:var(--shadow-sm);}
+.sum-card .n{font-family:var(--font-display);font-size:24px;font-weight:700;line-height:1;}
+.sum-card .l{font-size:10.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-top:5px;}
+.sum-card.co .n{color:var(--brand-orange);}
+.sum-card.dr .n{color:var(--status-info);}
+.sum-card.ncr .n{color:var(--status-bad);}
+.sum-card.drag .n{color:var(--brand-orange);}
+.sum-card.urgent{border-color:var(--status-bad);}
+.sum-card.urgent .n{color:var(--status-bad);}
+
+.readonly-note{background:var(--status-info-bg);color:var(--status-info);border-radius:var(--r-md);padding:11px 15px;font-size:12px;margin-bottom:18px;}
+
+/* ---- toolbar: tabs + search + bulk ---- */
+.toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:16px;}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;border-bottom:1px solid var(--line);padding-bottom:0;}
+.tab{font-family:var(--font-display);font-size:12.5px;font-weight:600;padding:9px 14px;border:none;background:none;color:var(--muted);cursor:pointer;position:relative;top:1px;border-bottom:2px solid transparent;display:flex;align-items:center;gap:6px;}
+.tab:hover{color:var(--ink-800);}
+.tab.active{color:var(--brand-orange);border-bottom-color:var(--brand-orange);}
+.tab .cnt{font-family:var(--font-mono);font-size:10px;background:var(--line-2);color:var(--ink-700);padding:1px 6px;border-radius:8px;}
+.tab.active .cnt{background:var(--brand-orange);color:#fff;}
+
+.toolbar-right{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+.search-box{position:relative;}
+.search-box input{font-family:var(--font-body);font-size:12.5px;padding:8px 12px 8px 30px;border:1px solid var(--line);border-radius:var(--r-pill);width:210px;background:var(--paper-1);}
+.search-box::before{content:'⌕';position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:13px;}
+.sel-mini{font-family:var(--font-display);font-size:11.5px;font-weight:600;padding:7px 10px;border:1px solid var(--line);border-radius:var(--r-sm);background:var(--paper-1);color:var(--ink-700);cursor:pointer;}
+.sort-toggle{font-family:var(--font-display);font-size:11.5px;font-weight:600;padding:7px 10px;border:1px solid var(--line);border-radius:var(--r-sm);background:var(--paper-1);color:var(--ink-700);cursor:pointer;}
+
+/* ---- bulk action bar ---- */
+.bulk-bar{display:none;align-items:center;justify-content:space-between;background:var(--ink-900);color:#fff;border-radius:var(--r-md);padding:11px 17px;margin-bottom:14px;font-size:12.5px;font-family:var(--font-display);font-weight:600;}
+.bulk-bar.show{display:flex;}
+.bulk-bar .actions{display:flex;gap:8px;}
+.bulk-bar .btn{padding:6px 14px;font-size:11.5px;}
+.bulk-bar .btn-clear{background:none;border:1px solid rgba(255,255,255,.35);color:#fff;}
+.bulk-bar .btn-approve{background:var(--brand-green);color:#fff;border:none;}
+.bulk-bar .btn-reject{background:#fff;color:var(--status-bad);border:none;}
+
+/* ---- table ---- */
+.table-wrap{background:var(--paper-1);border:1px solid var(--line);border-radius:var(--r-lg);overflow:hidden;}
+table.appr-table{width:100%;border-collapse:collapse;font-size:12.5px;}
+table.appr-table thead th{text-align:left;font-family:var(--font-display);font-size:10.5px;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);font-weight:700;padding:11px 14px;border-bottom:1px solid var(--line);background:var(--paper-0);white-space:nowrap;}
+table.appr-table th.chk, table.appr-table td.chk{width:30px;padding-right:0;}
+table.appr-table tbody tr{border-bottom:1px solid var(--line-2);cursor:pointer;transition:background .12s ease;}
+table.appr-table tbody tr:hover{background:var(--paper-0);}
+table.appr-table tbody tr:last-child{border-bottom:none;}
+table.appr-table td{padding:11px 14px;vertical-align:top;}
+.row-title{font-weight:700;font-family:var(--font-display);font-size:12.5px;color:var(--ink-800);}
+.row-sub{font-size:11px;color:var(--muted);margin-top:2px;max-width:340px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.row-proj{font-size:11.5px;color:var(--ink-700);}
+.row-amount{font-family:var(--font-mono);font-weight:600;font-size:12px;}
+.row-age{font-family:var(--font-mono);font-size:11px;}
+.row-age.urgent{color:var(--status-bad);font-weight:700;}
+.row-actions{display:flex;gap:6px;justify-content:flex-end;}
+
+.type-tag{font-family:var(--font-display);font-size:9.5px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;padding:3px 8px;border-radius:9px;white-space:nowrap;}
+.type-tag.co{background:#FEF3E2;color:#B45309;}
+.type-tag.resched{background:#FEF3E2;color:#B45309;}
+.type-tag.budget{background:#E7F7ED;color:var(--brand-green);}
+.type-tag.dr{background:#EAF1FE;color:var(--status-info);}
+.type-tag.ncr{background:#FDEAEA;color:var(--status-bad);}
+.type-tag.drag{background:#FEF3E2;color:var(--brand-orange);}
+
+.status-pill{font-family:var(--font-display);font-size:10px;font-weight:700;padding:3px 10px;border-radius:10px;text-transform:capitalize;white-space:nowrap;}
+.status-pill.pending{background:#FEF3E2;color:#B45309;}
+.status-pill.approved{background:#E7F7ED;color:var(--brand-green);}
+.status-pill.rejected{background:#FDEAEA;color:var(--status-bad);}
+.status-pill.open{background:#FDEAEA;color:var(--status-bad);}
+
+.btn{font-family:var(--font-display);font-size:11.5px;font-weight:700;padding:6px 13px;border-radius:var(--r-sm);border:none;cursor:pointer;transition:filter .15s ease, background .15s ease;}
+.btn-approve{background:var(--brand-green);color:#fff;}
+.btn-approve:hover{filter:brightness(1.06);}
+.btn-reject{background:var(--paper-0);color:var(--status-bad);border:1px solid var(--status-bad);}
+.btn-reject:hover{background:var(--status-bad);color:#fff;}
+.btn:disabled{opacity:.5;cursor:default;filter:none;}
+
+/* ---- expanded row detail ---- */
+.detail-row td{padding:0;border-bottom:1px solid var(--line-2);}
+.detail-inner{padding:16px 20px;background:var(--paper-0);font-size:12px;line-height:1.6;}
+.detail-grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;}
+.detail-grid2 .k{font-family:var(--font-display);font-size:9.5px;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);font-weight:700;margin-bottom:2px;}
+.detail-grid2 .v{font-size:12px;font-weight:600;color:var(--ink-800);}
+.timeline{display:flex;flex-direction:column;gap:8px;margin-top:10px;}
+.tl-item{display:flex;gap:10px;align-items:flex-start;font-size:11.5px;}
+.tl-dot{width:8px;height:8px;border-radius:50%;margin-top:4px;flex-shrink:0;background:var(--muted);}
+.tl-dot.approved{background:var(--brand-green);} .tl-dot.rejected{background:var(--status-bad);} .tl-dot.pending{background:var(--brand-orange);}
+.tl-item b{color:var(--ink-800);}
+
+.empty{background:var(--paper-1);border:1px dashed var(--line);border-radius:var(--r-lg);padding:36px;text-align:center;color:var(--muted);}
+.empty .big{font-size:15px;color:var(--ink-700);font-family:var(--font-display);font-weight:700;margin-bottom:6px;}
+.loading{padding:40px;text-align:center;color:var(--muted);}
+
+/* ---- reject reason modal ---- */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(20,21,26,0.5);z-index:200;align-items:center;justify-content:center;}
+.modal-overlay.open{display:flex;}
+.modal-box{background:var(--paper-1);border-radius:var(--r-lg);width:420px;max-width:92vw;padding:20px 22px;box-shadow:var(--shadow-lg);}
+.modal-box h3{font-family:var(--font-display);font-size:15px;margin:0 0 4px;}
+.modal-box .hint{font-size:11.5px;color:var(--muted);margin-bottom:12px;}
+.modal-box textarea{width:100%;font-family:var(--font-body);font-size:12.5px;border:1px solid var(--line);border-radius:8px;padding:10px;resize:vertical;min-height:80px;}
+.modal-foot{display:flex;justify-content:flex-end;gap:8px;margin-top:14px;}
+.modal-foot .btn-cancel{background:var(--paper-0);color:var(--ink-700);border:1px solid var(--line);}
+
+@media(max-width:900px){
+  .summary-row{grid-template-columns:repeat(3,1fr);}
+  table.appr-table{font-size:11.5px;}
+  .row-sub{max-width:160px;}
+}
+@media(max-width:640px){
+  .summary-row{grid-template-columns:repeat(2,1fr);}
+  .table-wrap{overflow-x:auto;}
+  table.appr-table{min-width:760px;}
+}
+</style>
+</head>
+<body>
+
+<div id="sips-sidebar-mount"></div>
+
+<div class="app-main">
+  <div class="app-topbar">
+    <div style="display:flex;align-items:center;gap:14px;">
+      <button class="app-hamburger" id="app-hamburger-btn" aria-label="Toggle menu">&#9776;</button>
+      <div>
+        <div class="app-title">Approvals</div>
+        <div class="app-subtitle">Items routed to the Director for a decision</div>
+      </div>
+    </div>
+    <div class="app-user-chip">
+      <div class="app-user-avatar" id="userAvatar">–</div>
+      <div class="app-user-meta">
+        <div class="app-user-name" id="userName">—</div>
+        <div class="app-user-role" id="userRole">—</div>
+      </div>
+      <button class="app-logout-btn" id="logoutBtn">Log out</button>
+    </div>
+  </div>
+
+  <div class="content" id="content">
+    <div class="loading">Loading approvals…</div>
+  </div>
+</div>
+
+<!-- Reject reason modal -->
+<div class="modal-overlay" id="rejectModal">
+  <div class="modal-box">
+    <h3 id="rejectModalTitle">Reject item</h3>
+    <div class="hint">Add a short reason. This is stored with the decision and visible in history.</div>
+    <textarea id="rejectReasonInput" placeholder="e.g. Amount exceeds approved scope, please revise and resubmit"></textarea>
+    <div class="modal-foot">
+      <button class="btn btn-cancel" id="rejectCancelBtn">Cancel</button>
+      <button class="btn btn-reject" id="rejectConfirmBtn" style="background:var(--status-bad);color:#fff;border:none;">Reject item</button>
+    </div>
+  </div>
+</div>
+
+<script>
+function canApprove(role){ return role === 'director'; }
+function pill(status){
+  const s = (status||'').toLowerCase();
+  const cls = ['approved','rejected','pending','open'].includes(s) ? s : 'pending';
+  return `<span class="status-pill ${cls}">${status||'pending'}</span>`;
+}
+function esc(v){ return (v==null?'':String(v)).replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+function money(v){ return (v||v===0) ? '₹' + Number(v).toLocaleString('en-IN') : '—'; }
+function fdate(v){ if(!v) return '—'; try{ return new Date(v).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}); }catch(e){ return v; } }
+function daysAgo(v){ if(!v) return null; const d = Math.floor((Date.now()-new Date(v).getTime())/86400000); return d; }
+
+let ROLE = null;
+let PROJECTS = {};
+let TASKS_BY_ID = {};
+let ACTIVE_TAB = 'all';        // all | co | resched | dragresched | budget | paydj | history
+let SEARCH_Q = '';
+let SORT_MODE = 'age';         // age (oldest first) | newest
+let SELECTED = new Set();
+let EXPANDED = new Set();
+let PENDING_REJECT = null;     // {key, table, id}
+let LAST_GROUPS = [];
+let HISTORY_ROWS = [];         // flattened resolved items across all types
+
+async function loadReschedules(){
+  const { data, error } = await sb.from('schedule_tasks').select('*');
+  if(error) return { pending: [], resolved: [] };
+  const all = data||[];
+  const isResched = t => (t.reschedule_count||0) > 0 || t.resched_reason;
+  return {
+    pending: all.filter(t => isResched(t) && (t.approval_status||'pending').toLowerCase() === 'pending'),
+    resolved: all.filter(t => isResched(t) && ['approved','rejected'].includes((t.approval_status||'').toLowerCase()))
+  };
+}
+async function loadBudgets(){
+  const { data, error } = await sb.from('projects').select('*');
+  if(error) return { pending: [], resolved: [] };
+  const all = data||[];
+  return {
+    pending: all.filter(p => (p.budget_status||'').toLowerCase() === 'pending'),
+    resolved: [] // budget_status doesn't carry a resolved trail distinct from normal statuses
+  };
+}
+async function loadDragChangeRequests(){
+  const { data } = await sb.from('schedule_change_requests').select('*');
+  const all = data||[];
+  const ids = all.map(r=>r.task_id).filter(Boolean);
+  if(ids.length){
+    const { data: tasks } = await sb.from('schedule_tasks').select('id,task,milestone,project_id').in('id', ids);
+    (tasks||[]).forEach(t=> TASKS_BY_ID[t.id] = t);
+  }
+  return {
+    pending: all.filter(r => (r.approval_status||'pending').toLowerCase()==='pending'),
+    resolved: all.filter(r => ['approved','rejected'].includes((r.approval_status||'').toLowerCase()))
+  };
+}
+async function loadChangeOrders(){
+  const { data } = await sb.from('change_orders').select('*');
+  const all = data||[];
+  return {
+    pending: all.filter(r=>{ const s=(r.status||'pending').toLowerCase(); return s!=='approved' && s!=='rejected'; }),
+    resolved: all.filter(r=>['approved','rejected'].includes((r.status||'').toLowerCase()))
+  };
+}
+async function loadPaymentAdjustments(){
+  const { data } = await sb.from('payment_adjustments').select('*');
+  const all = data||[];
+  return {
+    pending: all.filter(r=>(r.approval_status||'pending').toLowerCase()==='pending'),
+    resolved: all.filter(r=>['approved','rejected'].includes((r.approval_status||'').toLowerCase()))
+  };
+}
+
+const TYPES = [
+  { key:'co', table:'change_orders', statusCol:'status', label:'Change Order', tag:'co',
+    load: loadChangeOrders,
+    titleOf: r => r.title || r.description || ('Change Order #' + r.id),
+    subOf: r => r.description || r.reason || '',
+    amountOf: r => r.amount ?? r.value ?? null,
+    projectOf: r => r.project_id, dateOf: r => r.created_at || r.date },
+  { key:'resched', table:'schedule_tasks', statusCol:'approval_status', label:'Rescheduled Task', tag:'resched',
+    load: loadReschedules,
+    titleOf: r => r.task || ('Task #' + r.id),
+    subOf: r => (r.resched_reason ? 'Reason: ' + r.resched_reason : '') + (r.reschedule_count ? '  ·  ↻ ' + r.reschedule_count : '') + ((r.due_date||r.baseline_start) ? '  ·  ' + (r.due_date||r.baseline_start) : ''),
+    amountOf: r => null,
+    projectOf: r => r.project_id, dateOf: r => r.created_at },
+  { key:'dragresched', table:'schedule_change_requests', statusCol:'approval_status', label:'Schedule Change (Drag & Drop)', tag:'drag',
+    load: loadDragChangeRequests,
+    titleOf: r => (TASKS_BY_ID[r.task_id] && TASKS_BY_ID[r.task_id].task) || r.task_name || ('Task #' + r.task_id),
+    subOf: r => {
+      const orig = (r.original_start||'—') + ' → ' + (r.original_end||'—');
+      const prop = (r.proposed_start||'—') + ' → ' + (r.proposed_end||'—');
+      const days = r.days_shifted!=null ? (r.days_shifted>0?'+':'') + r.days_shifted + ' day' + (Math.abs(r.days_shifted)===1?'':'s') : '';
+      const impactedCount = (r.impacted_task_ids||[]).length;
+      const milestoneCount = (r.impacted_milestones||[]).length;
+      return `Original: ${orig}  ·  Proposed: ${prop}${days?'  ·  '+days:''}${r.reason?'  ·  Reason: '+r.reason:''}  ·  Impact: ${impactedCount} task(s), ${milestoneCount} milestone(s)  ·  Changed by: ${r.changed_by||'Unknown user'}`;
+    },
+    amountOf: r => null,
+    projectOf: r => (TASKS_BY_ID[r.task_id] && TASKS_BY_ID[r.task_id].project_id) || null, dateOf: r => r.created_at },
+  { key:'budget', table:'projects', statusCol:'budget_status', label:'Budget', tag:'budget',
+    load: loadBudgets,
+    titleOf: r => 'Budget — ' + (r.name || ('Project #' + r.id)),
+    subOf: r => 'Revised budget sheet awaiting sign-off',
+    amountOf: r => r.contract_value ?? r.budget_approved ?? null,
+    projectOf: r => r.id, dateOf: r => r.updated_at || r.created_at },
+  { key:'paydj', table:'payment_adjustments', statusCol:'approval_status', label:'Payment Adjustment', tag:'budget',
+    load: loadPaymentAdjustments,
+    titleOf: r => (r.request_type==='discount' ? 'Discount — ' : 'Extra Payment — ') + (r.subtask || ('Item #'+r.budget_item_id)),
+    subOf: r => `Payable: ${money(r.payable_amount)}  ·  Requested ${r.request_type==='discount'?'Discount':'Extra Payment'}: ${money(r.requested_amount)}${r.vendor?'  ·  Vendor: '+r.vendor:''}`,
+    amountOf: r => r.requested_amount ?? null,
+    projectOf: r => r.project_id, dateOf: r => r.created_at }
+];
+
+(async function(){
+  const auth = await requireAuth();
+  if(!auth) return;
+  const { session, role } = auth;
+  ROLE = role;
+
+  const roleLabels = { director:'Director', pm:'Project Manager', engineer:'Site Engineer', vendor:'Vendor', client:'Client' };
+  const emailName = (session.user.email || 'Signed in').split('@')[0];
+  document.getElementById('userName').textContent = emailName;
+  document.getElementById('userRole').textContent = roleLabels[role] || role || '—';
+  document.getElementById('userAvatar').textContent = emailName.charAt(0).toUpperCase();
+  document.getElementById('logoutBtn').addEventListener('click', async ()=>{ await sb.auth.signOut(); window.location.href = 'login.html'; });
+
+  document.querySelectorAll('[data-perm]').forEach(el=>{
+    const perm = el.getAttribute('data-perm');
+    const grants = { export_reports:['director','pm'], view_vendors:['director','pm'], manage_settings:['director'] };
+    el.style.display = (grants[perm]||[]).includes(role) ? '' : 'none';
+  });
+
+  try {
+    const { data: projs } = await sb.from('projects').select('id,name');
+    (projs||[]).forEach(p => PROJECTS[p.id] = p.name);
+  } catch(e){}
+
+  await loadAll();
+})();
+
+async function loadAll(){
+  const content = document.getElementById('content');
+  content.innerHTML = '<div class="loading">Loading approvals…</div>';
+
+  const groups = [];
+  const historyRows = [];
+  for (const t of TYPES){
+    let res = { pending: [], resolved: [] };
+    try { res = await t.load(); } catch(e){}
+    groups.push({ t, pending: res.pending||[] });
+    (res.resolved||[]).forEach(r => historyRows.push({ t, r }));
+  }
+  LAST_GROUPS = groups;
+  HISTORY_ROWS = historyRows;
+  render();
+}
+
+function totalPendingCount(){ return LAST_GROUPS.reduce((s,g)=>s+g.pending.length,0); }
+function urgentCount(){
+  let n = 0;
+  LAST_GROUPS.forEach(g => g.pending.forEach(r => { const d = daysAgo(g.t.dateOf(r)); if(d!=null && d>=3) n++; }));
+  return n;
+}
+
+function render(){
+  const content = document.getElementById('content');
+  const totalPending = totalPendingCount();
+  const cnt = k => { const g = LAST_GROUPS.find(x=>x.t.key===k); return g ? g.pending.length : 0; };
+
+  const badge = document.getElementById('sideApprovalsBadge');
+  if(badge){ if(totalPending>0){ badge.textContent = totalPending; badge.style.display=''; } else { badge.style.display='none'; } }
+
+  let html = `<div class="summary-row">
+    <div class="sum-card"><div class="n">${totalPending}</div><div class="l">Total pending</div></div>
+    <div class="sum-card urgent"><div class="n">${urgentCount()}</div><div class="l">Pending 3+ days</div></div>
+    <div class="sum-card co"><div class="n">${cnt('co')}</div><div class="l">Change orders</div></div>
+    <div class="sum-card dr"><div class="n">${cnt('resched')}</div><div class="l">Rescheduled tasks</div></div>
+    <div class="sum-card drag"><div class="n">${cnt('dragresched')}</div><div class="l">Drag & drop changes</div></div>
+    <div class="sum-card ncr"><div class="n">${cnt('budget')+cnt('paydj')}</div><div class="l">Budget &amp; payments</div></div>
+  </div>`;
+
+  if(!canApprove(ROLE)){
+    html += `<div class="readonly-note">You are viewing as <b>${esc(ROLE||'—')}</b>. Only a Director can approve or reject. This list is read-only for you.</div>`;
+  }
+
+  html += `<div class="toolbar">
+    <div class="tabs" id="tabsWrap">
+      ${tabBtn('all','All', totalPending)}
+      ${tabBtn('co','Change Orders', cnt('co'))}
+      ${tabBtn('resched','Reschedule', cnt('resched'))}
+      ${tabBtn('dragresched','Drag & Drop', cnt('dragresched'))}
+      ${tabBtn('budget','Budget', cnt('budget'))}
+      ${tabBtn('paydj','Payments', cnt('paydj'))}
+      ${tabBtn('history','History', HISTORY_ROWS.length)}
+    </div>
+    <div class="toolbar-right">
+      <div class="search-box"><input type="text" id="searchInput" placeholder="Search title, project…" value="${esc(SEARCH_Q)}"></div>
+      <select class="sort-toggle" id="sortSelect">
+        <option value="age" ${SORT_MODE==='age'?'selected':''}>Oldest first</option>
+        <option value="newest" ${SORT_MODE==='newest'?'selected':''}>Newest first</option>
+      </select>
+    </div>
+  </div>`;
+
+  html += `<div class="bulk-bar" id="bulkBar">
+    <span id="bulkCount">0 selected</span>
+    <div class="actions">
+      <button class="btn btn-approve" id="bulkApproveBtn">✓ Approve selected</button>
+      <button class="btn btn-reject" id="bulkRejectBtn">✕ Reject selected</button>
+      <button class="btn btn-clear" id="bulkClearBtn">Clear</button>
+    </div>
+  </div>`;
+
+  html += `<div id="tableArea"></div>`;
+
+  content.innerHTML = html;
+
+  document.querySelectorAll('.tab').forEach(b=> b.addEventListener('click', ()=>{
+    ACTIVE_TAB = b.getAttribute('data-tab');
+    SELECTED.clear(); EXPANDED.clear();
+    render();
+  }));
+  document.getElementById('searchInput').addEventListener('input', (e)=>{ SEARCH_Q = e.target.value; renderTable(); });
+  document.getElementById('sortSelect').addEventListener('change', (e)=>{ SORT_MODE = e.target.value; renderTable(); });
+  document.getElementById('bulkClearBtn').addEventListener('click', ()=>{ SELECTED.clear(); renderTable(); });
+  document.getElementById('bulkApproveBtn').addEventListener('click', ()=> bulkAct('approved'));
+  document.getElementById('bulkRejectBtn').addEventListener('click', ()=> bulkAct('rejected'));
+
+  renderTable();
+}
+
+function tabBtn(key, label, count){
+  return `<button class="tab ${ACTIVE_TAB===key?'active':''}" data-tab="${key}">${esc(label)} <span class="cnt">${count}</span></button>`;
+}
+
+function getRowsForActiveTab(){
+  if(ACTIVE_TAB === 'history') return null; // handled separately
+  let rows = [];
+  LAST_GROUPS.forEach(g=>{
+    if(ACTIVE_TAB !== 'all' && g.t.key !== ACTIVE_TAB) return;
+    g.pending.forEach(r => rows.push({ t: g.t, r }));
+  });
+  if(SEARCH_Q.trim()){
+    const q = SEARCH_Q.trim().toLowerCase();
+    rows = rows.filter(({t,r})=>{
+      const proj = (PROJECTS[t.projectOf(r)] || r.project_name || (t.key==='budget'?r.name:'') || '').toLowerCase();
+      const title = (t.titleOf(r)||'').toLowerCase();
+      return title.includes(q) || proj.includes(q);
+    });
+  }
+  rows.sort((a,b)=>{
+    const da = a.t.dateOf(a.r) ? new Date(a.t.dateOf(a.r)).getTime() : 0;
+    const db = b.t.dateOf(b.r) ? new Date(b.t.dateOf(b.r)).getTime() : 0;
+    return SORT_MODE === 'age' ? da-db : db-da;
+  });
+  return rows;
+}
+
+function renderTable(){
+  const area = document.getElementById('tableArea');
+  const bulkBar = document.getElementById('bulkBar');
+
+  if(ACTIVE_TAB === 'history'){
+    bulkBar.classList.remove('show');
+    area.innerHTML = renderHistoryTable();
+    wireHistoryRows();
+    return;
+  }
+
+  const rows = getRowsForActiveTab();
+
+  if(canApprove(ROLE) && SELECTED.size>0){
+    bulkBar.classList.add('show');
+    document.getElementById('bulkCount').textContent = SELECTED.size + ' selected';
+  } else {
+    bulkBar.classList.remove('show');
+  }
+
+  if(!rows.length){
+    area.innerHTML = `<div class="empty"><div class="big">All clear ✓</div>Nothing matches here right now.</div>`;
+    return;
+  }
+
+  let html = `<div class="table-wrap"><table class="appr-table"><thead><tr>
+    ${canApprove(ROLE) ? '<th class="chk"><input type="checkbox" id="selectAllChk"></th>' : ''}
+    <th>Item</th><th>Type</th><th>Project</th><th>Amount</th><th>Raised by</th><th>Age</th><th>Status</th>
+    ${canApprove(ROLE) ? '<th></th>' : ''}
+  </tr></thead><tbody>`;
+
+  rows.forEach(({t,r})=>{
+    const rowKey = t.key + ':' + t.table + ':' + r.id;
+    const proj = PROJECTS[t.projectOf(r)] || r.project_name || (t.key==='budget' ? r.name : '—');
+    const amount = t.amountOf(r);
+    const raisedBy = r.raised_by || r.created_by || r.changed_by || '—';
+    const age = daysAgo(t.dateOf(r));
+    const ageStr = age==null ? '—' : (age===0 ? 'Today' : age + 'd');
+    const curStatus = r[t.statusCol] || 'pending';
+    const isExpanded = EXPANDED.has(rowKey);
+    const isChecked = SELECTED.has(rowKey);
+
+    html += `<tr class="data-row" data-rowkey="${esc(rowKey)}">
+      ${canApprove(ROLE) ? `<td class="chk"><input type="checkbox" class="row-chk" data-rowkey="${esc(rowKey)}" ${isChecked?'checked':''}></td>` : ''}
+      <td>
+        <div class="row-title">${esc(t.titleOf(r))}</div>
+        <div class="row-sub">${esc((t.subOf?t.subOf(r):''))}</div>
+      </td>
+      <td><span class="type-tag ${t.tag}">${esc(t.label)}</span></td>
+      <td class="row-proj">${esc(proj)}</td>
+      <td class="row-amount">${amount!=null ? esc(money(amount)) : '—'}</td>
+      <td>${esc(raisedBy)}</td>
+      <td class="row-age ${age!=null && age>=3 ? 'urgent':''}">${ageStr}</td>
+      <td>${pill(curStatus)}</td>
+      ${canApprove(ROLE) ? `<td><div class="row-actions">
+          <button class="btn btn-approve" data-act="approved" data-key="${esc(rowKey)}">✓</button>
+          <button class="btn btn-reject" data-act="rejected" data-key="${esc(rowKey)}">✕</button>
+        </div></td>` : ''}
+    </tr>`;
+
+    if(isExpanded){
+      html += `<tr class="detail-row"><td colspan="${canApprove(ROLE)?8:6}"><div class="detail-inner">${renderDetail(t,r)}</div></td></tr>`;
+    }
+  });
+
+  html += `</tbody></table></div>`;
+  area.innerHTML = html;
+  wireTableRows(rows);
+}
+
+function renderDetail(t,r){
+  const proj = PROJECTS[t.projectOf(r)] || r.project_name || (t.key==='budget' ? r.name : '—');
+  let out = `<div class="detail-grid2">
+    <div><div class="k">Project</div><div class="v">${esc(proj)}</div></div>
+    <div><div class="k">Raised by</div><div class="v">${esc(r.raised_by||r.created_by||r.changed_by||'—')}</div></div>
+    <div><div class="k">Raised on</div><div class="v">${esc(fdate(t.dateOf(r)))}</div></div>
+    <div><div class="k">Reference ID</div><div class="v">#${esc(r.id)}</div></div>
+  </div>`;
+  if(t.subOf && t.subOf(r)) out += `<div>${esc(t.subOf(r))}</div>`;
+  return out;
+}
+
+function wireTableRows(rows){
+  document.querySelectorAll('.data-row').forEach(tr=>{
+    tr.addEventListener('click', (e)=>{
+      if(e.target.closest('.row-chk') || e.target.closest('.btn')) return;
+      const key = tr.getAttribute('data-rowkey');
+      if(EXPANDED.has(key)) EXPANDED.delete(key); else EXPANDED.add(key);
+      renderTable();
+    });
+  });
+  document.querySelectorAll('.row-chk').forEach(chk=>{
+    chk.addEventListener('click', (e)=>e.stopPropagation());
+    chk.addEventListener('change', (e)=>{
+      const key = e.target.getAttribute('data-rowkey');
+      if(e.target.checked) SELECTED.add(key); else SELECTED.delete(key);
+      renderTable();
+    });
+  });
+  const selAll = document.getElementById('selectAllChk');
+  if(selAll){
+    selAll.addEventListener('click', (e)=>e.stopPropagation());
+    selAll.addEventListener('change', (e)=>{
+      rows.forEach(({t,r})=>{
+        const key = t.key+':'+t.table+':'+r.id;
+        if(e.target.checked) SELECTED.add(key); else SELECTED.delete(key);
+      });
+      renderTable();
+    });
+  }
+  document.querySelectorAll('.btn[data-act]').forEach(btn=>{
+    btn.addEventListener('click', (e)=>{
+      e.stopPropagation();
+      const act = btn.getAttribute('data-act');
+      const key = btn.getAttribute('data-key');
+      if(act === 'rejected'){ openRejectModal(key); return; }
+      actOnItem(key, 'approved', null);
+    });
+  });
+}
+
+/* ---- history tab ---- */
+function renderHistoryTable(){
+  let rows = HISTORY_ROWS.slice();
+  if(SEARCH_Q.trim()){
+    const q = SEARCH_Q.trim().toLowerCase();
+    rows = rows.filter(({t,r})=>{
+      const proj = (PROJECTS[t.projectOf(r)] || r.project_name || (t.key==='budget'?r.name:'') || '').toLowerCase();
+      const title = (t.titleOf(r)||'').toLowerCase();
+      return title.includes(q) || proj.includes(q);
+    });
+  }
+  rows.sort((a,b)=>{
+    const da = a.r.decided_at || a.r.approved_at || a.t.dateOf(a.r);
+    const db = b.r.decided_at || b.r.approved_at || b.t.dateOf(b.r);
+    const ta = da? new Date(da).getTime():0, tb = db? new Date(db).getTime():0;
+    return SORT_MODE === 'age' ? ta-tb : tb-ta;
+  });
+
+  if(!rows.length) return `<div class="empty"><div class="big">No decisions yet</div>Approved and rejected items will show up here.</div>`;
+
+  let html = `<div class="table-wrap"><table class="appr-table"><thead><tr>
+    <th>Item</th><th>Type</th><th>Project</th><th>Decision</th><th>Decided by</th><th>Decided on</th>
+  </tr></thead><tbody>`;
+
+  rows.forEach(({t,r})=>{
+    const rowKey = 'h_' + t.key + ':' + t.table + ':' + r.id;
+    const proj = PROJECTS[t.projectOf(r)] || r.project_name || (t.key==='budget' ? r.name : '—');
+    const status = (r[t.statusCol]||'').toLowerCase();
+    const decidedBy = r.decided_by || r.approved_by || 'Director';
+    const decidedAt = r.decided_at || r.approved_at || r.updated_at;
+    const isExpanded = EXPANDED.has(rowKey);
+    html += `<tr class="hist-row" data-rowkey="${esc(rowKey)}">
+      <td><div class="row-title">${esc(t.titleOf(r))}</div><div class="row-sub">${esc(t.subOf?t.subOf(r):'')}</div></td>
+      <td><span class="type-tag ${t.tag}">${esc(t.label)}</span></td>
+      <td class="row-proj">${esc(proj)}</td>
+      <td>${pill(status)}</td>
+      <td>${esc(decidedBy)}</td>
+      <td class="row-age">${esc(fdate(decidedAt))}</td>
+    </tr>`;
+    if(isExpanded){
+      let extra = renderDetail(t,r);
+      if(r.reject_reason) extra += `<div class="timeline"><div class="tl-item"><span class="tl-dot rejected"></span><div><b>Rejected</b> — ${esc(r.reject_reason)}</div></div></div>`;
+      html += `<tr class="detail-row"><td colspan="6"><div class="detail-inner">${extra}</div></td></tr>`;
+    }
+  });
+  html += `</tbody></table></div>`;
+  return html;
+}
+function wireHistoryRows(){
+  document.querySelectorAll('.hist-row').forEach(tr=>{
+    tr.addEventListener('click', ()=>{
+      const key = tr.getAttribute('data-rowkey');
+      if(EXPANDED.has(key)) EXPANDED.delete(key); else EXPANDED.add(key);
+      renderTable();
+    });
+  });
+}
+
+/* ---- reject modal ---- */
+function openRejectModal(key){
+  PENDING_REJECT = key;
+  document.getElementById('rejectReasonInput').value = '';
+  document.getElementById('rejectModal').classList.add('open');
+}
+document.getElementById('rejectCancelBtn').addEventListener('click', ()=>{
+  PENDING_REJECT = null;
+  document.getElementById('rejectModal').classList.remove('open');
+});
+document.getElementById('rejectConfirmBtn').addEventListener('click', async ()=>{
+  const reason = document.getElementById('rejectReasonInput').value.trim();
+  const key = PENDING_REJECT;
+  document.getElementById('rejectModal').classList.remove('open');
+  if(!key) return;
+  if(Array.isArray(key)){
+    await Promise.all(key.map(k=>actOnItem(k,'rejected',reason)));
+  } else {
+    await actOnItem(key, 'rejected', reason);
+  }
+  PENDING_REJECT = null;
+});
+
+/* ---- bulk actions ---- */
+async function bulkAct(act){
+  const keys = Array.from(SELECTED);
+  if(!keys.length) return;
+  if(act === 'rejected'){ openRejectModal(keys); return; }
+  const ok = await sipsConfirm('Approve ' + keys.length + ' item(s)?', '', 'Approve all');
+  if(!ok) return;
+  await Promise.all(keys.map(k=>actOnItem(k,'approved',null)));
+  SELECTED.clear();
+}
+
+/* ---- core act (approve/reject) — same underlying logic as before, per type ---- */
+async function actOnItem(rowKey, act, reason){
+  const [key, table, id] = rowKey.split(':');
+  const t = TYPES.find(x=>x.key===key);
+  if(!t) return;
+
+  try {
+    if(key === 'dragresched'){
+      const { data: reqRows, error: reqErr } = await sb.from('schedule_change_requests').select('*').eq('id', id).single();
+      if(reqErr || !reqRows){ sipsToast('Could not load this request: ' + (reqErr?reqErr.message:'not found'), 'error'); return; }
+      const r = reqRows;
+      if(act === 'approved'){
+        const taskPatch = { baseline_start: r.proposed_start, planned_end: r.proposed_end, pending_request_id: null };
+        const { error: tErr } = await sb.from('schedule_tasks').update(taskPatch).eq('id', r.task_id);
+        if(tErr){ sipsToast('Could not apply the new dates: ' + tErr.message, 'error'); return; }
+
+        const { data: allSched } = await sb.from('schedule_tasks').select('*');
+        const newStart = r.proposed_start, newEnd = r.proposed_end;
+        const other = (allSched||[]).find(x=>{
+          if(String(x.id)===String(r.task_id)) return false;
+          const oStart = x.baseline_start || x.due_date;
+          const oEnd = x.planned_end || x.due_date || oStart;
+          if(!oStart || !oEnd) return false;
+          return newStart <= oEnd && newEnd >= oStart;
+        });
+        if(other){
+          const oStart = other.baseline_start || other.due_date;
+          const oEnd = other.planned_end || other.due_date || oStart;
+          const oDur = Math.round((new Date(oEnd)-new Date(oStart))/86400000);
+          const base = new Date(newEnd); base.setDate(base.getDate()+1);
+          const p = n=>String(n).padStart(2,'0');
+          const pushedStart = base.getFullYear()+'-'+p(base.getMonth()+1)+'-'+p(base.getDate());
+          const pe = new Date(pushedStart); pe.setDate(pe.getDate()+oDur);
+          const pushedEnd = pe.getFullYear()+'-'+p(pe.getMonth()+1)+'-'+p(pe.getDate());
+          await sb.from('schedule_tasks').update({ baseline_start: pushedStart, planned_end: pushedEnd }).eq('id', other.id);
+          await cascadeFromTask(other.id);
+        }
+        await cascadeFromTask(r.task_id);
+      } else {
+        const { error: tErr } = await sb.from('schedule_tasks').update({ pending_request_id: null }).eq('id', r.task_id);
+        if(tErr){ console.error('Could not clear pending flag on task', tErr); }
+      }
+      const patch = { approval_status: act, approved_by:'Director', approved_at: new Date().toISOString() };
+      if(act==='rejected') patch.reject_reason = reason || null;
+      const { error } = await sb.from('schedule_change_requests').update(patch).eq('id', id);
+      if(error){ sipsToast('Could not update: ' + error.message, 'error'); return; }
+      await loadAll();
+      return;
+    }
+
+    if(key === 'paydj'){
+      const patch = { approval_status: act, decided_by: 'Director', decided_at: new Date().toISOString() };
+      if(act==='rejected') patch.reject_reason = reason || null;
+      const { error } = await sb.from('payment_adjustments').update(patch).eq('id', id);
+      if(error){ sipsToast('Could not update: ' + error.message, 'error'); return; }
+      await loadAll();
+      return;
+    }
+
+    const patch = {}; patch[t.statusCol] = act;
+    patch.decided_by = 'Director'; patch.decided_at = new Date().toISOString();
+    if(act==='rejected') patch.reject_reason = reason || null;
+    const { error } = await sb.from(table).update(patch).eq('id', id);
+    if(error){ sipsToast('Could not update: ' + error.message, 'error'); return; }
+    await loadAll();
+  } catch(e){
+    sipsToast('Update failed: ' + e.message, 'error');
+  }
+}
+
+async function cascadeFromTask(tid){
+  const { data: parentRows } = await sb.from('schedule_tasks').select('*').eq('id', tid).single();
+  const parent = parentRows;
+  const parentFinish = parent && (parent.planned_end || parent.due_date);
+  if(!parentFinish) return;
+  const { data: deps } = await sb.from('schedule_tasks').select('*').eq('depends_on', tid);
+  for(const d of (deps||[])){
+    if(d.status === 'completed'){ await cascadeFromTask(d.id); continue; }
+    const dur = (d.due_date && d.baseline_start) ? Math.round((new Date(d.due_date)-new Date(d.baseline_start))/86400000) : 0;
+    const base = new Date(parentFinish); base.setDate(base.getDate()+1+dur);
+    const p = n=>String(n).padStart(2,'0');
+    const newFinish = base.getFullYear()+'-'+p(base.getMonth()+1)+'-'+p(base.getDate());
+    if(d.planned_end !== newFinish){
+      await sb.from('schedule_tasks').update({ planned_end: newFinish }).eq('id', d.id);
+    }
+    await cascadeFromTask(d.id);
+  }
+}
+</script>
+<script>
+sipsRenderShell({ activeHref: "approvals.html" });
+</script>
+</body>
+</html>

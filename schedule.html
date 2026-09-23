@@ -1,0 +1,1786 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Schedule — Kinder Sports</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="auth-guard.js"></script>
+<link rel="stylesheet" href="sips-design-system.css">
+<link rel="stylesheet" href="sips-mobile.css">
+<script src="sips-shell.js"></script>
+<script src="sips-mobile.js"></script>
+<style>
+/* Local tokens kept (not renamed) — every rule below already targets these
+   names throughout this file's Gantt/calendar/drawer/modal CSS. Values match
+   the shared design system 1:1, so nothing here fights the shared file;
+   only the sidebar/topbar markup below is now delegated to it. */
+:root{--ink:#171717;--ink2:#262626;--orange:#FF6A00;--yellow:#D97706;--green:#16A34A;--red:#DC2626;--blue:#2563EB;--paper:#F7F8FA;--paper2:#FFFFFF;--line:#E8EAED;--muted:#6B7280;}
+*{box-sizing:border-box;} html,body{margin:0;padding:0;}
+body{background:var(--paper);color:var(--ink);font-family:var(--font-body);-webkit-font-smoothing:antialiased;}
+a{text-decoration:none;color:inherit;}
+::-webkit-scrollbar{width:9px;} ::-webkit-scrollbar-thumb{background:#D7DAE0;border-radius:6px;}
+
+/* ---- Page-local topbar additions on top of the shared .app-topbar ---- */
+.app-topbar{align-items:flex-end;}
+.header-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
+.btn{font-family:var(--font-display);font-size:12px;font-weight:600;padding:9px 14px;border-radius:var(--r-sm);border:1px solid var(--line);background:var(--paper2);cursor:pointer;color:var(--ink);transition:border-color .15s ease, color .15s ease;}
+.btn:hover{border-color:var(--orange);color:var(--orange);}
+.btn.dark{background:var(--ink-900);color:#fff;border-color:var(--ink-900);}
+.btn.dark:hover{background:var(--orange);border-color:var(--orange);color:#fff;}
+.btn.sm{padding:6px 10px;font-size:11px;}
+.btn:disabled{opacity:.55;cursor:not-allowed;}
+#projSel{font-family:var(--font-display);font-weight:600;font-size:12px;padding:9px 12px;border-radius:var(--r-sm);border:1px solid var(--line);background:var(--paper2);color:var(--ink);max-width:230px;}
+
+.main{max-width:1200px;margin:0 auto;padding:26px 32px 60px 32px;}
+
+.toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;justify-content:space-between;margin-bottom:20px;}
+.filters{display:flex;gap:8px;flex-wrap:wrap;}
+.filters select, .filters input{font-family:var(--font-display);font-size:12px;padding:8px 10px;border-radius:var(--r-sm);border:1px solid var(--line);background:var(--paper2);color:var(--ink);}
+.filters input{min-width:180px;}
+/* (.viewtabs rules removed — verified unused: no matching markup anywhere
+   in this file. View switching is actually Gantt ⇄ per-milestone Calendar
+   drill-down via setView(), not a persistent 3-way tab control.) */
+
+.summary-row{display:flex;gap:14px;margin-bottom:22px;flex-wrap:wrap;}
+.sum-chip{flex:1;min-width:140px;background:var(--paper2);border:1px solid var(--line);border-radius:var(--r-lg);padding:14px 16px;}
+.sum-chip .l{font-size:11px;color:var(--muted);}
+.sum-chip .v{font-family:var(--font-display);font-size:22px;font-weight:700;margin-top:4px;color:var(--ink-900);}
+
+/* ── Delay Impact Summary (new) ───────────────────────────────────────── */
+.delay-summary{background:var(--paper2);border:1px solid var(--line);border-radius:var(--r-lg);padding:16px 18px;margin-bottom:20px;}
+.delay-summary .ds-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
+.delay-summary .ds-head b{font-family:var(--font-display);font-size:13.5px;}
+.delay-summary .ds-risk{font-size:10.5px;font-weight:700;padding:3px 10px;border-radius:var(--r-pill);letter-spacing:.3px;}
+.delay-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;}
+.delay-kpi{background:var(--paper);border:1px solid var(--line);border-radius:var(--r-md);padding:12px 14px;position:relative;overflow:hidden;}
+.delay-kpi::before{content:'';position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--kpi-color,var(--muted));}
+.delay-kpi .ico{font-size:15px;margin-bottom:6px;display:block;}
+.delay-kpi .l{font-size:10.5px;color:var(--muted);}
+.delay-kpi .v{font-family:var(--font-display);font-size:19px;font-weight:700;margin-top:3px;color:var(--kpi-color,var(--ink));}
+
+/* ── Version History drawer (new) ─────────────────────────────────────── */
+.version-drawer{position:fixed;top:0;right:0;bottom:0;width:360px;max-width:92vw;background:var(--paper2);border-left:1px solid var(--line);box-shadow:var(--shadow-lg);z-index:210;display:flex;flex-direction:column;transform:translateX(100%);transition:transform .22s ease;}
+.version-drawer.open{transform:translateX(0);}
+.version-drawer .vd-head{display:flex;align-items:center;justify-content:space-between;padding:16px 18px;border-bottom:1px solid var(--line);}
+.version-drawer .vd-head b{font-family:var(--font-display);font-weight:800;font-size:14px;}
+.version-drawer .vd-close{cursor:pointer;font-size:18px;color:var(--muted);line-height:1;background:none;border:none;}
+.version-drawer .vd-body{flex:1;overflow-y:auto;padding:14px;}
+.version-backdrop{position:fixed;inset:0;background:rgba(20,21,26,0.45);z-index:205;display:none;}
+.version-backdrop.open{display:block;}
+.version-card{background:var(--paper);border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin-bottom:10px;}
+.version-card.is-active{border-color:var(--green);background:#E7F7ED;}
+.version-card .vc-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;}
+.version-card .vc-top b{font-family:var(--font-display);font-size:13px;}
+.version-card .vc-status{font-size:9.5px;font-weight:700;padding:2px 8px;border-radius:20px;text-transform:uppercase;letter-spacing:.3px;}
+.version-card .vc-row{display:flex;justify-content:space-between;font-size:11px;color:var(--ink2);padding:2px 0;}
+.version-card .vc-row span:first-child{color:var(--muted);}
+.version-card .vc-reason{margin-top:6px;font-size:10.5px;color:var(--muted);font-style:italic;border-top:1px dashed var(--line);padding-top:6px;}
+
+.milestone-group{background:var(--paper2);border:1px solid var(--line);border-radius:var(--r-lg);margin-bottom:14px;overflow:hidden;}
+.milestone-head{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;cursor:pointer;gap:10px;}
+.milestone-head:hover{background:var(--paper);}
+.milestone-head-left{display:flex;align-items:center;gap:10px;}
+.milestone-head .chev{font-size:11px;color:var(--muted);transition:transform .15s;}
+.milestone-group.collapsed .chev{transform:rotate(-90deg);}
+.milestone-head b{font-family:var(--font-display);font-weight:800;font-size:14px;}
+.milestone-progress{font-size:11px;color:var(--muted);font-family:var(--font-mono);}
+.milestone-bar{width:90px;height:6px;background:var(--line);border-radius:4px;overflow:hidden;}
+.milestone-bar div{height:100%;background:var(--green);}
+.milestone-body{border-top:1px solid var(--line);}
+.milestone-group.collapsed .milestone-body{display:none;}
+
+.task-row{display:flex;align-items:center;gap:12px;padding:12px 18px;border-bottom:1px solid var(--line);}
+.task-row:last-child{border-bottom:none;}
+.task-row .left{flex:1;min-width:0;}
+.task-row .left b{display:block;font-size:12.5px;}
+.task-row .left .sub{font-size:10.5px;color:var(--muted);margin-top:2px;}
+.task-status-select{font-family:var(--font-display);font-size:10.5px;font-weight:700;padding:6px 10px;border-radius:8px;border:1px solid var(--line);cursor:pointer;flex-shrink:0;background:var(--paper);color:var(--ink2);}
+.task-status-select.not_started{background:#F1F2F4;color:var(--muted);border-color:#E8EAED;}
+.task-status-select.in_progress{background:#FEF3E2;color:#B45309;border-color:#FEF3E2;}
+.task-status-select.completed{background:#E7F7ED;color:var(--green);border-color:#E7F7ED;}
+.task-status-select:disabled{opacity:.6;cursor:wait;}
+.del-btn{border:none;background:none;color:var(--muted);cursor:pointer;font-size:14px;padding:4px 6px;flex-shrink:0;}
+.del-btn:hover{color:var(--red);}
+
+.empty{padding:24px;text-align:center;color:var(--muted);font-size:12px;}
+
+.add-form{background:var(--paper2);border:1px solid var(--line);border-radius:var(--r-lg);padding:16px 18px;margin-bottom:20px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;}
+.add-form input, .add-form select{font-family:var(--font-body);font-size:12.5px;padding:9px 12px;border-radius:8px;border:1px solid var(--line);background:var(--paper);color:var(--ink);}
+.add-form input[name="task"]{flex:2;min-width:200px;}
+.add-form input[name="milestone"]{flex:1;min-width:140px;}
+#importMsg{font-size:11.5px;color:var(--muted);flex-basis:100%;}
+#importMsg.err{color:var(--red);} #importMsg.ok{color:var(--green);}
+
+.cal-wrap{background:var(--paper2);border:1px solid var(--line);border-radius:var(--r-lg);overflow:hidden;box-shadow:var(--shadow-sm);}
+.cal-top{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;gap:10px;flex-wrap:wrap;background:linear-gradient(180deg,#FFFFFF,#FCFCFD);border-bottom:1px solid var(--line);}
+.cal-month{font-family:var(--font-display);font-weight:800;font-size:16px;letter-spacing:.2px;color:var(--ink-900);}
+.cal-nav{display:flex;gap:6px;align-items:center;}
+.cal-nav .btn.sm{border-radius:8px;}
+.cal-nav #cToday{border-color:var(--orange);color:var(--orange);}
+.cal-nav #cToday:hover{background:var(--orange);color:#fff;}
+.cal-dow{display:grid;grid-template-columns:repeat(7,1fr);border-bottom:1px solid var(--line);background:#FBFAF8;}
+.cal-dow div{padding:10px 6px;font-family:var(--font-display);font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--muted);text-align:center;}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);}
+.cal-cell{min-height:104px;border-right:1px solid var(--line);border-bottom:1px solid var(--line);padding:8px 8px;overflow:visible;align-items:start;transition:background-color .12s ease;}
+.cal-cell:hover{background:#FFF9F4;}
+.cal-cell:nth-child(7n){border-right:none;}
+.cal-cell.out{background:#FAFAFB;}
+.cal-cell.out:hover{background:#F5F4F2;}
+.cal-cell.holiday{background:#FFF6F0;}
+.cal-cell.holiday:hover{background:#FFF0E6;}
+.cal-cell .dnum{font-family:var(--font-mono);font-size:11px;color:var(--muted);margin-bottom:6px;position:relative;}
+.cal-cell.out .dnum{opacity:.45;}
+.cal-cell.today{background:#FFF6EE;box-shadow:inset 0 0 0 1.5px var(--orange);}
+.cal-cell.today .dnum{background:var(--orange);color:#fff;border-radius:6px;padding:1px 7px;display:inline-block;font-weight:700;}
+.cal-add-btn{position:absolute;right:0;top:-1px;width:16px;height:16px;line-height:15px;text-align:center;border-radius:5px;background:var(--paper2);border:1px solid var(--line);color:var(--muted);font-size:12px;font-weight:700;cursor:pointer;opacity:0;transition:opacity .12s ease,background-color .12s ease,color .12s ease;}
+.cal-cell:hover .cal-add-btn{opacity:1;}
+.cal-add-btn:hover{background:var(--orange);color:#fff;border-color:var(--orange);}
+.cal-ev{font-size:11.5px;line-height:1.4;padding:8px 10px;border-radius:var(--r-sm);margin-bottom:7px;cursor:pointer;white-space:normal;border-left:none;background:#E7F7ED;color:#262626;box-shadow:var(--shadow-sm);position:relative;transition:box-shadow .12s ease,transform .12s ease;}
+.cal-ev:hover{box-shadow:var(--shadow-md);transform:translateY(-1px);}
+.cal-ev.not_started_blue{background:#E8F0FE;color:var(--blue);}
+.cal-ev.in_progress{background:#FEF3E2;color:#B45309;}
+.cal-ev.completed{background:#E7F7ED;color:#262626;}
+.cal-ev.not_completed{background:#FDEAEA;color:#991B1B;}
+.cal-ev-alert{display:block;font-size:9.5px;font-weight:700;color:#B45309;background:#FEF3E2;border-radius:6px;padding:2px 6px;margin-top:4px;}
+.cal-ev.preview-pending{outline:2px dashed var(--orange);outline-offset:1px;}
+.save-changes-bar{position:sticky;bottom:0;left:0;right:0;background:var(--ink);color:#fff;padding:12px 18px;display:flex;align-items:center;justify-content:space-between;gap:12px;border-radius:0 0 12px 12px;z-index:50;}
+.save-changes-bar .msg{font-family:var(--font-display);font-size:12.5px;font-weight:600;}
+.save-changes-bar .actions{display:flex;gap:8px;}
+.save-changes-bar .btn.discard{background:transparent;color:#fff;border-color:rgba(255,255,255,0.25);}
+.save-changes-bar .btn.commit{background:var(--orange);color:#fff;border-color:var(--orange);}
+.cal-ev.history{opacity:.5;}
+.cal-ev-task{font-weight:700;cursor:help;}
+.cal-ev-proj{display:block;font-size:9.5px;font-weight:600;color:var(--muted);margin-top:3px;}
+.cal-tick{vertical-align:-1px;margin-right:5px;width:14px;height:14px;cursor:pointer;accent-color:var(--orange);}
+.cal-ev-mile{font-weight:700;opacity:.75;}
+.cal-more{font-size:9.5px;color:var(--muted);font-family:var(--font-display);font-weight:600;cursor:pointer;}
+.cal-ev-reason{display:block;font-size:9.5px;color:var(--red);margin-top:3px;font-style:italic;}
+.cal-ev-resched{display:inline-block;font-size:9px;background:#FFF3E9;border:1px solid #FFE2C7;border-radius:10px;padding:1px 7px;margin-top:4px;font-weight:700;color:var(--orange);}
+.cal-ev-pending{display:inline-block;font-size:9px;background:#FEF3E2;border:1px solid #FEF3E2;border-radius:10px;padding:1px 7px;margin-top:4px;font-weight:700;color:#B45309;}
+.cal-ev[draggable="true"]{cursor:grab;}
+.cal-ev.dragging{opacity:.4;}
+.cal-cell.dragover{background:#FFF3E9;box-shadow:inset 0 0 0 1.5px var(--orange);}
+.cal-ev-resizer{position:absolute;right:2px;bottom:1px;width:12px;height:10px;cursor:ew-resize;font-size:9px;color:var(--muted);}
+
+.cal-ev-shadow{font-size:11px;line-height:1.4;padding:7px 10px;border-radius:7px;margin-bottom:6px;background:repeating-linear-gradient(135deg,#F7F6F4,#F7F6F4 6px,#F1F0EE 6px,#F1F0EE 12px);border:1px dashed #C9CDD4;color:var(--muted);position:relative;cursor:help;}
+.cal-ev-shadow .shl{font-weight:700;text-decoration:line-through;opacity:.8;}
+.cal-ev-shadow .shnote{display:block;font-size:9.5px;color:var(--orange);margin-top:3px;font-style:italic;}
+
+.drag-reason-backdrop{position:fixed;inset:0;background:rgba(20,21,26,0.5);z-index:500;display:flex;align-items:center;justify-content:center;padding:20px;}
+.drag-reason-modal{background:#fff;border-radius:var(--r-lg);max-width:420px;width:100%;max-height:85vh;overflow-y:auto;box-shadow:var(--shadow-lg);font-family:var(--font-display);}
+.drag-reason-modal .rm-head{padding:18px 20px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;}
+.drag-reason-modal .rm-head b{font-family:var(--font-display);font-weight:800;font-size:14px;color:var(--ink);}
+.drag-reason-modal .rm-head button{border:none;background:none;font-size:16px;color:var(--muted);cursor:pointer;}
+.drag-reason-modal .rm-body{padding:18px 20px;display:flex;flex-direction:column;gap:12px;}
+.drm-summary{background:var(--paper);border:1px solid var(--line);border-radius:9px;padding:10px 12px;font-size:12px;color:var(--ink);}
+.drag-reason-options{display:grid;grid-template-columns:1fr 1fr;gap:7px;}
+.drag-reason-options label{display:flex;align-items:center;gap:7px;font-size:11.5px;background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:8px 10px;cursor:pointer;}
+.drag-reason-options input[type=radio]{accent-color:var(--orange);}
+.drag-reason-modal textarea,.drag-reason-modal input[type=text]{width:100%;border:1px solid var(--line);border-radius:8px;padding:8px 10px;font-family:var(--font-display);font-size:12px;}
+.drag-reason-modal .rm-actions{display:flex;gap:8px;padding:14px 20px;border-top:1px solid var(--line);}
+.drag-reason-modal .rm-actions button{flex:1;border:none;border-radius:8px;padding:10px 12px;font-family:var(--font-display);font-weight:700;font-size:12.5px;cursor:pointer;}
+
+.approval-panel-toggle{position:relative;}
+.approval-badge-count{position:absolute;top:-6px;right:-6px;background:var(--orange);color:#fff;font-size:9.5px;font-weight:700;border-radius:10px;padding:1px 6px;line-height:1.4;}
+.approval-card{background:#fff;border:1px solid var(--line);border-radius:var(--r-lg);padding:16px;margin-bottom:12px;box-shadow:var(--shadow-sm);transition:box-shadow .15s ease;}
+.approval-card:hover{box-shadow:var(--shadow-md);}
+.approval-card .ac-title{font-family:var(--font-display);font-weight:700;font-size:13px;color:var(--ink);margin-bottom:2px;}
+.approval-card .ac-sub{font-size:10.5px;color:var(--muted);margin-bottom:10px;}
+.approval-card .ac-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;}
+.approval-card .ac-item{background:var(--paper);border-radius:8px;padding:7px 10px;}
+.approval-card .ac-item .l{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;font-weight:700;}
+.approval-card .ac-item .v{font-family:var(--font-mono);font-size:12px;margin-top:2px;color:var(--ink);}
+.approval-card .ac-impact{font-size:11px;background:#FDEAEA;color:#991B1B;border-radius:8px;padding:7px 10px;margin-bottom:10px;}
+.approval-card .ac-actions{display:flex;gap:8px;}
+.approval-card .ac-actions button{flex:1;border:none;border-radius:8px;padding:8px 10px;font-family:var(--font-display);font-weight:700;font-size:12px;cursor:pointer;}
+.approval-card .ac-approve{background:var(--green);color:#fff;}
+.approval-card .ac-reject{background:var(--paper);color:var(--red);border:1px solid var(--line) !important;}
+.status-pop{position:absolute;z-index:300;background:var(--paper2);border:1px solid var(--line);border-radius:var(--r-md);padding:8px;width:170px;box-shadow:var(--shadow-md);}
+.status-pop button{display:block;width:100%;text-align:left;border:none;background:none;padding:8px 10px;border-radius:6px;font-family:var(--font-display);font-size:12px;font-weight:600;cursor:pointer;color:var(--ink);}
+.status-pop button:hover{background:var(--paper);}
+.reason-pop{position:absolute;z-index:300;background:var(--paper2);border:1px solid var(--line);border-radius:var(--r-md);padding:10px;width:220px;box-shadow:var(--shadow-md);}
+.reason-pop textarea{width:100%;font-family:var(--font-body);font-size:11.5px;padding:7px 8px;border:1px solid var(--line);border-radius:6px;background:var(--paper);color:var(--ink);resize:vertical;min-height:50px;}
+.reason-pop .rp-actions{display:flex;justify-content:flex-end;gap:6px;margin-top:7px;}
+.nodate{padding:14px 18px;border-top:1px solid var(--line);background:var(--paper);}
+.nodate .h{font-family:var(--font-display);font-weight:700;font-size:11.5px;margin-bottom:8px;}
+.nodate .chips{display:flex;gap:7px;flex-wrap:wrap;}
+.nodate .chip{font-size:10.5px;background:var(--paper2);border:1px solid var(--line);border-radius:20px;padding:4px 11px;cursor:pointer;}
+.cal-legend{display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:12px 18px;border-top:1px solid var(--line);font-size:10.5px;color:var(--ink2);background:#FBFAF8;}
+.cal-legend span:not([style]){background:#fff;border:1px solid var(--line);border-radius:20px;padding:4px 10px 4px 8px;display:inline-flex;align-items:center;}
+.cal-legend i{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px;vertical-align:-1px;}
+.gantt-wrap{background:var(--paper2);border:1px solid var(--line);border-radius:var(--r-lg);overflow:hidden;margin-bottom:14px;}
+.gantt-head{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid var(--line);}
+.gantt-scale{padding:6px 18px;font-size:10px;color:var(--muted);font-family:var(--font-mono);border-bottom:1px solid var(--line);white-space:nowrap;overflow:hidden;}
+.gantt-row{display:flex;align-items:center;gap:14px;padding:12px 18px;border-bottom:1px solid var(--line);cursor:pointer;}
+.gantt-row:last-child{border-bottom:none;}
+.gantt-row:hover{background:var(--paper);}
+.gantt-row .gname{width:200px;flex-shrink:0;font-family:var(--font-display);font-weight:700;font-size:12.5px;}
+.gantt-row .gname small{display:block;font-weight:500;color:var(--muted);font-size:10px;margin-top:2px;}
+.gantt-track{flex:1;position:relative;height:22px;background:var(--paper);border-radius:6px;}
+.gantt-bar{position:absolute;top:0;height:100%;border-radius:6px;background:var(--line);overflow:hidden;display:flex;}
+.gantt-seg{height:100%;}
+.gantt-bar.late{outline:2px solid var(--red);outline-offset:1px;}
+.gantt-pct{width:60px;flex-shrink:0;text-align:right;font-family:var(--font-mono);font-size:11px;color:var(--muted);}
+.resched-panel{background:var(--paper2);border:1px solid var(--line);border-radius:var(--r-lg);padding:14px 18px;margin-bottom:16px;}
+.resched-panel .h{font-family:var(--font-display);font-weight:800;font-size:13px;margin-bottom:10px;}
+.resched-item{display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--line);font-size:12px;}
+.resched-item:last-child{border-bottom:none;}
+.resched-item .cnt{font-family:var(--font-mono);font-weight:700;color:var(--orange);background:#FEF3E2;padding:2px 9px;border-radius:20px;font-size:11px;}
+
+.modal{position:fixed;inset:0;background:rgba(20,21,26,0.5);z-index:200;display:none;align-items:center;justify-content:center;padding:24px;}
+.modal.on{display:flex;}
+.modal-box{background:var(--paper2);border-radius:14px;width:100%;max-width:480px;padding:22px;max-height:88vh;overflow-y:auto;}
+.modal-box h4{font-family:var(--font-display);font-weight:800;font-size:15px;margin:0 0 4px 0;}
+.modal-box .ms{font-size:11.5px;color:var(--muted);margin-bottom:16px;}
+.fld{margin-bottom:12px;}
+.fld .k{font-size:9.5px;letter-spacing:.9px;text-transform:uppercase;color:var(--muted);font-family:var(--font-display);font-weight:600;margin-bottom:5px;display:block;}
+.fld input,.fld select{width:100%;padding:9px 11px;border:1px solid var(--line);border-radius:7px;font-size:12.5px;font-family:var(--font-body);background:var(--paper);color:var(--ink);}
+.modal-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:16px;}
+.preview{border:1px solid var(--line);border-radius:8px;max-height:230px;overflow-y:auto;background:var(--paper);margin-bottom:12px;}
+.preview table{width:100%;border-collapse:collapse;font-size:11.5px;}
+.preview th{position:sticky;top:0;background:var(--paper);text-align:left;padding:7px 9px;font-family:var(--font-display);font-size:9.5px;letter-spacing:.7px;text-transform:uppercase;color:var(--muted);border-bottom:1px solid var(--line);}
+.preview td{padding:6px 9px;border-bottom:1px solid var(--line);}
+.preview td.d{font-family:var(--font-mono);font-size:10.5px;color:var(--muted);white-space:nowrap;}
+
+@media(max-width:900px){.main{padding-left:18px;padding-right:18px;}.cal-cell{min-height:78px;}}
+@media(max-width:640px){
+  .gantt-wrap{overflow-x:auto;}
+  .gantt-row, .gantt-scale, .gantt-head{min-width:560px;}
+  .summary-row{flex-direction:column;}
+  .toolbar{flex-direction:column;align-items:stretch;}
+  .filters{flex-direction:column;}
+  .filters input{min-width:0;}
+}
+</style>
+</head>
+<body>
+
+<div id="sips-sidebar-mount"></div>
+<script>
+sipsRenderShell({ activeHref: 'schedule.html' });
+</script>
+
+<div class="app-main">
+  <div class="app-lanes"><span class="l1"></span><span class="l2"></span><span class="l3"></span><span class="l4"></span></div>
+  <div class="app-topbar">
+    <div style="display:flex;align-items:center;gap:12px;">
+      <button class="app-hamburger" id="app-hamburger-btn" aria-label="Toggle menu">&#9776;</button>
+      <div>
+        <div class="app-crumb">Projects &rsaquo; <span id="crumbName">—</span> &rsaquo; Schedule</div>
+        <div class="app-title">Schedule</div>
+        <div class="app-subtitle">All tasks grouped by milestone — update status or add new tasks</div>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;">
+      <div class="header-actions">
+        <select id="projSel"><option>Loading…</option></select>
+        <button class="btn" id="versionHistoryBtn">&#128337; Version History</button>
+        <a class="btn" href="project-overview.html" id="backLink">&#8592; Overview</a>
+      </div>
+      <div class="app-user-chip">
+        <div class="app-user-avatar" id="userAvatar">—</div>
+        <div class="app-user-meta">
+          <div class="app-user-name" id="userName">Loading…</div>
+          <div class="app-user-role" id="userRole">—</div>
+        </div>
+        <button class="app-logout-btn" id="logoutBtn">Log out</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="main">
+    <div class="summary-row" id="summaryRow"></div>
+    <div class="delay-summary" id="delaySummary"></div>
+
+    <div class="toolbar" id="toolbarRow">
+      <div class="filters">
+        <input type="text" id="searchBox" placeholder="Search tasks…">
+        <select id="statusFilter">
+          <option value="">All statuses</option>
+          <option value="not_started">Not started</option>
+          <option value="in_progress">In progress</option>
+          <option value="completed">Completed</option>
+        </select>
+        <select id="versionFilter"></select>
+        <button class="btn sm" id="repairDateStatusBtn" title="One-time fix: overwrite every task's per-date Calendar history with its own current overall status, for tasks updated before this sync existed">🔧 Repair per-date history</button>
+      </div>
+    </div>
+
+    <div id="reschedPanel" class="resched-panel collapsed" style="display:none;">
+      <div class="h" id="reschedHead" style="cursor:pointer;display:flex;align-items:center;justify-content:space-between;">
+        <span>↻ Rescheduled Tasks (for Director approval)</span>
+        <span class="chev" id="reschedChev" style="font-size:11px;color:var(--muted);transition:transform .15s;">▾</span>
+      </div>
+      <div id="reschedList" style="display:none;"></div>
+    </div>
+
+    <div id="dragApprovalPanel" class="resched-panel collapsed" style="display:none;">
+      <div class="h" id="dragApprovalHead" style="cursor:pointer;display:flex;align-items:center;justify-content:space-between;">
+        <span>📅 Schedule Change Requests (drag/drop — for Director approval)</span>
+        <span class="chev" id="dragApprovalChev" style="font-size:11px;color:var(--muted);transition:transform .15s;">▾</span>
+      </div>
+      <div id="dragApprovalList" style="display:none;"></div>
+    </div>
+
+    <div id="ganttView"><div class="empty">Loading…</div></div>
+    <div id="listView" style="display:none;"></div>
+    <div id="calView" style="display:none;"></div>
+  </div>
+</div>
+
+<div class="version-backdrop" id="versionBackdrop"></div>
+<div class="version-drawer" id="versionDrawer">
+  <div class="vd-head">
+    <b>Version History</b>
+    <button class="vd-close" id="versionDrawerClose">✕</button>
+  </div>
+  <div class="vd-body" id="versionDrawerBody"></div>
+</div>
+
+<div class="drag-reason-backdrop" id="scheduleCheckBackdrop" style="display:none;">
+  <div class="drag-reason-modal" style="max-width:440px;">
+    <div class="rm-head"><b>Schedule Duration Check</b><button id="scdClose">✕</button></div>
+    <div class="rm-body">
+      <div class="drm-summary" id="scdSummary"></div>
+      <div style="font-size:12.5px;color:var(--ink2);line-height:1.5;">
+        Today's work has been marked as incomplete. You still have time remaining within the current scheduled period.<br><br>
+        <b>Can the remaining work be completed within the existing schedule?</b>
+      </div>
+    </div>
+    <div class="rm-actions">
+      <button id="scdYes" style="background:var(--green);color:#fff;">YES — Continue Current Schedule</button>
+      <button id="scdNo" style="background:var(--orange);color:#fff;">NO — Request Reschedule</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal" id="modal">
+  <div class="modal-box">
+    <h4 id="mTitle">Task</h4>
+    <div class="ms" id="mSub"></div>
+    <div class="fld"><span class="k">Task name</span><input type="text" id="mName"></div>
+    <div class="fld"><span class="k">Milestone</span><input type="text" id="mMile"></div>
+    <div class="fld"><span class="k">Start date</span><input type="date" id="mStart"></div>
+    <div class="fld"><span class="k">Due date</span><input type="date" id="mDue"></div>
+    <div class="fld"><span class="k">Status</span><select id="mStatus">
+      <option value="not_started">Not started</option>
+      <option value="in_progress">In progress</option>
+      <option value="completed">Completed</option>
+    </select></div>
+    <div class="fld"><span class="k">Milestone Order</span><input type="number" id="mMileOrder" placeholder="1, 2, 3… (sequence number in the dependency chain)"></div>
+    <div class="fld"><span class="k">Depends On</span><select id="mDependsOn"><option value="">— None —</option></select></div>
+    <div class="fld ms" style="margin-top:-6px;">The task that must be completed before this one can start — used by the 3+ day delay alert.</div>
+    <div class="fld" id="mReasonFld" style="display:none;"><span class="k">Reason</span><input type="text" id="mReason" placeholder="Reason (leave blank to delete)"></div>
+    <div class="modal-actions">
+      <button class="btn" id="mDelete" style="display:none;margin-right:auto;color:var(--red);border-color:var(--red);">🗑 Delete</button>
+      <button class="btn" id="mCancel">Cancel</button>
+      <button class="btn dark" id="mSave">Save</button>
+    </div>
+  </div>
+</div>
+
+<script>
+let currentProj = null, allTasks = [], calRef = new Date(), editId = null;
+let currentView = 'gantt', ganttMilestoneFilter = null;
+let dragTid = null, resizeTid = null, resizeStartX = null, resizeOrigDue = null;
+// Pending (unsaved) drag/swap/resize changes. Map: taskId -> { planned_end } preview override.
+// Nothing here touches the DB until "Save Changes" is clicked.
+let pendingChanges = {};
+// Read-only cache of open drag-and-drop schedule change requests, loaded from the
+// (already existing) schedule_change_requests table. Nothing here writes to a task's
+// live baseline_start/planned_end — those only change when a Director approves.
+let pendingChangeRequests = {};
+// Approved change requests — kept as a record, unlike pendingChangeRequests (which drops a
+// request the moment it's approved), so the origin shadow can still be shown at the task's old
+// date after the move has been approved. Only the MOST RECENT request per task is ever actually
+// rendered as a shadow (see renderCalendarInner) — older, superseded moves are kept here for
+// audit/history but no longer produce their own overlapping ghost range.
+let approvedChangeRequests = {};
+async function loadPendingChangeRequests(){
+  const { data, error } = await sb.from('schedule_change_requests').select('*').in('approval_status',['pending','approved']);
+  if(error){ console.error('Failed to load pending change requests', error); return; }
+  pendingChangeRequests = {};
+  approvedChangeRequests = {};
+  (data||[]).forEach(r=>{
+    if(r.approval_status==='approved') approvedChangeRequests[r.id] = r;
+    else pendingChangeRequests[r.id] = r;
+  });
+}
+
+const MON = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+
+function esc(s){ return (s==null?'':String(s)).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function ymd(d){ const p=n=>String(n).padStart(2,'0'); return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate()); }
+function addDays(dateStr, n){ const d = new Date(dateStr+'T00:00:00'); d.setDate(d.getDate()+n); return ymd(d); }
+// Normalizes a milestone name for COMPARISON/GROUPING only (never for display or storage):
+// trims the ends, collapses any run of internal whitespace (double spaces, tabs, stray line
+// breaks — common when a name is copy-pasted from Excel) down to one space, and lowercases.
+// Without collapsing internal whitespace, "Fabrication  work..." (double space) still counted
+// as a different milestone from "Fabrication work..." and kept rendering as a duplicate row.
+function normMile(m){ return (m||'Unassigned').replace(/\s+/g,' ').trim().toLowerCase(); }
+function statusPct(t){ return t.length ? Math.round(t.filter(x=>x.status==='completed').length/t.length*100) : 0; }
+// "active" row for a reschedule chain = the one with max reschedule_count among tasks sharing the same root
+function rootId(t){ return t.original_task_id || t.id; }
+
+function renderSummary(){
+  const ns = allTasks.filter(t=>(t.status||'not_started')==='not_started').length;
+  const ip = allTasks.filter(t=>t.status==='in_progress').length;
+  const cp = allTasks.filter(t=>t.status==='completed').length;
+  document.getElementById('summaryRow').innerHTML = `
+    <div class="sum-chip"><div class="l">Total Tasks</div><div class="v">${allTasks.length}</div></div>
+    <div class="sum-chip"><div class="l">Not Started</div><div class="v" style="color:var(--muted)">${ns}</div></div>
+    <div class="sum-chip"><div class="l">In Progress</div><div class="v" style="color:#B45309">${ip}</div></div>
+    <div class="sum-chip"><div class="l">Completed</div><div class="v" style="color:var(--green)">${cp}</div></div>`;
+}
+
+// ── Delay Impact Summary (new) ────────────────────────────────────────────
+// Reads only existing task fields (status, due_date/baseline_start, planned_end, actual_end,
+// milestone, milestone_order) — no schema changes, no writes.
+function renderDelayImpact(){
+  const box = document.getElementById('delaySummary');
+  if(!box || !allTasks.length){ if(box) box.innerHTML=''; return; }
+  const tStr = ymd(new Date());
+  const dayDiff = (a,b)=> Math.round((new Date(b)-new Date(a))/86400000);
+
+  let delayedTasks = 0, criticalTasks = 0;
+  const affectedMilestones = new Set();
+  allTasks.forEach(t=>{
+    const planEnd = t.planned_end || t.due_date;
+    if(t.status==='completed'){
+      if(t.actual_end && planEnd && t.actual_end > planEnd){
+        delayedTasks++;
+        affectedMilestones.add(t.milestone||'Unassigned');
+      }
+      return;
+    }
+    if(planEnd && planEnd < tStr){
+      delayedTasks++;
+      const d = dayDiff(planEnd, tStr);
+      affectedMilestones.add(t.milestone||'Unassigned');
+      if(d > 3) criticalTasks++;
+    }
+  });
+
+  // Completion date change: latest forecast finish across all tasks vs. the project's original end date.
+  // This is also used as the single, non-duplicated source for "Total Project Delay" below — a task-by-task
+  // sum would double/triple count the SAME root-cause delay across every cascaded dependent task.
+  const forecastDates = allTasks.map(t=> t.planned_end || t.due_date).filter(Boolean).sort();
+  const latestForecast = forecastDates[forecastDates.length-1];
+  let completionChangeLabel = '—', completionChangeColor = 'var(--muted)';
+  let totalDelayDays = 0;
+  if(currentProj && currentProj.end_date && latestForecast){
+    const diff = dayDiff(currentProj.end_date, latestForecast);
+    totalDelayDays = diff;
+    if(diff > 0){ completionChangeLabel = '+'+diff+' days'; completionChangeColor = 'var(--red)'; }
+    else if(diff < 0){ completionChangeLabel = diff+' days'; completionChangeColor = 'var(--green)'; }
+    else { completionChangeLabel = 'On track'; completionChangeColor = 'var(--green)'; }
+  }
+
+  const totalMilestones = new Set(allTasks.map(t=>t.milestone||'Unassigned')).size || 1;
+  const delayRatio = allTasks.length ? delayedTasks/allTasks.length : 0;
+  let risk = 'Low', riskColor = 'var(--green)';
+  if(delayRatio > 0.3 || affectedMilestones.size >= Math.ceil(totalMilestones/2) || criticalTasks>0){ risk='High'; riskColor='var(--red)'; }
+  else if(delayedTasks > 0){ risk='Medium'; riskColor='var(--orange)'; }
+
+  box.innerHTML = `
+    <div class="ds-head">
+      <b>⏱ Delay Impact Summary</b>
+      <span class="ds-risk" style="background:${riskColor}22;color:${riskColor};">${risk} Risk</span>
+    </div>
+    <div class="delay-kpis">
+      <div class="delay-kpi" style="--kpi-color:${totalDelayDays>0?'var(--red)':'var(--green)'};"><span class="ico">📉</span><div class="l">Total Project Delay</div><div class="v">${Math.max(0,totalDelayDays)} days</div></div>
+      <div class="delay-kpi" style="--kpi-color:${delayedTasks>0?'var(--red)':'var(--green)'};"><span class="ico">🕒</span><div class="l">Delayed Tasks</div><div class="v">${delayedTasks}</div></div>
+      <div class="delay-kpi" style="--kpi-color:${criticalTasks>0?'var(--red)':'var(--muted)'};"><span class="ico">⚠</span><div class="l">Critical Tasks</div><div class="v">${criticalTasks}</div></div>
+      <div class="delay-kpi" style="--kpi-color:${affectedMilestones.size>0?'var(--orange)':'var(--muted)'};"><span class="ico">🏁</span><div class="l">Affected Milestones</div><div class="v">${affectedMilestones.size}</div></div>
+      <div class="delay-kpi" style="--kpi-color:${completionChangeColor};"><span class="ico">📅</span><div class="l">Completion Date Change</div><div class="v" style="font-size:15px;">${completionChangeLabel}</div></div>
+      <div class="delay-kpi" style="--kpi-color:${riskColor};"><span class="ico">🚦</span><div class="l">Risk Level</div><div class="v" style="font-size:15px;">${risk}</div></div>
+    </div>`;
+}
+
+// ── Version History drawer (new, read-only) ────────────────────────────────
+// Groups tasks by existing `schedule_version` field. Per-version status/reason/changed-by are
+// derived from existing task fields (approval_status, resched_reason, reschedule_count,
+// assigned_engineer/engineer) — no new DB columns or writes.
+function renderVersionHistory(){
+  const bodyEl = document.getElementById('versionDrawerBody');
+  if(!bodyEl) return;
+  if(!allTasks.length){ bodyEl.innerHTML = '<div class="empty">No data available.</div>'; return; }
+  const dayDiff = (a,b)=> Math.round((new Date(b)-new Date(a))/86400000);
+  const groups = {};
+  allTasks.forEach(t=>{
+    const v = t.schedule_version || 'Schedule 1';
+    (groups[v] = groups[v] || []).push(t);
+  });
+  const versionKeys = Object.keys(groups).sort();
+  const activeKey = versionKeys[versionKeys.length-1];
+
+  const cards = versionKeys.slice().reverse().map(v=>{
+    const tasks = groups[v];
+    const changed = tasks.filter(t=> (t.reschedule_count||0)>0 || t.resched_reason);
+    let status, statusColor;
+    if(v===activeKey){ status='Active'; statusColor='var(--green)'; }
+    else if(changed.some(t=>t.approval_status==='pending')){ status='Pending'; statusColor='var(--yellow)'; }
+    else if(changed.some(t=>t.approval_status==='rejected')){ status='Rejected'; statusColor='var(--red)'; }
+    else if(changed.some(t=>t.approval_status==='approved')){ status='Approved'; statusColor='var(--green)'; }
+    else { status='Superseded'; statusColor='var(--muted)'; }
+
+    const changedBy = (changed.map(t=>t.assigned_engineer||t.engineer).find(Boolean)) || '—';
+    const dates = changed.map(t=>t.planned_end||t.due_date).filter(Boolean).sort();
+    const lastDate = dates[dates.length-1] || '—';
+    let daysShifted = 0;
+    changed.forEach(t=>{
+      const base = t.baseline_start || t.due_date, fc = t.planned_end || t.due_date;
+      if(base && fc) daysShifted += Math.abs(dayDiff(base, fc));
+    });
+    const reason = (changed.map(t=>t.resched_reason).find(Boolean)) || '—';
+
+    return `<div class="version-card ${v===activeKey?'is-active':''}">
+      <div class="vc-top"><b>${esc(v)}</b><span class="vc-status" style="background:${statusColor}22;color:${statusColor};">${status}</span></div>
+      <div class="vc-row"><span>Changed By</span><span>${esc(changedBy)}</span></div>
+      <div class="vc-row"><span>Date</span><span>${esc(lastDate)}</span></div>
+      <div class="vc-row"><span>Tasks Changed</span><span>${changed.length} / ${tasks.length}</span></div>
+      <div class="vc-row"><span>Days Shifted</span><span>${daysShifted}</span></div>
+      ${reason!=='—' ? `<div class="vc-reason">Reason: ${esc(reason)}</div>` : ''}
+    </div>`;
+  }).join('');
+  bodyEl.innerHTML = cards || '<div class="empty">No version data available.</div>';
+}
+function openVersionDrawer(){
+  document.getElementById('versionDrawer').classList.add('open');
+  document.getElementById('versionBackdrop').classList.add('open');
+}
+function closeVersionDrawer(){
+  document.getElementById('versionDrawer').classList.remove('open');
+  document.getElementById('versionBackdrop').classList.remove('open');
+}
+document.getElementById('versionHistoryBtn').onclick = ()=>{ renderVersionHistory(); openVersionDrawer(); };
+document.getElementById('versionDrawerClose').onclick = closeVersionDrawer;
+document.getElementById('versionBackdrop').onclick = closeVersionDrawer;
+
+function renderReschedPanel(){
+  const panel = document.getElementById('reschedPanel');
+  const groups = {};
+  allTasks.forEach(t=>{
+    const rc = t.reschedule_count||0;
+    if(rc>0 || t.resched_reason){ const rid = rootId(t); if(!groups[rid] || (t.reschedule_count||0) > (groups[rid].reschedule_count||0)) groups[rid]=t; }
+  });
+  const items = Object.values(groups).sort((a,b)=>(b.reschedule_count||0)-(a.reschedule_count||0));
+  if(!items.length){ panel.style.display='none'; return; }
+  panel.style.display='';
+  document.getElementById('reschedList').innerHTML = items.map(t=>{
+    const av = t.approval_status||'pending';
+    return `<div class="resched-item"><span>${esc(t.task)} <span style="color:var(--muted)">(${esc(t.milestone||'Unassigned')})</span>${(t.due_date||t.baseline_start)?`<span style="color:var(--muted);font-family:var(--font-mono);font-size:10.5px;"> · ${esc(t.due_date||t.baseline_start)}</span>`:''}${t.resched_reason?`<div class="cal-ev-reason" style="margin-top:2px;">Reason: ${esc(t.resched_reason)}</div>`:''}</span>
+      <span style="display:flex;align-items:center;gap:6px;">
+        <span class="cnt">↻ ${t.reschedule_count||0}</span>
+        ${av==='approved'?'<span style="color:var(--green);font-size:11px;font-weight:700;">✓ Approved</span>'
+          :av==='rejected'?'<span style="color:var(--red);font-size:11px;font-weight:700;">✕ Rejected</span>'
+          :`<button class="btn sm" data-appr="${t.id}">✓ Approve</button><button class="btn sm" data-rej="${t.id}">✕ Reject</button>`}
+      </span></div>`;
+  }).join('');
+  document.querySelectorAll('[data-appr]').forEach(b=> b.onclick = ()=> setApproval(b.dataset.appr,'approved'));
+  document.querySelectorAll('[data-rej]').forEach(b=> b.onclick = ()=> setApproval(b.dataset.rej,'rejected'));
+  const list = document.getElementById('reschedList'), chev = document.getElementById('reschedChev');
+  const open = !panel.classList.contains('collapsed');
+  list.style.display = open ? '' : 'none';
+  chev.style.transform = open ? '' : 'rotate(-90deg)';
+  document.getElementById('reschedHead').onclick = ()=>{
+    panel.classList.toggle('collapsed');
+    const isOpen = !panel.classList.contains('collapsed');
+    list.style.display = isOpen ? '' : 'none';
+    chev.style.transform = isOpen ? '' : 'rotate(-90deg)';
+  };
+}
+
+// Shows drag-and-drop Schedule Change Requests directly on the main Schedule page, right
+// below the existing Rescheduled Tasks panel — same visual pattern, same collapse behavior.
+// Reads only from the already-loaded pendingChangeRequests cache (loaded once at startup).
+function renderDragApprovalPanel(){
+  const panel = document.getElementById('dragApprovalPanel');
+  const reqs = Object.values(pendingChangeRequests).sort((a,b)=> new Date(b.requested_at||0)-new Date(a.requested_at||0));
+  if(!reqs.length){ panel.style.display='none'; return; }
+  panel.style.display='';
+  document.getElementById('dragApprovalList').innerHTML = reqs.map(r=>{
+    const impactedTasks = (r.impacted_task_ids||[]).map(id=> allTasks.find(x=>String(x.id)===String(id))).filter(Boolean);
+    const impactedMilestones = r.impacted_milestones || [];
+    const requestedAt = r.requested_at ? new Date(r.requested_at).toLocaleString() : '—';
+    return `<div class="approval-card" data-req="${r.id}" style="margin:10px 0 0 0;">
+      <div class="ac-title">${esc(r.task_name)}</div>
+      <div class="ac-sub">Changed by ${esc(r.changed_by||'Unknown user')} · Requested ${esc(requestedAt)}</div>
+      <div class="ac-grid">
+        <div class="ac-item"><div class="l">Original</div><div class="v">${esc(r.original_start||'—')} → ${esc(r.original_end||'—')}</div></div>
+        <div class="ac-item"><div class="l">Proposed</div><div class="v" style="color:var(--orange);">${esc(r.proposed_start||'—')} → ${esc(r.proposed_end||'—')}</div></div>
+        <div class="ac-item"><div class="l">Days Shifted</div><div class="v">${r.days_shifted>0?'+':''}${r.days_shifted} day${Math.abs(r.days_shifted)===1?'':'s'}</div></div>
+        <div class="ac-item"><div class="l">Reason</div><div class="v" style="font-family:var(--font-display);font-size:11.5px;">${esc(r.reason)}</div></div>
+      </div>
+      <div class="ac-impact">Schedule Impact: ${impactedTasks.length} dependent task${impactedTasks.length===1?'':'s'} and ${impactedMilestones.length} milestone${impactedMilestones.length===1?'':'s'} affected${impactedTasks.length?' — '+impactedTasks.map(x=>x.task).join(', '):''}</div>
+      <div class="ac-actions">
+        <button class="ac-approve" data-dapprove="${r.id}">✓ Approve</button>
+        <button class="ac-reject" data-dreject="${r.id}">✕ Reject</button>
+      </div>
+    </div>`;
+  }).join('');
+  document.querySelectorAll('[data-dapprove]').forEach(b=> b.onclick = ()=> approveChangeRequest(b.dataset.dapprove, ()=>{}));
+  document.querySelectorAll('[data-dreject]').forEach(b=> b.onclick = ()=> rejectChangeRequest(b.dataset.dreject, ()=>{}));
+  const list = document.getElementById('dragApprovalList'), chev = document.getElementById('dragApprovalChev');
+  const open = !panel.classList.contains('collapsed');
+  list.style.display = open ? '' : 'none';
+  chev.style.transform = open ? '' : 'rotate(-90deg)';
+  document.getElementById('dragApprovalHead').onclick = ()=>{
+    panel.classList.toggle('collapsed');
+    const isOpen = !panel.classList.contains('collapsed');
+    list.style.display = isOpen ? '' : 'none';
+    chev.style.transform = isOpen ? '' : 'rotate(-90deg)';
+  };
+}
+
+async function setApproval(tid, status){
+  const patch = { approval_status: status };
+  if(status==='rejected'){
+    const t0 = allTasks.find(x=>String(x.id)===String(tid));
+    patch.planned_end = t0 ? (t0.due_date||null) : null; // revert forecast, baseline never touched
+  }
+  const { error } = await sb.from('schedule_tasks').update(patch).eq('id', tid);
+  if(error){ alert('Update fail: '+error.message); return; }
+  const t = allTasks.find(x=>String(x.id)===String(tid));
+  if(t) Object.assign(t, patch);
+  if(status==='rejected' && t) await rebuildFromPredecessor(t.id);
+  render();
+}
+
+function fillVersions(){
+  const sel = document.getElementById('versionFilter');
+  const vers = [...new Set(allTasks.map(t=>t.schedule_version||'Schedule 1'))].sort();
+  const cur = sel.value;
+  sel.innerHTML = vers.map(v=>`<option value="${esc(v)}">${esc(v)}</option>`).join('');
+  sel.value = vers.includes(cur) ? cur : vers[vers.length-1];
+}
+
+function filtered(){
+  const q = document.getElementById('searchBox').value.trim().toLowerCase();
+  const sf = document.getElementById('statusFilter').value;
+  const vf = document.getElementById('versionFilter').value;
+  return allTasks.filter(t=>{
+    const mq = !q || (t.task||'').toLowerCase().includes(q) || (t.milestone||'').toLowerCase().includes(q);
+    const ms = !sf || (t.status||'not_started')===sf;
+    const mv = !vf || (t.schedule_version||'Schedule 1')===vf;
+    return mq && ms && mv;
+  });
+}
+
+function render(){
+  fillVersions();
+  renderDelayImpact();
+  renderVersionHistory();
+  if(currentView==='cal'){
+    renderCalendar();
+    return;
+  }
+  renderSummary();
+  renderReschedPanel();
+  renderDragApprovalPanel();
+  renderGantt();
+}
+
+function setView(v){
+  currentView = v;
+  document.getElementById('ganttView').style.display = v==='gantt' ? '' : 'none';
+  document.getElementById('listView').style.display = 'none';
+  document.getElementById('calView').style.display = v==='cal' ? '' : 'none';
+  document.getElementById('summaryRow').style.display = v==='cal' ? 'none' : '';
+  document.getElementById('delaySummary').style.display = v==='cal' ? 'none' : '';
+  document.getElementById('toolbarRow').style.display = v==='cal' ? 'none' : '';
+  const rp = document.getElementById('reschedPanel');
+  if(v==='cal') rp.style.display='none';
+  const dap = document.getElementById('dragApprovalPanel');
+  if(v==='cal') dap.style.display='none';
+  if(v!=='cal') ganttMilestoneFilter = null;
+  render();
+}
+function backToGantt(){ setView('gantt'); }
+
+function renderList(){
+  const groups = {};
+  filtered().forEach(t=>{ const m=t.milestone||'Unassigned'; (groups[m]=groups[m]||[]).push(t); });
+  const c = document.getElementById('listView');
+  const names = Object.keys(groups);
+  // Preserve Excel milestone sequence: only reorder when EVERY milestone group has an explicit
+  // milestone_order (set by the Excel importer) — otherwise keep the existing natural/DB order
+  // untouched, so older schedules imported before this field existed render exactly as before.
+  if(names.every(m => groups[m][0] && groups[m][0].milestone_order != null)){
+    names.sort((a,b)=> groups[a][0].milestone_order - groups[b][0].milestone_order);
+  }
+  if(!names.length){ c.innerHTML='<div class="empty">No tasks found — import a schedule from Overview or use Add Task above.</div>'; return; }
+
+  c.innerHTML = names.map(m=>{
+    const tasks = groups[m].slice().sort((a,b)=> (a.baseline_start||a.due_date||'').localeCompare(b.baseline_start||b.due_date||''));
+    const pct = statusPct(tasks);
+    const rows = tasks.map(t=>{
+      const s = t.status||'not_started';
+      const span = t.baseline_start && t.due_date && t.baseline_start!==t.due_date ? `${t.baseline_start} → ${t.due_date}` : (t.due_date||t.baseline_start||'');
+      return `<div class="task-row">
+        <div class="left"><b>${esc(t.task)}</b><div class="sub">${esc(m)}${span?' · '+esc(span):''}${t.reschedule_count?' · <span style="color:var(--orange)">↻ '+t.reschedule_count+'</span>':''}</div></div>
+        <button class="btn sm" data-edit="${t.id}">✎</button>
+        <select class="task-status-select ${s}" data-tid="${t.id}">
+          <option value="not_started" ${s==='not_started'?'selected':''}>Not started</option>
+          <option value="in_progress" ${s==='in_progress'?'selected':''}>In progress</option>
+          <option value="completed" ${s==='completed'?'selected':''}>Completed</option>
+        </select>
+        <button class="del-btn" data-tid="${t.id}" title="Delete">✕</button>
+      </div>`;
+    }).join('');
+    return `<div class="milestone-group">
+      <div class="milestone-head">
+        <div class="milestone-head-left"><span class="chev">▾</span><b>${esc(m)}</b></div>
+        <div style="display:flex;align-items:center;gap:10px;">
+          <div class="milestone-progress">${pct}% · ${tasks.filter(t=>t.status==='completed').length}/${tasks.length}</div>
+          <div class="milestone-bar"><div style="width:${pct}%"></div></div>
+        </div>
+      </div>
+      <div class="milestone-body">${rows}</div>
+    </div>`;
+  }).join('');
+
+  c.querySelectorAll('.milestone-head').forEach(h=> h.onclick = ()=> h.closest('.milestone-group').classList.toggle('collapsed'));
+  bindCommon(c);
+}
+
+function renderGantt(){
+  // Group by a NORMALIZED milestone name so the same milestone typed with different
+  // casing/whitespace (e.g. one row from Excel import, another added manually) merges into
+  // one row instead of showing up twice. The first-seen raw text is kept as the display name.
+  const groups = {}, displayName = {};
+  filtered().forEach(t=>{
+    const key = normMile(t.milestone);
+    if(!displayName[key]) displayName[key] = (t.milestone||'Unassigned').trim() || 'Unassigned';
+    (groups[key]=groups[key]||[]).push(t);
+  });
+  console.log('[Schedule trace] renderGantt sees', filtered().length, 'task(s):', filtered().map(t=>({id:t.id, task:t.task, status:t.status, baseline_start:t.baseline_start, planned_end:t.planned_end})));
+  const c = document.getElementById('ganttView');
+  const names = Object.keys(groups);
+  // Preserve Excel milestone sequence in the Gantt row order (see renderList for the same guard).
+  if(names.every(m => groups[m][0] && groups[m][0].milestone_order != null)){
+    names.sort((a,b)=> groups[a][0].milestone_order - groups[b][0].milestone_order);
+  }
+  if(!names.length){ c.innerHTML='<div class="empty">No tasks found.</div>'; return; }
+
+  const milestones = names.map(m=>{
+    const tasks = groups[m];
+    const starts = tasks.map(t=>t.baseline_start).filter(Boolean);
+    const ends = tasks.map(t=>t.planned_end||t.due_date||t.baseline_start).filter(Boolean);
+    const start = starts.length ? starts.reduce((a,b)=>a<b?a:b) : null;
+    const end = ends.length ? ends.reduce((a,b)=>a>b?a:b) : null;
+    // Count progress by the task's own CURRENT/FINAL status only — never its historical
+    // per-date entries. A task's date_status can still hold stale "in_progress" days from
+    // before it was finished (applyStatus only ever writes the one date actually clicked), and
+    // those must not keep contributing an Orange segment once the task's real status is
+    // Completed. The task's current status is authoritative and overrides old history.
+    const counts = { completed:0, in_progress:0, not_completed:0, not_started:0 };
+    let total = 0;
+    tasks.forEach(t=>{
+      const st = t.status || 'not_started';
+      counts[st] = (counts[st]||0) + 1;
+      total++;
+    });
+    total = total || 1;
+    const pct = Math.round(counts.completed/total*100);
+    return { name:displayName[m], tasks, start, end, pct, counts, total };
+  });
+  const allStarts = milestones.map(x=>x.start).filter(Boolean);
+  const allEnds = milestones.map(x=>x.end).filter(Boolean);
+  if(!allStarts.length || !allEnds.length){ c.innerHTML='<div class="empty">No dates found on tasks — Gantt view cannot be displayed.</div>'; return; }
+  // Timeline range = project's own start_date/end_date (falls back to task min/max only if project dates missing)
+  const projStart = (currentProj && currentProj.start_date) || allStarts.reduce((a,b)=>a<b?a:b);
+  const taskMaxEnd = allEnds.reduce((a,b)=>a>b?a:b);
+  const projEnd = (currentProj && currentProj.end_date && currentProj.end_date > taskMaxEnd) ? currentProj.end_date : ((currentProj && currentProj.end_date) || taskMaxEnd);
+  const rangeEnd = projEnd > taskMaxEnd ? projEnd : taskMaxEnd;
+  const totalDays = Math.max(1, Math.round((new Date(rangeEnd)-new Date(projStart))/86400000)+1);
+  const tStr = ymd(new Date());
+  // Display-only formatter: converts stored YYYY-MM-DD to DD/MM/YYYY. Never touches the
+  // underlying date string used for calculations/sorting/DB — formatting happens only here.
+  const fmt = d => { if(!d) return d; const [y,mo,da]=d.split('-'); return `${da}/${mo}/${y}`; };
+
+  const rows = milestones.map(ms=>{
+    let left=0, width=100;
+    if(ms.start && ms.end){
+      left = Math.max(0, Math.round((new Date(ms.start)-new Date(projStart))/86400000/totalDays*100));
+      width = Math.max(2, Math.round((Math.round((new Date(ms.end)-new Date(ms.start))/86400000)+1)/totalDays*100));
+    }
+    // Delayed = today already past this milestone's forecast end (or project end_date) and still not 100% done
+    const projDeadlinePassed = currentProj && currentProj.end_date && tStr > currentProj.end_date && ms.pct < 100;
+    const late = (ms.end && ms.end < tStr && ms.pct < 100) || projDeadlinePassed;
+    // Bar segments reuse the SAME counts/total computed above per milestone — the % and
+    // fraction shown next to the bar now always match what the bar itself displays.
+    const counts = ms.counts, total = ms.total;
+    const segColor = { completed:'var(--green)', in_progress:'var(--yellow)', not_completed:'var(--red)', not_started:'var(--blue)' };
+    const segLabel = { completed:'Completed', in_progress:'In Progress', not_completed:'Not completed', not_started:'Not started' };
+    const segs = ['completed','in_progress','not_completed','not_started'].map(k=>{
+      const cnt = counts[k];
+      if(!cnt) return '';
+      const w = Math.round(cnt/total*100);
+      return `<div class="gantt-seg" style="width:${w}%;background:${segColor[k]};" title="${segLabel[k]}: ${cnt}/${total}"></div>`;
+    }).join('');
+    return `<div class="gantt-row" data-mile="${esc(ms.name)}">
+      <div class="gname">${esc(ms.name)}<small>${ms.start&&ms.end?esc(fmt(ms.start))+' → '+esc(fmt(ms.end)):'No dates'}${late?' · Delayed':''}</small></div>
+      <div class="gantt-track"><div class="gantt-bar ${late?'late':''}" style="left:${left}%;width:${width}%;">${segs}</div></div>
+      <div class="gantt-pct" style="color:${late?'var(--red)':'var(--muted)'}">${ms.pct}% (${counts.completed}/${total})</div>
+    </div>`;
+  }).join('');
+
+  c.innerHTML = `<div class="gantt-wrap scroll-hint-x">
+    <div class="gantt-head"><b style="font-family:var(--font-display);font-weight:800;font-size:14px;">Project Timeline</b>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <span style="font-size:11px;color:var(--muted);">${esc(fmt(projStart))} → ${esc(fmt(projEnd))}</span>
+        <button class="btn sm" id="viewAllTasksBtn">▤ All Tasks (every milestone)</button>
+      </div>
+    </div>
+    <div class="gantt-scale">${esc(fmt(projStart))} ─────────────────────── ${esc(fmt(projEnd))}</div>
+    ${rows}
+  </div>`;
+  c.querySelectorAll('.gantt-row').forEach(r=>{
+    r.onclick = ()=>{ ganttMilestoneFilter = r.dataset.mile; setView('cal'); };
+  });
+  document.getElementById('viewAllTasksBtn').onclick = e=>{
+    e.stopPropagation();
+    ganttMilestoneFilter = null;
+    setView('cal');
+  };
+  if(typeof sipsWireScrollHints === 'function') sipsWireScrollHints(c);
+}
+
+function renderCalendar(){
+  try{
+    renderCalendarInner();
+  }catch(err){
+    console.error('renderCalendar error:', err);
+    document.getElementById('calView').innerHTML = `
+      <div class="cal-wrap">
+        <div class="cal-top">
+          <div class="cal-month">${MON[calRef.getMonth()]} ${calRef.getFullYear()}</div>
+          <div class="cal-nav">
+            <button class="btn sm" id="cPrev">‹</button>
+            <button class="btn sm" id="cToday">Today</button>
+            <button class="btn sm" id="cNext">›</button>
+          </div>
+        </div>
+        <div class="empty" style="color:var(--red);">Unable to load calendar — one or more tasks have invalid date or milestone data.<br><span style="font-size:10px;color:var(--muted);">${esc(err.message||String(err))}</span></div>
+      </div>`;
+  }
+}
+// Nav buttons bound once via delegation on the persistent container, so they keep working
+// even if a render attempt above throws (bad task data, etc.) and the inner rebuild fails.
+document.getElementById('calView').addEventListener('click', e=>{
+  if(e.target.closest('#cPrev')){ calRef.setMonth(calRef.getMonth()-1); renderCalendar(); }
+  else if(e.target.closest('#cNext')){ calRef.setMonth(calRef.getMonth()+1); renderCalendar(); }
+  else if(e.target.closest('#cToday')){ calRef = new Date(); renderCalendar(); }
+  else if(e.target.closest('#backToGanttBtn')){ backToGantt(); }
+  else if(e.target.closest('#openApprovalPanelBtn')){ openApprovalPanel(); }
+});
+
+function renderCalendarInner(){
+  const y = calRef.getFullYear(), m = calRef.getMonth();
+  const first = new Date(y,m,1), start = new Date(first);
+  start.setDate(1 - first.getDay());
+  const tStr = ymd(new Date());
+
+  let rows = filtered();
+  if(ganttMilestoneFilter) rows = rows.filter(t=>normMile(t.milestone)===normMile(ganttMilestoneFilter));
+  const byDate = {};
+  rows.forEach(t=>{
+    const pend = pendingChanges[t.id];
+    const planEnd = (pend && pend.planned_end) || t.planned_end || t.due_date;
+    const spanStart = (pend && pend.fc_start) || t.baseline_start || planEnd;
+    const spanEnd = planEnd || spanStart;
+    if(!spanStart){ return; }
+    // Spread this task across every day from its start to its forecast end — not just the final date
+    let cur = spanStart;
+    let guard = 0;
+    while(cur <= spanEnd && guard < 400){
+      (byDate[cur]=byDate[cur]||[]).push({ t, isLastDay: cur===spanEnd, isFirstDay: cur===spanStart });
+      if(cur===spanEnd) break;
+      cur = addDays(cur, 1);
+      guard++;
+    }
+  });
+  const undated = rows.filter(t=>!t.baseline_start && !t.due_date);
+
+  // Shadow cards: for every open pending drag request, show a faded placeholder on the task's
+  // ORIGINAL (still-live, unchanged) date span — the live schedule itself is untouched until a
+  // Director approves, so this shadow is purely a visual note, not a second real task entry.
+  const shadowByDate = {};
+  const allShadowRequests = [...Object.values(pendingChangeRequests), ...Object.values(approvedChangeRequests)];
+  // Only the MOST RECENT request per task should ever produce a shadow. A task can accumulate
+  // many past change requests over its lifetime; without this, every one of them (even from
+  // moves long since superseded by a later move) would render its own overlapping ghost range
+  // at the same time. Keeping just the latest one means a new move replaces the previous
+  // shadow instead of stacking another duplicate range alongside it.
+  const latestShadowByTask = {};
+  allShadowRequests.forEach(r=>{
+    const key = String(r.task_id);
+    const rTime = r.approved_at || r.requested_at || 0;
+    const cur = latestShadowByTask[key];
+    const curTime = cur ? (cur.approved_at || cur.requested_at || 0) : null;
+    if(!cur || new Date(rTime) > new Date(curTime)) latestShadowByTask[key] = r;
+  });
+  Object.values(latestShadowByTask).forEach(r=>{
+    const t = rows.find(x=> String(x.id)===String(r.task_id));
+    if(!t) return;
+    const origStart = r.original_start, origEnd = r.original_end || origStart;
+    if(!origStart) return;
+    let cur = origStart, guard = 0;
+    while(cur <= origEnd && guard < 400){
+      (shadowByDate[cur]=shadowByDate[cur]||[]).push({ t, r });
+      if(cur===origEnd) break;
+      cur = addDays(cur, 1);
+      guard++;
+    }
+  });
+
+  // Tasks stuck (not completed) for more than 3 days since their planned start — flag their
+  // direct dependent (depends_on chain) and ALL tasks of the next milestone (not just self).
+  const alertTaskIds = new Set();
+  rows.forEach(t=>{
+    if(t.status==='completed') return;
+    const spanStart = t.baseline_start || t.planned_end || t.due_date;
+    if(!spanStart) return;
+    const daysStuck = Math.round((new Date(tStr)-new Date(spanStart))/86400000);
+    if(daysStuck > 3){
+      const dep = rows.find(x=> x.depends_on===t.id);
+      if(dep) alertTaskIds.add(String(dep.id));
+      if(t.milestone_order!=null){
+        rows.filter(x=> (x.milestone_order||0) === (t.milestone_order+1))
+          .forEach(x=> alertTaskIds.add(String(x.id)));
+      }
+    }
+  });
+
+  let cells = '';
+  for(let i=0;i<42;i++){
+    const d = new Date(start); d.setDate(start.getDate()+i);
+    const key = ymd(d), out = d.getMonth()!==m, isSunday = d.getDay()===0;
+    const evs = byDate[key]||[];
+    const shown = evs.map(({t,isLastDay,isFirstDay})=>{
+      const pend = pendingChanges[t.id];
+      const isPreview = !!pend;
+      // Per-date visual state: look up THIS specific date's own entry, not the task's overall
+      // status. A date with no entry yet defaults to Not Started/Blue. Only the exact date(s)
+      // the user has updated via the checkbox below ever change color — updating one date must
+      // never repaint the rest of the task's range. A passed planned date never implies Overdue
+      // or Completed on its own — only an explicit update to that date does. Still the same 4
+      // existing classes/colors.
+      const dEntry = t.date_status && t.date_status[key];
+      const dStatus = dEntry ? dEntry.status : 'not_started';
+      let cls;
+      if(dStatus==='completed') cls = 'completed';
+      else if(dStatus==='not_completed') cls = 'not_completed';
+      else if(dStatus==='in_progress') cls = 'in_progress';
+      else cls = 'not_started_blue';
+      const pending = t.approval_status==='pending' && t.reschedule_count;
+      const eng = t.assigned_engineer || t.engineer || '';
+      const pr = t.priority || '';
+      // Task name now shows on EVERY day of its scheduled span (start → end), not only on the
+      // completion day — per updated requirement. Status/reason badges below still convey
+      // in-progress/incomplete context, so no information is lost.
+      const isAtRisk = alertTaskIds.has(String(t.id));
+      return `<div class="cal-ev ${cls} ${isPreview?'preview-pending':''}" data-edit="${t.id}" data-tid="${t.id}" draggable="true">
+        <input type="checkbox" class="cal-tick" data-tid="${t.id}" data-day="${key}" ${dStatus==='completed'?'checked':''} onclick="event.stopPropagation(); openStatusPop(event.currentTarget)">
+        <span class="cal-ev-task" title="${esc(t.milestone||'Unassigned')}">${esc(t.task)}${eng?' · '+esc(eng):''}${pr?' · '+esc(pr):''}</span>
+        ${isAtRisk ? `<span class="cal-ev-alert">⚠ Alert</span>` : ''}
+        ${isPreview ? `<span class="cal-ev-resched" style="color:var(--orange);">Unsaved move</span>` : ''}
+        ${t.reschedule_count ? `<span class="cal-ev-resched">↻ ${t.reschedule_count}</span>` : ''}
+        ${pending ? `<span class="cal-ev-pending">Pending Approval</span>` : ''}
+        <span class="cal-ev-resizer" data-resize="${t.id}" title="Adjust duration">⇔</span>
+      </div>`;
+    }).join('');
+    const shadowEvs = (shadowByDate[key]||[]).map(({t,r})=>{
+      const daysShifted = r.days_shifted!=null ? r.days_shifted : Math.round((new Date(r.proposed_end)-new Date(r.original_end))/86400000);
+      const isApproved = r.approval_status==='approved';
+      return `<div class="cal-ev-shadow" title="${isApproved?'Approved schedule change':'Awaiting Director approval'}">
+        <span class="shl">${esc(t.task)}</span>
+        <span class="shnote">Moved to ${esc(r.proposed_end)} — ${esc(r.reason)} (${daysShifted>0?'+':''}${daysShifted} day${Math.abs(daysShifted)===1?'':'s'}${isApproved?', approved':', pending approval'})</span>
+      </div>`;
+    }).join('');
+    cells += `<div class="cal-cell ${out?'out':''} ${key===tStr?'today':''} ${isSunday?'holiday':''}" data-day="${key}">
+      <div class="dnum">${d.getDate()}${isSunday?' <span style=\'color:var(--red);font-size:9px;\'>(Holiday)</span>':''}<span class="cal-add-btn" data-adddate="${key}" title="Add task on this date">+</span></div>${shown}${shadowEvs}</div>`;
+  }
+
+  document.getElementById('calView').innerHTML = `
+  <div class="cal-wrap">
+    <div style="padding:10px 18px;background:#FEF3E2;font-size:12px;display:flex;justify-content:space-between;align-items:center;">
+      <span>${ganttMilestoneFilter ? 'Milestone: <b>'+esc(ganttMilestoneFilter)+'</b>' : '<b>All Tasks — every milestone</b>'}</span>
+      <span style="display:flex;gap:8px;align-items:center;">
+        <button class="btn sm approval-panel-toggle" id="openApprovalPanelBtn">Schedule Change Approvals${Object.keys(pendingChangeRequests).length ? `<span class="approval-badge-count">${Object.keys(pendingChangeRequests).length}</span>` : ''}</button>
+        <button class="btn sm" id="backToGanttBtn">← Back to Gantt</button>
+      </span></div>
+    <div class="cal-top">
+      <div class="cal-month">${MON[m]} ${y}</div>
+      <div class="cal-nav">
+        <button class="btn sm" id="cPrev">‹</button>
+        <button class="btn sm" id="cToday">Today</button>
+        <button class="btn sm" id="cNext">›</button>
+      </div>
+    </div>
+    <div class="cal-dow"><div>Sun</div><div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div></div>
+    <div class="cal-grid">${cells}</div>
+    ${undated.length?`<div class="nodate"><div class="h">No date set (${undated.length}) — click to assign a date</div>
+      <div class="chips">${undated.map(t=>`<span class="chip" data-edit="${t.id}">${esc(t.task)}</span>`).join('')}</div></div>`:''}
+    <div class="cal-legend">
+      <span><i style="background:var(--blue)"></i>Not started</span>
+      <span><i style="background:var(--yellow)"></i>In progress</span>
+      <span><i style="background:var(--green)"></i>Completed</span>
+      <span><i style="background:var(--red)"></i>Not completed</span>
+      <span style="margin-left:auto;">Drag a task to change its date · drag the edge to change duration · drop on another task to swap</span>
+    </div>
+    ${Object.keys(pendingChanges).length ? `<div class="save-changes-bar">
+      <span class="msg">${Object.keys(pendingChanges).length} task${Object.keys(pendingChanges).length>1?'s':''} moved — changes will not be saved until you click Save</span>
+      <div class="actions">
+        <button class="btn discard" id="discardChangesBtn">Discard</button>
+        <button class="btn commit" id="saveChangesBtn">Save Changes</button>
+      </div>
+    </div>` : ''}
+  </div>`;
+
+  // cPrev/cNext/cToday/backToGanttBtn are handled by the delegated listener on #calView (see
+  // renderCalendar wrapper above) so they keep working even if this inner render throws.
+  const saveBtn = document.getElementById('saveChangesBtn');
+  if(saveBtn) saveBtn.onclick = commitPendingChanges;
+  const discardBtn = document.getElementById('discardChangesBtn');
+  if(discardBtn) discardBtn.onclick = ()=>{ pendingChanges = {}; renderCalendar(); };
+
+  document.querySelectorAll('.cal-ev[draggable="true"]').forEach(ev=>{
+    ev.addEventListener('dragstart', e=>{ dragTid = ev.dataset.tid; ev.classList.add('dragging'); e.dataTransfer.effectAllowed='move'; });
+    ev.addEventListener('dragend', ()=>{ ev.classList.remove('dragging'); dragTid=null; });
+  });
+  document.querySelectorAll('.cal-cell').forEach(c=>{
+    c.addEventListener('dragover', e=>{ if(dragTid){ e.preventDefault(); c.classList.add('dragover'); } });
+    c.addEventListener('dragleave', ()=> c.classList.remove('dragover'));
+    c.addEventListener('drop', e=>{
+      e.preventDefault(); c.classList.remove('dragover');
+      if(dragTid) openDragReasonPopup(dragTid, c.dataset.day);
+      dragTid = null;
+    });
+  });
+  document.querySelectorAll('[data-resize]').forEach(r=>{
+    r.addEventListener('mousedown', e=>{
+      e.stopPropagation(); e.preventDefault();
+      resizeTid = r.dataset.resize; resizeStartX = e.clientX;
+      const t = allTasks.find(x=>String(x.id)===String(resizeTid));
+      resizeOrigDue = t ? (t.planned_end||t.due_date) : null;
+    });
+  });
+  document.getElementById('calView').querySelectorAll('.cal-add-btn').forEach(btn=>{
+    btn.onclick = e=>{
+      e.stopPropagation();
+      openModal(null, btn.dataset.adddate);
+      if(ganttMilestoneFilter) document.getElementById('mMile').value = ganttMilestoneFilter;
+    };
+  });
+  bindCommon(document.getElementById('calView'));
+}
+document.addEventListener('mousemove', e=>{
+  if(!resizeTid) return;
+  const deltaDays = Math.round((e.clientX - resizeStartX)/40);
+  if(deltaDays===0) return;
+});
+document.addEventListener('mouseup', e=>{
+  if(!resizeTid) return;
+  const deltaDays = Math.round((e.clientX - resizeStartX)/40);
+  const tid = resizeTid, orig = resizeOrigDue;
+  resizeTid = null; resizeStartX = null; resizeOrigDue = null;
+  if(deltaDays!==0 && orig){
+    pendingChanges[tid] = { planned_end: addDays(orig, deltaDays) };
+    renderCalendar();
+  }
+});
+
+function closeStatusPop(){ const p=document.getElementById('statusPop'); if(p) p.remove(); }
+function closeReasonPopup(){ const p=document.getElementById('reasonPop'); if(p) p.remove(); }
+
+function openStatusPop(cb){
+  closeStatusPop(); closeReasonPopup();
+  const tid = cb.dataset.tid, day = cb.dataset.day;
+  const rect = cb.getBoundingClientRect();
+  const pop = document.createElement('div');
+  pop.className = 'status-pop';
+  pop.id = 'statusPop';
+  pop.style.top = (window.scrollY + rect.bottom + 6) + 'px';
+  pop.style.left = (window.scrollX + rect.left) + 'px';
+  pop.innerHTML = `
+    <button data-s="completed">✓ Complete</button>
+    <button data-s="in_progress">◐ In Progress</button>
+    <button data-s="not_completed">✕ Incomplete</button>`;
+  document.body.appendChild(pop);
+  pop.onclick = e=>{
+    e.stopPropagation();
+    const s = e.target.closest('button')?.dataset.s;
+    if(!s) return;
+    if(s==='not_completed' || s==='in_progress'){ closeStatusPop(); openReasonPopup(cb, s); return; }
+    closeStatusPop();
+    applyStatus(tid, day, s, null, cb);
+  };
+}
+
+async function applyStatus(tid, day, status, reason, cb){
+  cb.disabled = true;
+  const t = allTasks.find(x=>String(x.id)===String(tid));
+  if(!t){ cb.disabled = false; return; }
+  const dateStatus = Object.assign({}, t.date_status||{});
+  dateStatus[day] = { status, reason: reason||null, updated_at: ymd(new Date()) };
+  // Keep the task's own overall `status` (and `actual_end`) in sync with this per-date update —
+  // this is the SAME field Gantt/List read, so a Calendar change is reflected there immediately
+  // instead of leaving a stale value only the Calendar knows to ignore.
+  const patch = { date_status: dateStatus, status };
+  if(status==='completed') patch.actual_end = day;
+  const { error } = await sb.from('schedule_tasks').update(patch).eq('id', tid);
+  cb.disabled = false;
+  if(error){ alert('Update fail: '+error.message); return; }
+  Object.assign(t, patch);
+  console.log('[Schedule trace] task', tid, '(', t.task, ') saved → status:', t.status, ', date_status['+day+']:', t.date_status[day], ', baseline_start:', t.baseline_start, ', planned_end:', t.planned_end);
+  render();
+
+  // Daily task completion workflow: marking a specific date "not_completed" does not auto-
+  // reschedule anything. Now ask the Site Engineer whether the remaining scheduled window is
+  // still enough, per the existing Schedule Duration Check modal.
+  if(status==='not_completed'){
+    openScheduleDurationCheck(t, reason);
+  }
+}
+
+// ── Schedule Duration Check modal (new) ────────────────────────────────────
+// Shown after a "not_completed" daily status is saved. Does not alter any dates itself.
+// YES -> no-op (schedule already saved as-is above).
+// NO  -> hands off to the EXISTING drag/schedule_change_requests workflow via
+//        requestOneDayReschedule, so Director approval / shadow preview / audit are all reused.
+function fmtDisplayDate(d){
+  if(!d) return '—';
+  const [y,mo,da] = d.split('-');
+  return `${da} ${MON[Number(mo)-1].slice(0,3)} ${y}`;
+}
+function openScheduleDurationCheck(t, reason){
+  const backdrop = document.getElementById('scheduleCheckBackdrop');
+  const start = t.baseline_start || t.due_date;
+  const end = t.planned_end || t.due_date;
+  document.getElementById('scdSummary').innerHTML =
+    `<b>${esc(t.task)}</b><br>
+     <span style="color:var(--muted);">Scheduled Duration</span><br>
+     <b>${esc(fmtDisplayDate(start))} → ${esc(fmtDisplayDate(end))}</b><br>
+     <span style="color:var(--muted);">Today</span><br>
+     <b>${esc(fmtDisplayDate(ymd(new Date())))}</b>`;
+  backdrop.style.display = 'flex';
+  const close = ()=>{ backdrop.style.display = 'none'; };
+  document.getElementById('scdClose').onclick = close;
+  backdrop.onclick = e=>{ if(e.target===backdrop) close(); };
+  document.getElementById('scdYes').onclick = ()=>{
+    // Nothing to change — status/reason were already saved in applyStatus. Schedule stays.
+    close();
+  };
+  document.getElementById('scdNo').onclick = async ()=>{
+    close();
+    await requestOneDayReschedule(t, reason);
+  };
+}
+
+// One-day reschedule request, reusing the EXISTING schedule_change_requests flow
+// (createDragChangeRequest) so Director approval, shadow-preview, and audit trail are
+// identical to the drag-and-drop path. Live baseline_start/planned_end are NOT touched here.
+async function requestOneDayReschedule(t, reason){
+  const originalStart = t.baseline_start || t.due_date;
+  const originalEnd = t.planned_end || t.due_date;
+  const proposedStart = addDays(originalStart, 1);
+  const proposedEnd = addDays(originalEnd, 1);
+  await createDragChangeRequest(t, originalStart, originalEnd, proposedStart, proposedEnd, 1, reason || 'Daily incomplete — one-day reschedule requested');
+  renderCalendar();
+  render();
+}
+
+// Drag: stage a task's new date locally (preview only). Nothing is saved to the DB here —
+// the ORIGINAL baseline_start/due_date (approved schedule) are never touched by dragging.
+// Only the forecast dates (start/end pair, kept the same duration) move as a pending preview.
+// If the target date already holds another task (anywhere in that task's visible span),
+// the two tasks' forecast start+end pairs are swapped together — not just the end date —
+// so neither task's span balloons across the month.
+const DRAG_REASON_OPTIONS = ['Vendor Delay','Material Delay','Client Request','Site Condition','Weather','Manpower','Design Change','Scope Change','Internal Planning','Other'];
+
+// Walks the depends_on chain forward from tid — used only to compute the "impacted tasks"
+// preview shown to the Director. Never writes anything, never touches depends_on itself.
+function collectDependentChain(tid){
+  const out = [];
+  const direct = allTasks.filter(x=> x.depends_on===tid);
+  for(const d of direct){
+    out.push(d.id);
+    out.push(...collectDependentChain(d.id));
+  }
+  return out;
+}
+
+// Drag drop lands here instead of moving the task directly. Nothing on the live schedule
+// changes yet — this only opens the reason popup; the actual pending request is created
+// on submit, in createDragChangeRequest.
+function openDragReasonPopup(tid, proposedEndDate){
+  const t = allTasks.find(x=>String(x.id)===String(tid));
+  if(!t){ renderCalendar(); return; }
+  document.getElementById('dragReasonRoot')?.remove();
+
+  const originalStart = t.baseline_start || t.due_date;
+  const originalEnd = t.planned_end || t.due_date;
+  if(proposedEndDate === originalEnd){ return; } // dropped back on the same date — nothing to do
+  const durDays = (originalEnd && originalStart) ? Math.round((new Date(originalEnd)-new Date(originalStart))/86400000) : 0;
+  const proposedStartDate = addDays(proposedEndDate, -durDays);
+  const daysShifted = Math.round((new Date(proposedEndDate) - new Date(originalEnd || proposedEndDate))/86400000);
+
+  const wrap = document.createElement('div');
+  wrap.id = 'dragReasonRoot';
+  wrap.className = 'drag-reason-backdrop';
+  wrap.innerHTML = `
+    <div class="drag-reason-modal">
+      <div class="rm-head"><b>Reschedule "${esc(t.task)}"</b><button id="drmClose">✕</button></div>
+      <div class="rm-body">
+        <div class="drm-summary"><b>${esc(originalEnd||'—')}</b> → <b style="color:var(--orange);">${esc(proposedEndDate)}</b> &nbsp;(${daysShifted>0?'+':''}${daysShifted} day${Math.abs(daysShifted)===1?'':'s'})<br>
+        <span style="color:var(--muted);font-size:11px;">This is a proposed change only — the task stays at its current position (with a shadow note) until a Director approves.</span></div>
+        <div>
+          <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:7px;">Reason for this change</div>
+          <div class="drag-reason-options">
+            ${DRAG_REASON_OPTIONS.map((r,i)=>`<label><input type="radio" name="dragReason" value="${esc(r)}" ${i===0?'checked':''}>${esc(r)}</label>`).join('')}
+          </div>
+          <input type="text" id="drmOtherText" placeholder="Describe the reason…" style="display:none;margin-top:8px;">
+        </div>
+      </div>
+      <div class="rm-actions">
+        <button id="drmCancel" style="background:var(--paper);color:var(--ink);border:1px solid var(--line);">Cancel</button>
+        <button id="drmSubmit" style="background:var(--orange);color:#fff;">Submit for Approval</button>
+      </div>
+    </div>`;
+  document.body.appendChild(wrap);
+  const close = ()=>{ wrap.remove(); renderCalendar(); };
+  document.getElementById('drmClose').onclick = close;
+  document.getElementById('drmCancel').onclick = close;
+  wrap.onclick = e=>{ if(e.target===wrap) close(); };
+  wrap.querySelectorAll('input[name="dragReason"]').forEach(r=> r.onchange = ()=>{
+    document.getElementById('drmOtherText').style.display = r.value==='Other' ? 'block' : 'none';
+  });
+  document.getElementById('drmSubmit').onclick = async ()=>{
+    const selected = wrap.querySelector('input[name="dragReason"]:checked');
+    let reason = selected ? selected.value : 'Other';
+    if(reason==='Other'){
+      const custom = document.getElementById('drmOtherText').value.trim();
+      if(!custom){ alert('Please describe the reason.'); return; }
+      reason = custom;
+    }
+    await createDragChangeRequest(t, originalStart, originalEnd, proposedStartDate, proposedEndDate, daysShifted, reason);
+    wrap.remove();
+    renderCalendar();
+  };
+}
+
+async function createDragChangeRequest(t, originalStart, originalEnd, proposedStart, proposedEnd, daysShifted, reason){
+  const chainIds = collectDependentChain(t.id);
+  const impactedTasks = chainIds.map(id=> allTasks.find(x=>String(x.id)===String(id))).filter(Boolean);
+  const impactedMilestones = Array.from(new Set(impactedTasks.map(x=> x.milestone||'Unassigned')));
+  const record = {
+    task_id: t.id,
+    task_name: t.task,
+    changed_by: (currentProj && currentProj.owner_name) || 'Unknown user',
+    original_start: originalStart,
+    original_end: originalEnd,
+    proposed_start: proposedStart,
+    proposed_end: proposedEnd,
+    days_shifted: daysShifted,
+    reason: reason,
+    approval_status: 'pending',
+    impacted_task_ids: impactedTasks.map(x=>x.id),
+    impacted_milestones: impactedMilestones
+  };
+  const { data, error } = await sb.from('schedule_change_requests').insert(record).select();
+  if(error){ alert('Could not submit change request: '+error.message); return; }
+  const req = data && data[0];
+  if(!req) return;
+  const { error: e2 } = await sb.from('schedule_tasks').update({ pending_request_id: req.id }).eq('id', t.id);
+  if(!e2){ t.pending_request_id = req.id; }
+  pendingChangeRequests[req.id] = req;
+}
+
+// ===== Director Approval Panel =====
+function openApprovalPanel(){
+  document.getElementById('approvalPanelRoot')?.remove();
+  const reqs = Object.values(pendingChangeRequests).sort((a,b)=> new Date(b.requested_at||0)-new Date(a.requested_at||0));
+
+  const wrap = document.createElement('div');
+  wrap.id = 'approvalPanelRoot';
+  wrap.className = 'drag-reason-backdrop';
+  wrap.innerHTML = `
+    <div class="drag-reason-modal" style="max-width:640px;">
+      <div class="rm-head"><b>Schedule Change Approvals</b><button id="apClose">✕</button></div>
+      <div class="rm-body" id="apBody" style="padding-top:14px;"></div>
+    </div>`;
+  document.body.appendChild(wrap);
+  const close = ()=> wrap.remove();
+  document.getElementById('apClose').onclick = close;
+  wrap.onclick = e=>{ if(e.target===wrap) close(); };
+
+  const body = document.getElementById('apBody');
+  if(!reqs.length){ body.innerHTML = '<div class="empty">No pending schedule change requests.</div>'; return; }
+  body.innerHTML = reqs.map(r=>{
+    const impactedTasks = (r.impacted_task_ids||[]).map(id=> allTasks.find(x=>String(x.id)===String(id))).filter(Boolean);
+    const impactedMilestones = r.impacted_milestones || [];
+    const requestedAt = r.requested_at ? new Date(r.requested_at).toLocaleString() : '—';
+    return `<div class="approval-card" data-req="${r.id}">
+      <div class="ac-title">${esc(r.task_name)}</div>
+      <div class="ac-sub">Changed by ${esc(r.changed_by||'Unknown user')} · Requested ${esc(requestedAt)}</div>
+      <div class="ac-grid">
+        <div class="ac-item"><div class="l">Original</div><div class="v">${esc(r.original_start||'—')} → ${esc(r.original_end||'—')}</div></div>
+        <div class="ac-item"><div class="l">Proposed</div><div class="v" style="color:var(--orange);">${esc(r.proposed_start||'—')} → ${esc(r.proposed_end||'—')}</div></div>
+        <div class="ac-item"><div class="l">Days Shifted</div><div class="v">${r.days_shifted>0?'+':''}${r.days_shifted} day${Math.abs(r.days_shifted)===1?'':'s'}</div></div>
+        <div class="ac-item"><div class="l">Reason</div><div class="v" style="font-family:var(--font-display);font-size:11.5px;">${esc(r.reason)}</div></div>
+      </div>
+      <div class="ac-impact">Schedule Impact: ${impactedTasks.length} dependent task${impactedTasks.length===1?'':'s'} and ${impactedMilestones.length} milestone${impactedMilestones.length===1?'':'s'} affected${impactedTasks.length?' — '+impactedTasks.map(x=>x.task).join(', '):''}</div>
+      <div class="ac-actions">
+        <button class="ac-approve" data-approve="${r.id}">✓ Approve</button>
+        <button class="ac-reject" data-reject="${r.id}">✕ Reject</button>
+      </div>
+    </div>`;
+  }).join('');
+
+  body.querySelectorAll('[data-approve]').forEach(b=> b.onclick = ()=> approveChangeRequest(b.dataset.approve, close));
+  body.querySelectorAll('[data-reject]').forEach(b=> b.onclick = ()=> rejectChangeRequest(b.dataset.reject, close));
+}
+
+async function approveChangeRequest(reqId, closePanel){
+  const r = pendingChangeRequests[reqId];
+  if(!r) return;
+  const t = allTasks.find(x=>String(x.id)===String(r.task_id));
+  if(!t){ alert('Task not found — it may have been deleted.'); return; }
+  const patch = { baseline_start: r.proposed_start, planned_end: r.proposed_end, pending_request_id: null };
+  const { error } = await sb.from('schedule_tasks').update(patch).eq('id', t.id);
+  if(error){ alert('Approve failed: '+error.message); return; }
+  Object.assign(t, patch);
+
+  // Collision push: if the approved dates now land on top of another task's existing span,
+  // push that other task forward to start right after the dragged task's new end date —
+  // keeping its own duration and its own dependency cascade intact. Only triggered here,
+  // at approval time — not during the drag itself.
+  const newStart = r.proposed_start, newEnd = r.proposed_end;
+  const other = allTasks.find(x=>{
+    if(String(x.id)===String(t.id)) return false;
+    const oStart = x.baseline_start || x.due_date;
+    const oEnd = x.planned_end || x.due_date || oStart;
+    if(!oStart || !oEnd) return false;
+    return newStart <= oEnd && newEnd >= oStart; // date-range overlap test
+  });
+  if(other){
+    const oStart = other.baseline_start || other.due_date;
+    const oEnd = other.planned_end || other.due_date || oStart;
+    const oDur = Math.round((new Date(oEnd)-new Date(oStart))/86400000);
+    const pushedStart = addDays(newEnd, 1);
+    const pushedEnd = addDays(pushedStart, oDur);
+    const pushPatch = { baseline_start: pushedStart, planned_end: pushedEnd };
+    const { error: e3 } = await sb.from('schedule_tasks').update(pushPatch).eq('id', other.id);
+    if(!e3){ Object.assign(other, pushPatch); await rebuildFromPredecessor(other.id); }
+  }
+
+  await rebuildFromPredecessor(t.id); // existing dependencies only — never modified here
+  const { error: e2 } = await sb.from('schedule_change_requests').update({ approval_status:'approved', approved_by:'Director', approved_at: new Date().toISOString() }).eq('id', reqId);
+  if(!e2){
+    r.approval_status = 'approved';
+    approvedChangeRequests[reqId] = r;
+    delete pendingChangeRequests[reqId];
+  }
+  await checkProjectDelay();
+  closePanel();
+  render();
+}
+
+function rejectChangeRequest(reqId, closePanel){
+  const r = pendingChangeRequests[reqId];
+  if(!r) return;
+  const reason = prompt('Reason for rejecting this schedule change:');
+  if(reason===null) return;
+  (async ()=>{
+    const t = allTasks.find(x=>String(x.id)===String(r.task_id));
+    const { error } = await sb.from('schedule_change_requests').update({ approval_status:'rejected', rejection_reason: reason, approved_by:'Director', approved_at: new Date().toISOString() }).eq('id', reqId);
+    if(error){ alert('Reject failed: '+error.message); return; }
+    if(t){
+      const { error: e2 } = await sb.from('schedule_tasks').update({ pending_request_id: null }).eq('id', t.id);
+      if(!e2) t.pending_request_id = null;
+    }
+    delete pendingChangeRequests[reqId];
+    closePanel();
+    render();
+  })();
+}
+
+function stageTaskDrop(tid, newDate){
+  const t = allTasks.find(x=>String(x.id)===String(tid));
+  if(!t) return;
+  const curEnd = (pendingChanges[tid] && pendingChanges[tid].planned_end) || t.planned_end || t.due_date || t.baseline_start;
+  const curStart = (pendingChanges[tid] && pendingChanges[tid].fc_start) || t.baseline_start || curEnd;
+  const durDays = Math.round((new Date(curEnd) - new Date(curStart)) / 86400000);
+  if(newDate === curEnd) return;
+  const newStart = addDays(newDate, -durDays);
+
+  // Find another task whose visible forecast span covers newDate.
+  const other = allTasks.find(x=>{
+    if(String(x.id)===String(tid)) return false;
+    const oEnd = (pendingChanges[x.id] && pendingChanges[x.id].planned_end) || x.planned_end || x.due_date;
+    const oStart = (pendingChanges[x.id] && pendingChanges[x.id].fc_start) || x.baseline_start || oEnd;
+    if(!oEnd) return false;
+    return newDate >= oStart && newDate <= oEnd;
+  });
+
+  pendingChanges[tid] = { planned_end: newDate, fc_start: newStart };
+  if(other){
+    const oEnd = (pendingChanges[other.id] && pendingChanges[other.id].planned_end) || other.planned_end || other.due_date;
+    const oStart = (pendingChanges[other.id] && pendingChanges[other.id].fc_start) || other.baseline_start || oEnd;
+    const oDur = Math.round((new Date(oEnd) - new Date(oStart)) / 86400000);
+    pendingChanges[other.id] = { planned_end: curEnd, fc_start: addDays(curEnd, -oDur) };
+  }
+  renderCalendar();
+}
+
+// Commit all staged drag/swap/resize changes to the DB in one go, then trigger the same
+// dependency-cascade + approval flow the old immediate-save path used.
+async function commitPendingChanges(){
+  const ids = Object.keys(pendingChanges);
+  if(!ids.length) return;
+  const btn = document.getElementById('saveChangesBtn');
+  if(btn){ btn.disabled = true; btn.textContent = 'Saving…'; }
+  for(const tid of ids){
+    const t = allTasks.find(x=>String(x.id)===String(tid));
+    if(!t) continue;
+    const pend = pendingChanges[tid];
+    const patch = { planned_end: pend.planned_end, reschedule_count:(t.reschedule_count||0)+1, approval_status:'pending' };
+    // If the swap also moved the forecast start, carry that forward as the new baseline_start
+    // preview reference so the span renders correctly after save (approved baseline history
+    // is preserved via reschedule_count / approval flow, same as before).
+    if(pend.fc_start && pend.fc_start !== t.baseline_start) patch.baseline_start = pend.fc_start;
+    const { error } = await sb.from('schedule_tasks').update(patch).eq('id', tid);
+    if(error){ alert('Save fail ('+t.task+'): '+error.message); continue; }
+    Object.assign(t, patch);
+  }
+  pendingChanges = {};
+  for(const tid of ids){ await rebuildFromPredecessor(tid); }
+  await checkProjectDelay();
+  if(btn){ btn.disabled = false; btn.textContent = 'Save Changes'; }
+  render();
+}
+
+// Resize: change forecast duration (due edge) — also goes to Pending, baseline untouched.
+async function resizeTaskDuration(tid, newForecastEnd){
+  const t = allTasks.find(x=>String(x.id)===String(tid));
+  if(!t) return;
+  const patch = { planned_end:newForecastEnd, reschedule_count:(t.reschedule_count||0)+1, approval_status:'pending' };
+  const { error } = await sb.from('schedule_tasks').update(patch).eq('id', tid);
+  if(error){ alert('Resize fail: '+error.message); return; }
+  Object.assign(t, patch);
+  await rebuildFromPredecessor(tid);
+  await checkProjectDelay();
+  render();
+}
+
+// Push all tasks that depend on tid forward by n days (recursive)
+async function rebuildFromPredecessor(tid){
+  const parent = allTasks.find(x=>x.id===tid);
+  const parentFinish = parent && (parent.planned_end || parent.due_date);
+  if(!parentFinish) return;
+  const deps = allTasks.filter(x=> x.depends_on===tid);
+  for(const d of deps){
+    const dur = (d.due_date && d.baseline_start) ? Math.round((new Date(d.due_date)-new Date(d.baseline_start))/86400000) : 0;
+    const newFinish = addDays(addDays(parentFinish,1), dur);
+    if(d.planned_end !== newFinish){
+      const { error } = await sb.from('schedule_tasks').update({planned_end:newFinish}).eq('id', d.id);
+      if(!error) Object.assign(d, {planned_end:newFinish});
+    }
+    await rebuildFromPredecessor(d.id);
+  }
+}
+
+// When a milestone's tasks finish late, push every later milestone's tasks by the same delay
+async function cascadeMilestoneDelay(finishedOrder, delayDays){
+  if(!delayDays || delayDays<=0) return;
+  const later = allTasks.filter(x=> (x.milestone_order||0) > finishedOrder);
+  for(const t of later){
+    const shift = { baseline_start: t.baseline_start ? addDays(t.baseline_start, delayDays) : t.baseline_start, due_date: t.due_date ? addDays(t.due_date, delayDays) : t.due_date };
+    const { error } = await sb.from('schedule_tasks').update(shift).eq('id', t.id);
+    if(!error) Object.assign(t, shift);
+  }
+}
+
+// Mark project delayed only if forecast (latest due_date among tasks) exceeds planned end_date
+async function checkProjectDelay(){
+  if(!currentProj || !currentProj.end_date) return;
+  const forecast = allTasks.reduce((mx,x)=> x.due_date && x.due_date>mx ? x.due_date : mx, '');
+  const delayed = !!forecast && forecast > currentProj.end_date;
+  if(currentProj.is_delayed !== delayed){
+    const { error } = await sb.from('projects').update({is_delayed: delayed}).eq('id', currentProj.id);
+    if(!error) currentProj.is_delayed = delayed;
+  }
+}
+
+function openReasonPopup(cb, statusKind){
+  closeReasonPopup();
+  const tid = cb.dataset.tid, day = cb.dataset.day;
+  const rect = cb.getBoundingClientRect();
+  const pop = document.createElement('div');
+  pop.className = 'reason-pop';
+  pop.id = 'reasonPop';
+  pop.style.top = (window.scrollY + rect.bottom + 6) + 'px';
+  pop.style.left = (window.scrollX + rect.left) + 'px';
+  const ph = statusKind==='in_progress' ? 'Why is this being rescheduled? Enter a reason…' : 'Why was this task not completed? Enter a reason…';
+  pop.innerHTML = `<textarea id="reasonTxt" placeholder="${ph}" autofocus></textarea>
+    <div class="rp-actions"><button class="btn sm" id="rpCancel">Cancel</button><button class="btn sm dark" id="rpSave">Save</button></div>`;
+  document.body.appendChild(pop);
+  pop.onclick = e=> e.stopPropagation();
+  document.getElementById('reasonTxt').focus();
+  document.getElementById('rpCancel').onclick = ()=> closeReasonPopup();
+  document.getElementById('rpSave').onclick = ()=>{
+    const reason = document.getElementById('reasonTxt').value.trim();
+    if(!reason){ alert('Please enter a reason.'); return; }
+    closeReasonPopup();
+    applyStatus(tid, day, statusKind==='in_progress' ? 'in_progress' : 'not_completed', reason, cb);
+  };
+}
+document.addEventListener('click', e=>{
+  if(!e.target.closest('.reason-pop')) closeReasonPopup();
+  if(!e.target.closest('.status-pop') && !e.target.classList.contains('cal-tick')) closeStatusPop();
+});
+
+function bindCommon(root){
+  root.querySelectorAll('[data-edit]').forEach(el=>{
+    el.onclick = e=>{ e.stopPropagation(); openModal(allTasks.find(t=>String(t.id)===el.dataset.edit)); };
+  });
+  root.querySelectorAll('.task-status-select').forEach(sel=>{
+    sel.onclick = e=> e.stopPropagation();
+    sel.onchange = async e=>{
+      e.target.disabled = true;
+      const tid = e.target.dataset.tid, newStatus = e.target.value;
+      const t = allTasks.find(x=>String(x.id)===String(tid));
+      const patch = { status: newStatus };
+      if(t){
+        const start = t.baseline_start, end = t.planned_end || t.due_date || start;
+        if(start){
+          const dateStatus = {};
+          let cur = start, guard = 0;
+          while(cur <= end && guard < 400){
+            dateStatus[cur] = { status: newStatus, reason: null, updated_at: ymd(new Date()) };
+            if(cur===end) break;
+            cur = addDays(cur, 1);
+            guard++;
+          }
+          patch.date_status = dateStatus;
+        }
+      }
+      const { error } = await sb.from('schedule_tasks').update(patch).eq('id', tid);
+      e.target.disabled = false;
+      if(error){ alert('Status update fail: '+error.message); return; }
+      if(t) Object.assign(t, patch);
+      render();
+    };
+  });
+  root.querySelectorAll('.del-btn').forEach(b=>{
+    b.onclick = async e=>{
+      e.stopPropagation();
+      if(!confirm('Are you sure you want to delete this task?')) return;
+      const { error } = await sb.from('schedule_tasks').delete().eq('id', b.dataset.tid);
+      if(error){ alert('Delete fail: '+error.message); return; }
+      allTasks = allTasks.filter(x=>String(x.id)!==String(b.dataset.tid));
+      render();
+    };
+  });
+}
+
+const modal = document.getElementById('modal');
+function openModal(t, presetDate){
+  editId = t ? t.id : null;
+  document.getElementById('mTitle').textContent = t ? 'Edit task' : 'New task';
+  document.getElementById('mSub').textContent = presetDate || '';
+  document.getElementById('mName').value   = t ? (t.task||'') : '';
+  document.getElementById('mMile').value   = t ? (t.milestone||'') : '';
+  document.getElementById('mStart').value  = t ? (t.baseline_start||'') : (presetDate||'');
+  document.getElementById('mDue').value    = t ? (t.due_date||'') : (presetDate||'');
+  document.getElementById('mStatus').value = t ? (t.status||'not_started') : 'not_started';
+  document.getElementById('mMileOrder').value = t && t.milestone_order!=null ? t.milestone_order : '';
+  const depSel = document.getElementById('mDependsOn');
+  depSel.innerHTML = '<option value="">— None —</option>' +
+    allTasks.filter(x=> !t || String(x.id)!==String(t.id))
+      .map(x=>`<option value="${x.id}">${esc(x.task)}${x.milestone?' ('+esc(x.milestone)+')':''}</option>`).join('');
+  depSel.value = t && t.depends_on ? t.depends_on : '';
+  const reasonFld = document.getElementById('mReasonFld'), reasonInp = document.getElementById('mReason');
+  const st = t ? (t.status||'not_started') : 'not_started';
+  let reasonKey = t && t.resched_reason ? 'resched_reason' : (t && t.fail_reason ? 'fail_reason' : (st==='in_progress' ? 'resched_reason' : (st==='not_completed' ? 'fail_reason' : null)));
+  reasonInp.dataset.key = reasonKey || '';
+  if(reasonKey){ reasonFld.style.display=''; reasonInp.value = (t && t[reasonKey]) || ''; }
+  else { reasonFld.style.display='none'; reasonInp.value=''; }
+  document.getElementById('mDelete').style.display = t ? '' : 'none';
+  modal.classList.add('on');
+}
+document.getElementById('mCancel').onclick = ()=> modal.classList.remove('on');
+modal.onclick = e=>{ if(e.target===modal) modal.classList.remove('on'); };
+document.getElementById('mDelete').onclick = async ()=>{
+  if(!editId) return;
+  if(!confirm('Are you sure you want to delete this task?')) return;
+  const btn = document.getElementById('mDelete'); btn.disabled = true;
+  const { error } = await sb.from('schedule_tasks').delete().eq('id', editId);
+  btn.disabled = false;
+  if(error){ alert('Delete fail: '+error.message); return; }
+  allTasks = allTasks.filter(x=>String(x.id)!==String(editId));
+  modal.classList.remove('on');
+  render();
+};
+
+document.getElementById('mSave').onclick = async ()=>{
+  const name = document.getElementById('mName').value.trim();
+  if(!name){ alert('Please enter a task name.'); return; }
+  const reasonKey = document.getElementById('mReason').dataset.key;
+  const mileOrderVal = document.getElementById('mMileOrder').value;
+  const dependsOnVal = document.getElementById('mDependsOn').value;
+  if(editId){
+    const t = allTasks.find(x=>String(x.id)===String(editId));
+    const newDue = document.getElementById('mDue').value || null;
+    const row = {
+      task: name,
+      milestone: document.getElementById('mMile').value.trim() || null,
+      status: document.getElementById('mStatus').value,
+      milestone_order: mileOrderVal===''? null : Number(mileOrderVal),
+      depends_on: dependsOnVal || null
+    };
+    if(reasonKey){ row[reasonKey] = document.getElementById('mReason').value.trim() || null; }
+    // Approved schedule dates (baseline_start/due_date) are never edited directly here —
+    // a date change instead becomes a Pending reschedule request for Director approval.
+    if(t && newDue && newDue !== (t.due_date||'')){
+      row.planned_end = newDue;
+      row.reschedule_count = (t.reschedule_count||0)+1;
+      row.approval_status = 'pending';
+    }
+    const { error } = await sb.from('schedule_tasks').update(row).eq('id', editId);
+    if(error){ alert('Save fail: '+error.message); return; }
+    Object.assign(t, row);
+    if(row.planned_end) await rebuildFromPredecessor(editId);
+  } else {
+    const newRow = {
+      task: name,
+      milestone: document.getElementById('mMile').value.trim() || null,
+      baseline_start: document.getElementById('mStart').value || null,
+      due_date: document.getElementById('mDue').value || null,
+      status: document.getElementById('mStatus').value,
+      milestone_order: mileOrderVal===''? null : Number(mileOrderVal),
+      depends_on: dependsOnVal || null,
+      project_id: currentProj.id
+    };
+    if(reasonKey){ newRow[reasonKey] = document.getElementById('mReason').value.trim() || null; }
+    const { data, error } = await sb.from('schedule_tasks').insert(newRow).select();
+    if(error){ alert('Add fail: '+error.message); return; }
+    if(data && data.length) allTasks.push(data[0]);
+  }
+  modal.classList.remove('on');
+  render();
+};
+
+document.getElementById('searchBox').oninput = render;
+document.getElementById('statusFilter').onchange = render;
+document.getElementById('versionFilter').onchange = render;
+
+async function repairDateStatusHistory(){
+  const ok = confirm(
+    'This overwrites every task\'s day-by-day Calendar history so every date in its planned range matches that SAME task\'s current overall status.\n\n' +
+    'Use this once to clean up old per-date entries saved before status updates were kept in sync (e.g. a task now marked Completed overall, but still showing some earlier dates as In Progress in the Calendar).\n\n' +
+    'If a task genuinely has different progress on different dates (e.g. 12–24 In Progress, 25 Completed) that you set intentionally and want to KEEP, do not run this — it will flatten that task to one single status across its whole range.\n\n' +
+    'Continue?'
+  );
+  if(!ok) return;
+  const btn = document.getElementById('repairDateStatusBtn');
+  btn.disabled = true;
+  const orig = btn.textContent;
+  btn.textContent = 'Repairing…';
+  let fixed = 0;
+  for(const t of allTasks){
+    const start = t.baseline_start, end = t.planned_end || t.due_date || start;
+    if(!start) continue;
+    const targetStatus = t.status || 'not_started';
+    const dateStatus = {};
+    let cur = start, guard = 0;
+    while(cur <= end && guard < 400){
+      dateStatus[cur] = { status: targetStatus, reason: null, updated_at: ymd(new Date()) };
+      if(cur===end) break;
+      cur = addDays(cur, 1);
+      guard++;
+    }
+    const { error } = await sb.from('schedule_tasks').update({ date_status: dateStatus }).eq('id', t.id);
+    if(!error){ t.date_status = dateStatus; fixed++; }
+  }
+  btn.disabled = false;
+  btn.textContent = orig;
+  render();
+  alert('Repaired per-date history for ' + fixed + ' task(s).');
+}
+document.getElementById('repairDateStatusBtn').onclick = repairDateStatusHistory;
+
+async function fillProjects(){
+  const { data: projs } = await sb.from('projects').select('id,name').order('name');
+  const sel = document.getElementById('projSel');
+  if(!projs || !projs.length){ sel.innerHTML='<option>No projects</option>'; return; }
+  sel.innerHTML = projs.map(p=>`<option value="${p.id}" ${p.id===currentProj.id?'selected':''}>${esc(p.name)}</option>`).join('');
+  sel.onchange = ()=> window.location.search = '?id=' + sel.value;
+}
+
+async function loadSchedule(){
+  const pid = new URLSearchParams(window.location.search).get('id');
+  let q = sb.from('projects').select('*');
+  q = pid ? q.eq('id', pid) : q.eq('name','Sama Sports Complex');
+  let { data: proj } = await q.single();
+  if(!proj){
+    const { data: any } = await sb.from('projects').select('*').order('name').limit(1);
+    proj = any && any[0];
+  }
+  if(!proj){ document.getElementById('listView').innerHTML='<div class="empty">No project found.</div>'; return; }
+  currentProj = proj;
+  document.querySelectorAll('.app-nav-item[href]').forEach(a=>{
+    const href=a.getAttribute('href');
+    if(href && href.endsWith('.html') && href!=='dashboard.html'){ a.setAttribute('href', href.split('?')[0]+'?id='+proj.id); }
+  });
+  document.getElementById('crumbName').textContent = proj.name;
+  document.getElementById('backLink').href = 'project-overview.html?id=' + proj.id;
+  await fillProjects();
+  const { data: tasks } = await sb.from('schedule_tasks').select('*').eq('project_id', proj.id);
+  allTasks = tasks || [];
+  await loadPendingChangeRequests();
+  render();
+  await checkProjectDelay();
+}
+
+/* ---- Sidebar permission gating (new — this page had none before; mirrors
+   the same data-perm grants already enforced on dashboard.html/vendors.html.
+   Purely controls nav-item visibility; every actual data operation below is
+   still governed by Supabase RLS regardless of what this shows/hides.) ---- */
+function can(role, perm){
+  const grants = {
+    view_vendors: ['director','pm'],
+    import_project: ['director','pm']
+  };
+  return (grants[perm] || []).includes(role);
+}
+function applyPermissions(role){
+  document.querySelectorAll('[data-perm]').forEach(el=>{
+    el.style.display = can(role, el.getAttribute('data-perm')) ? '' : 'none';
+  });
+  document.querySelectorAll('[data-perm-group="director-pm"]').forEach(el=>{
+    el.style.display = (role === 'director' || role === 'pm') ? '' : 'none';
+  });
+}
+
+(async function(){
+  const auth = await requireAuth();
+  if(!auth) return;
+  const { session, role, fullName } = auth;
+  const roleLabels = { director:'Director', pm:'Project Manager', engineer:'Site Engineer', accounts:'Accounts', vendor:'Vendor', client:'Client' };
+  const emailName = (session.user.email||'Signed in').split('@')[0];
+  const shownName = fullName || emailName;
+  document.getElementById('userName').textContent = shownName;
+  document.getElementById('userRole').textContent = roleLabels[role] || role || '—';
+  document.getElementById('userAvatar').textContent = shownName.charAt(0).toUpperCase();
+  document.getElementById('logoutBtn').addEventListener('click', async ()=>{ await sb.auth.signOut(); window.location.href='login.html'; });
+  applyPermissions(role);
+  await loadSchedule();
+})();
+</script>
+</body>
+</html>

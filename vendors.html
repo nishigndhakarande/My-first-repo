@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kinder Sports — Vendor Scorecard</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="sips-design-system.css">
+<link rel="stylesheet" href="sips-mobile.css">
+<script src="sips-shell.js"></script>
+<script src="sips-mobile.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="auth-guard.js"></script>
+<style>
+*{box-sizing:border-box;} html,body{margin:0;padding:0;background:var(--paper-0);color:var(--ink-800);font-family:var(--font-body);}
+.content{padding:22px 28px 40px;max-width:1200px;}
+
+.qa-row{display:flex;justify-content:flex-end;margin-bottom:16px;}
+.btn-add{font-family:var(--font-display);font-size:12.5px;font-weight:700;padding:9px 16px;border-radius:var(--r-sm);border:1px solid var(--ink-900);background:var(--ink-900);color:#fff;cursor:pointer;display:inline-flex;align-items:center;gap:6px;transition:background .15s ease, border-color .15s ease;}
+.btn-add:hover{background:var(--brand-orange);border-color:var(--brand-orange);}
+
+.vendor-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px;}
+.vendor-card{background:var(--paper-1);border:1px solid var(--line);border-radius:var(--r-lg);padding:18px 20px;cursor:pointer;transition:border-color .15s ease, transform .15s ease, box-shadow .15s ease;}
+.vendor-card:hover{border-color:var(--muted-2);transform:translateY(-2px);box-shadow:var(--shadow-md);}
+.vendor-top{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;}
+.vendor-name{font-family:var(--font-display);font-weight:700;font-size:15px;color:var(--ink-900);}
+.vendor-cat{font-size:11px;color:var(--muted);margin-top:2px;}
+.sla-pill{font-family:var(--font-display);font-size:9.5px;font-weight:700;padding:3px 9px;border-radius:var(--r-pill);white-space:nowrap;text-transform:capitalize;}
+.sla-pill.good{background:var(--status-good-bg);color:var(--brand-green);}
+.sla-pill.watch{background:var(--status-watch-bg);color:var(--status-watch);}
+.sla-pill.bad{background:var(--status-bad-bg);color:var(--status-bad);}
+.stars{color:var(--brand-orange);font-size:13px;margin-top:8px;}
+.stars .empty-star{color:var(--line-2);}
+.metric-row{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:14px;border-top:1px solid var(--line-2);padding-top:12px;}
+.metric{text-align:center;}
+.metric .v{font-family:var(--font-display);font-size:16px;font-weight:700;color:var(--ink-900);}
+.metric .v.good{color:var(--brand-green);} .metric .v.bad{color:var(--status-bad);} .metric .v.watch{color:var(--status-watch);}
+.metric .l{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-top:2px;}
+
+.empty{background:var(--paper-1);border:1px dashed var(--line);border-radius:var(--r-lg);padding:36px;text-align:center;color:var(--muted);}
+.empty .big{font-size:15px;color:var(--ink-700);font-family:var(--font-display);font-weight:700;margin-bottom:6px;}
+.loading{padding:40px;text-align:center;color:var(--muted);}
+
+/* ---- Modal ---- */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(20,21,26,0.5);z-index:200;align-items:center;justify-content:center;padding:20px;}
+.modal-overlay.open{display:flex;}
+.modal-box{background:var(--paper-1);border-radius:var(--r-lg);width:520px;max-width:100%;max-height:90vh;overflow-y:auto;box-shadow:var(--shadow-lg);}
+.modal-box.wide{width:760px;}
+.modal-head{display:flex;justify-content:space-between;align-items:center;padding:18px 22px;border-bottom:1px solid var(--line);}
+.modal-head h3{font-family:var(--font-display);font-size:16px;margin:0;color:var(--ink-900);}
+.modal-close{background:none;border:none;font-size:20px;cursor:pointer;color:var(--muted);}
+.modal-close:hover{color:var(--ink-800);}
+.modal-body{padding:18px 22px;}
+.modal-foot{display:flex;justify-content:flex-end;gap:8px;padding:16px 22px;border-top:1px solid var(--line);}
+.field{margin-bottom:12px;}
+.field label{display:block;font-family:var(--font-display);font-size:11px;font-weight:700;color:var(--ink-700);margin-bottom:5px;}
+.field input,.field select,.field textarea{width:100%;font-family:var(--font-body);font-size:13px;padding:9px 11px;border:1px solid var(--line);border-radius:var(--r-sm);background:var(--paper-0);}
+.field input:focus,.field select:focus,.field textarea:focus{outline:2px solid var(--brand-blue);outline-offset:0;border-color:var(--brand-blue);background:var(--paper-1);}
+.field-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.btn{font-family:var(--font-display);font-size:12.5px;font-weight:700;padding:9px 16px;border-radius:var(--r-sm);border:1px solid var(--line);background:var(--paper-0);color:var(--ink-700);cursor:pointer;}
+.btn:hover{border-color:var(--muted-2);}
+.modal-msg{display:none;font-size:12px;padding:8px 12px;border-radius:var(--r-sm);margin-bottom:12px;}
+.modal-msg.show.ok{display:block;background:var(--status-good-bg);color:var(--brand-green);}
+.modal-msg.show.err{display:block;background:var(--status-bad-bg);color:var(--status-bad);}
+
+/* ---- Detail view ---- */
+.detail-summary{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:20px;}
+.detail-summary .card{background:var(--paper-0);border:1px solid var(--line);border-radius:var(--r-md);padding:12px 14px;}
+.detail-summary .card .v{font-family:var(--font-display);font-size:19px;font-weight:700;color:var(--ink-900);}
+.detail-summary .card .l{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-top:3px;}
+
+.section-title{font-family:var(--font-display);font-size:12px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--ink-700);margin:18px 0 10px;}
+
+table.deliv-table{width:100%;border-collapse:collapse;font-size:12.5px;}
+table.deliv-table thead th{text-align:left;font-family:var(--font-display);font-size:10px;text-transform:uppercase;color:var(--muted);font-weight:700;padding:8px 10px;border-bottom:1px solid var(--line);background:var(--paper-0);}
+table.deliv-table td{padding:9px 10px;border-bottom:1px solid var(--line-2);}
+.delay-tag{font-family:var(--font-mono);font-weight:700;font-size:11.5px;}
+.delay-tag.ontime{color:var(--brand-green);}
+.delay-tag.late{color:var(--status-bad);}
+.del-row-btn{background:none;border:none;color:var(--muted);cursor:pointer;font-size:13px;}
+.del-row-btn:hover{color:var(--status-bad);}
+
+.rating-input{display:flex;gap:4px;font-size:20px;cursor:pointer;}
+.rating-input span{color:var(--line-2);}
+.rating-input span.active{color:var(--brand-orange);}
+
+@media(max-width:640px){
+  .content{padding:16px;}
+  .field-row{grid-template-columns:1fr;}
+  .detail-summary{grid-template-columns:1fr 1fr;}
+  .modal-box.wide{width:100%;}
+}
+</style>
+</head>
+<body>
+
+<div id="sips-sidebar-mount"></div>
+
+<div class="app-main">
+  <div class="app-topbar">
+    <div style="display:flex;align-items:center;gap:14px;">
+      <button class="app-hamburger" id="app-hamburger-btn" aria-label="Toggle menu">&#9776;</button>
+      <div>
+        <div class="app-title">Vendors</div>
+        <div class="app-subtitle">Performance, delivery reliability &amp; SLA tracking</div>
+      </div>
+    </div>
+    <div class="app-user-chip">
+      <div class="app-user-avatar" id="userAvatar">–</div>
+      <div class="app-user-meta">
+        <div class="app-user-name" id="userName">—</div>
+        <div class="app-user-role" id="userRole">—</div>
+      </div>
+      <button class="app-logout-btn" id="logoutBtn">Log out</button>
+    </div>
+  </div>
+
+  <div class="content" id="content">
+    <div class="loading">Loading vendors…</div>
+  </div>
+</div>
+
+<!-- Add/Edit Vendor Modal -->
+<div class="modal-overlay" id="vendorModal">
+  <div class="modal-box">
+    <div class="modal-head"><h3 id="vendorModalTitle">Add vendor</h3><button class="modal-close" id="closeVendorModal">&times;</button></div>
+    <div class="modal-body">
+      <div class="modal-msg" id="vendorModalMsg"></div>
+      <div class="field"><label>Vendor name</label><input type="text" id="v-name" placeholder="e.g. Greenline Turf Suppliers"></div>
+      <div class="field-row">
+        <div class="field"><label>Category</label><input type="text" id="v-category" placeholder="e.g. Turf, Electrical, Civil"></div>
+        <div class="field"><label>Contact person</label><input type="text" id="v-contact" placeholder="Name"></div>
+      </div>
+      <div class="field-row">
+        <div class="field"><label>Phone</label><input type="text" id="v-phone" placeholder="+91…"></div>
+        <div class="field"><label>Email</label><input type="text" id="v-email" placeholder="vendor@example.com"></div>
+      </div>
+      <div class="field"><label>SLA status</label><select id="v-sla"><option value="clear">Clear / good standing</option><option value="watch">Watch</option><option value="escalated">At risk — escalated</option></select></div>
+      <div class="field"><label>Notes</label><textarea id="v-notes" rows="2" placeholder="Any general notes about this vendor…"></textarea></div>
+    </div>
+    <div class="modal-foot"><button class="btn" id="cancelVendorModal">Cancel</button><button class="btn-add" id="submitVendorModal">Save vendor</button></div>
+  </div>
+</div>
+
+<!-- Delivery Entry Modal -->
+<div class="modal-overlay" id="deliveryModal">
+  <div class="modal-box">
+    <div class="modal-head"><h3>Log a delivery / milestone</h3><button class="modal-close" id="closeDeliveryModal">&times;</button></div>
+    <div class="modal-body">
+      <div class="modal-msg" id="deliveryModalMsg"></div>
+      <div class="field"><label>Task / PO / material</label><input type="text" id="d-task" placeholder="e.g. Turf rolls — batch 2"></div>
+      <div class="field"><label>Project (optional)</label><input type="text" id="d-project" placeholder="e.g. XYZ School Turf, Pune"></div>
+      <div class="field-row">
+        <div class="field"><label>Committed date</label><input type="date" id="d-committed"></div>
+        <div class="field"><label>Actual delivery date</label><input type="date" id="d-actual"></div>
+      </div>
+      <div class="field"><label>Reason for delay (if any)</label><input type="text" id="d-reason" placeholder="e.g. Transport strike, material shortage"></div>
+    </div>
+    <div class="modal-foot"><button class="btn" id="cancelDeliveryModal">Cancel</button><button class="btn-add" id="submitDeliveryModal">Save delivery</button></div>
+  </div>
+</div>
+
+<!-- Vendor Detail Modal -->
+<div class="modal-overlay" id="detailModal">
+  <div class="modal-box wide">
+    <div class="modal-head">
+      <div><h3 id="dt-name">Vendor</h3><div class="text-sm text-muted" id="dt-category">—</div></div>
+      <button class="modal-close" id="closeDetailModal">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="detail-summary" id="dt-summary"></div>
+
+      <div class="section-title">Your rating</div>
+      <div class="rating-input" id="dt-rating-input"></div>
+
+      <div class="section-title" style="display:flex;justify-content:space-between;align-items:center;">
+        <span>Delivery history</span>
+        <button class="btn-add" style="padding:6px 12px;font-size:11px;" id="openDeliveryFromDetail">+ Log delivery</button>
+      </div>
+      <div id="dt-deliveries"></div>
+    </div>
+    <div class="modal-foot"><button class="btn" id="closeDetailBtn">Close</button></div>
+  </div>
+</div>
+
+<script>
+function esc(s){ return (s==null?'':String(s)).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function fdate(v){ if(!v) return '—'; try{ return new Date(v).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}); }catch(e){ return v; } }
+function slaClass(s){ s=(s||'').toLowerCase(); if(s.includes('escalat')) return 'bad'; if(s.includes('watch')) return 'watch'; return 'good'; }
+function daysBetween(a,b){ return Math.round((new Date(b)-new Date(a))/86400000); }
+
+let VENDORS = [];
+let DELIVERIES_BY_VENDOR = {};
+let CURRENT_VENDOR_ID = null;
+let CURRENT_ROLE = null;
+let PENDING_RATING = 0;
+
+function canEdit(role){ return role === 'director' || role === 'pm'; }
+
+(async function(){
+  const auth = await requireAuth();
+  if(!auth) return;
+  const { session, role } = auth;
+  CURRENT_ROLE = role;
+
+  const roleLabels = { director:'Director', pm:'Project Manager', engineer:'Site Engineer', vendor:'Vendor', client:'Client' };
+  const emailName = (session.user.email || 'Signed in').split('@')[0];
+  document.getElementById('userName').textContent = emailName;
+  document.getElementById('userRole').textContent = roleLabels[role] || role || '—';
+  document.getElementById('userAvatar').textContent = emailName.charAt(0).toUpperCase();
+  document.getElementById('logoutBtn').addEventListener('click', async ()=>{ await sb.auth.signOut(); window.location.href = 'login.html'; });
+
+  document.querySelectorAll('[data-perm]').forEach(el=>{
+    const perm = el.getAttribute('data-perm');
+    const grants = { export_reports:['director','pm'], view_vendors:['director','pm'], manage_settings:['director'], import_project:['director','pm'] };
+    el.style.display = (grants[perm]||[]).includes(role) ? '' : 'none';
+  });
+  document.querySelectorAll('[data-perm-group="director-pm"]').forEach(el=>{
+    el.style.display = (role === 'director' || role === 'pm') ? '' : 'none';
+  });
+
+  if(!canEdit(role)){
+    document.getElementById('addVendorBtn') && (document.getElementById('addVendorBtn').style.display='none');
+  }
+
+  await loadAll();
+})();
+
+async function loadAll(){
+  const content = document.getElementById('content');
+  content.innerHTML = '<div class="loading">Loading vendors…</div>';
+
+  let vendors = [];
+  try{ const { data } = await sb.from('vendors').select('*').order('name'); vendors = data || []; }catch(e){}
+  VENDORS = vendors;
+
+  let deliveries = [];
+  try{ const { data } = await sb.from('vendor_deliveries').select('*').order('committed_date', { ascending:false }); deliveries = data || []; }catch(e){}
+  const byVendor = {};
+  deliveries.forEach(d => { (byVendor[d.vendor_id] = byVendor[d.vendor_id]||[]).push(d); });
+  DELIVERIES_BY_VENDOR = byVendor;
+
+  render();
+}
+
+function computeVendorStats(vendorId){
+  const rows = DELIVERIES_BY_VENDOR[vendorId] || [];
+  const delivered = rows.filter(r=>r.actual_date);
+  const onTime = delivered.filter(r=> daysBetween(r.committed_date, r.actual_date) <= 0).length;
+  const late = delivered.length - onTime;
+  const delays = delivered.map(r=> Math.max(0, daysBetween(r.committed_date, r.actual_date)));
+  const avgDelay = delays.length ? (delays.reduce((s,d)=>s+d,0)/delays.length) : 0;
+  const onTimePct = delivered.length ? Math.round(onTime/delivered.length*100) : null;
+  return { total: rows.length, delivered: delivered.length, onTime, late, avgDelay, onTimePct };
+}
+
+function render(){
+  const content = document.getElementById('content');
+  let html = `<div class="qa-row">${canEdit(CURRENT_ROLE) ? `<button class="btn-add" id="addVendorBtn">+ Add vendor</button>` : ''}</div>`;
+
+  if(!VENDORS.length){
+    html += `<div class="empty"><div class="big">No vendors yet</div>Add your first vendor to start tracking performance.</div>`;
+    content.innerHTML = html;
+    if(canEdit(CURRENT_ROLE)) document.getElementById('addVendorBtn').addEventListener('click', openAddVendor);
+    return;
+  }
+
+  html += `<div class="vendor-grid">` + VENDORS.map(v=>{
+    const stats = computeVendorStats(v.id);
+    const sla = v.sla_status || 'clear';
+    const rating = v.rating || 0;
+    const stars = Array.from({length:5}, (_,i)=> i < rating ? '★' : '<span class="empty-star">★</span>').join('');
+    return `<div class="vendor-card" data-id="${esc(v.id)}">
+      <div class="vendor-top">
+        <div><div class="vendor-name">${esc(v.name)}</div><div class="vendor-cat">${esc(v.category||'—')}</div></div>
+        <span class="sla-pill ${slaClass(sla)}">${esc(sla)}</span>
+      </div>
+      <div class="stars">${stars}</div>
+      <div class="metric-row">
+        <div class="metric"><div class="v ${stats.onTimePct==null?'':(stats.onTimePct>=85?'good':(stats.onTimePct>=60?'watch':'bad'))}">${stats.onTimePct!=null ? stats.onTimePct+'%' : '—'}</div><div class="l">On-time</div></div>
+        <div class="metric"><div class="v ${stats.late>0?'bad':'good'}">${stats.late}</div><div class="l">Delays</div></div>
+        <div class="metric"><div class="v">${stats.avgDelay ? stats.avgDelay.toFixed(1)+'d' : '—'}</div><div class="l">Avg delay</div></div>
+      </div>
+    </div>`;
+  }).join('') + `</div>`;
+
+  content.innerHTML = html;
+
+  if(canEdit(CURRENT_ROLE)) document.getElementById('addVendorBtn').addEventListener('click', openAddVendor);
+  document.querySelectorAll('.vendor-card').forEach(card=>{
+    card.addEventListener('click', ()=> openDetail(card.getAttribute('data-id')));
+  });
+}
+
+/* ---- Add/Edit vendor ---- */
+const vendorModal = document.getElementById('vendorModal');
+function openAddVendor(){
+  document.getElementById('vendorModalTitle').textContent = 'Add vendor';
+  ['v-name','v-category','v-contact','v-phone','v-email','v-notes'].forEach(id=> document.getElementById(id).value='');
+  document.getElementById('v-sla').value = 'clear';
+  document.getElementById('vendorModalMsg').className = 'modal-msg';
+  vendorModal.classList.add('open');
+}
+document.getElementById('closeVendorModal').addEventListener('click', ()=> vendorModal.classList.remove('open'));
+document.getElementById('cancelVendorModal').addEventListener('click', ()=> vendorModal.classList.remove('open'));
+vendorModal.addEventListener('click', (e)=>{ if(e.target===vendorModal) vendorModal.classList.remove('open'); });
+
+document.getElementById('submitVendorModal').addEventListener('click', async ()=>{
+  const msg = document.getElementById('vendorModalMsg');
+  msg.className = 'modal-msg'; msg.textContent='';
+  const name = document.getElementById('v-name').value.trim();
+  if(!name){ msg.className='modal-msg show err'; msg.textContent='Vendor name is required.'; return; }
+  const payload = {
+    name,
+    category: document.getElementById('v-category').value.trim(),
+    contact_person: document.getElementById('v-contact').value.trim(),
+    phone: document.getElementById('v-phone').value.trim(),
+    email: document.getElementById('v-email').value.trim(),
+    sla_status: document.getElementById('v-sla').value,
+    notes: document.getElementById('v-notes').value.trim()
+  };
+  const { error } = await sb.from('vendors').insert(payload);
+  if(error){ msg.className='modal-msg show err'; msg.textContent=error.message; return; }
+  msg.className='modal-msg show ok'; msg.textContent='Vendor added.';
+  setTimeout(async ()=>{ vendorModal.classList.remove('open'); await loadAll(); }, 500);
+});
+
+/* ---- Delivery entry ---- */
+const deliveryModal = document.getElementById('deliveryModal');
+function openDeliveryModal(vendorId){
+  CURRENT_VENDOR_ID = vendorId;
+  ['d-task','d-project','d-committed','d-actual','d-reason'].forEach(id=> document.getElementById(id).value='');
+  document.getElementById('deliveryModalMsg').className = 'modal-msg';
+  deliveryModal.classList.add('open');
+}
+document.getElementById('closeDeliveryModal').addEventListener('click', ()=> deliveryModal.classList.remove('open'));
+document.getElementById('cancelDeliveryModal').addEventListener('click', ()=> deliveryModal.classList.remove('open'));
+deliveryModal.addEventListener('click', (e)=>{ if(e.target===deliveryModal) deliveryModal.classList.remove('open'); });
+document.getElementById('openDeliveryFromDetail').addEventListener('click', ()=> openDeliveryModal(CURRENT_VENDOR_ID));
+
+document.getElementById('submitDeliveryModal').addEventListener('click', async ()=>{
+  const msg = document.getElementById('deliveryModalMsg');
+  msg.className='modal-msg'; msg.textContent='';
+  const task = document.getElementById('d-task').value.trim();
+  const committed = document.getElementById('d-committed').value;
+  if(!task || !committed){ msg.className='modal-msg show err'; msg.textContent='Task name and committed date are required.'; return; }
+  const actual = document.getElementById('d-actual').value || null;
+  const payload = {
+    vendor_id: CURRENT_VENDOR_ID,
+    task_name: task,
+    project_name: document.getElementById('d-project').value.trim() || null,
+    committed_date: committed,
+    actual_date: actual,
+    delay_reason: document.getElementById('d-reason').value.trim() || null
+  };
+  const { error } = await sb.from('vendor_deliveries').insert(payload);
+  if(error){ msg.className='modal-msg show err'; msg.textContent=error.message; return; }
+  msg.className='modal-msg show ok'; msg.textContent='Delivery logged.';
+  setTimeout(async ()=>{
+    deliveryModal.classList.remove('open');
+    await loadAll();
+    if(CURRENT_VENDOR_ID) openDetail(CURRENT_VENDOR_ID);
+  }, 450);
+});
+
+/* ---- Vendor detail ---- */
+const detailModal = document.getElementById('detailModal');
+function openDetail(vendorId){
+  const v = VENDORS.find(x=>String(x.id)===String(vendorId));
+  if(!v) return;
+  CURRENT_VENDOR_ID = v.id;
+  PENDING_RATING = v.rating || 0;
+
+  document.getElementById('dt-name').textContent = v.name;
+  document.getElementById('dt-category').textContent = [v.category, v.contact_person, v.phone].filter(Boolean).join(' · ') || '—';
+
+  const stats = computeVendorStats(v.id);
+  document.getElementById('dt-summary').innerHTML = `
+    <div class="card"><div class="v ${stats.onTimePct==null?'':(stats.onTimePct>=85?'good':(stats.onTimePct>=60?'watch':'bad'))}">${stats.onTimePct!=null?stats.onTimePct+'%':'—'}</div><div class="l">On-time delivery</div></div>
+    <div class="card"><div class="v">${stats.total}</div><div class="l">Total deliveries logged</div></div>
+    <div class="card"><div class="v ${stats.late>0?'bad':'good'}">${stats.late}</div><div class="l">Delayed deliveries</div></div>
+    <div class="card"><div class="v">${stats.avgDelay?stats.avgDelay.toFixed(1)+'d':'—'}</div><div class="l">Average delay</div></div>
+  `;
+
+  renderRatingInput();
+  renderDeliveryTable(v.id);
+  detailModal.classList.add('open');
+}
+document.getElementById('closeDetailModal').addEventListener('click', ()=> detailModal.classList.remove('open'));
+document.getElementById('closeDetailBtn').addEventListener('click', ()=> detailModal.classList.remove('open'));
+detailModal.addEventListener('click', (e)=>{ if(e.target===detailModal) detailModal.classList.remove('open'); });
+
+function renderRatingInput(){
+  const wrap = document.getElementById('dt-rating-input');
+  wrap.innerHTML = Array.from({length:5},(_,i)=>`<span data-star="${i+1}" class="${i<PENDING_RATING?'active':''}">★</span>`).join('');
+  wrap.querySelectorAll('span').forEach(s=>{
+    s.addEventListener('click', async ()=>{
+      const val = parseInt(s.getAttribute('data-star'));
+      PENDING_RATING = val;
+      renderRatingInput();
+      if(!canEdit(CURRENT_ROLE)) return;
+      const { error } = await sb.from('vendors').update({ rating: val }).eq('id', CURRENT_VENDOR_ID);
+      if(!error){
+        const v = VENDORS.find(x=>String(x.id)===String(CURRENT_VENDOR_ID));
+        if(v) v.rating = val;
+        sipsToast('Rating saved.', 'success');
+      } else {
+        sipsToast('Could not save rating: ' + error.message, 'error');
+      }
+    });
+  });
+}
+
+function renderDeliveryTable(vendorId){
+  const rows = DELIVERIES_BY_VENDOR[vendorId] || [];
+  const area = document.getElementById('dt-deliveries');
+  if(!rows.length){ area.innerHTML = `<div class="empty" style="padding:20px;"><div class="big">No deliveries logged</div>Log the first delivery to start tracking on-time performance.</div>`; return; }
+
+  let html = `<table class="deliv-table"><thead><tr>
+    <th>Task / material</th><th>Project</th><th>Committed</th><th>Actual</th><th>Delay</th><th>Reason</th>${canEdit(CURRENT_ROLE)?'<th></th>':''}
+  </tr></thead><tbody>`;
+  rows.forEach(r=>{
+    const delayDays = r.actual_date ? daysBetween(r.committed_date, r.actual_date) : null;
+    let delayHtml = '<span style="color:var(--muted)">Pending</span>';
+    if(delayDays!=null){
+      delayHtml = delayDays <= 0
+        ? `<span class="delay-tag ontime">On time</span>`
+        : `<span class="delay-tag late">+${delayDays}d late</span>`;
+    }
+    html += `<tr>
+      <td>${esc(r.task_name)}</td>
+      <td>${esc(r.project_name||'—')}</td>
+      <td>${fdate(r.committed_date)}</td>
+      <td>${r.actual_date ? fdate(r.actual_date) : '—'}</td>
+      <td>${delayHtml}</td>
+      <td>${esc(r.delay_reason||'—')}</td>
+      ${canEdit(CURRENT_ROLE) ? `<td><button class="del-row-btn" data-delid="${esc(r.id)}" title="Delete">🗑</button></td>` : ''}
+    </tr>`;
+  });
+  html += `</tbody></table>`;
+  area.innerHTML = html;
+
+  area.querySelectorAll('.del-row-btn').forEach(btn=>{
+    btn.addEventListener('click', async ()=>{
+      const id = btn.getAttribute('data-delid');
+      const ok = await sipsConfirm('Delete this delivery record?', '', 'Delete');
+      if(!ok) return;
+      const { error } = await sb.from('vendor_deliveries').delete().eq('id', id);
+      if(error){ sipsToast('Could not delete: ' + error.message, 'error'); return; }
+      await loadAll();
+      openDetail(CURRENT_VENDOR_ID);
+    });
+  });
+}
+</script>
+<script>
+sipsRenderShell({ activeHref: "vendors.html" });
+</script>
+</body>
+</html>

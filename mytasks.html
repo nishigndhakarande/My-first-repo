@@ -1,0 +1,648 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>My Tasks — Kinder Sports</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="sips-design-system.css">
+<link rel="stylesheet" href="sips-mobile.css">
+<script src="sips-shell.js"></script>
+<script src="sips-mobile.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="auth-guard.js"></script>
+<style>
+*{box-sizing:border-box;} html,body{margin:0;padding:0;}
+body{background:var(--paper-0);color:var(--ink-800);font-family:var(--font-body);-webkit-font-smoothing:antialiased;}
+a{text-decoration:none;color:inherit;}
+::-webkit-scrollbar{width:9px;} ::-webkit-scrollbar-thumb{background:#D7DAE0;border-radius:6px;}
+
+.main{max-width:1480px;margin:0 auto;padding:26px 32px 60px 32px;display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:20px;align-items:start;}
+@media(max-width:1100px){.main{grid-template-columns:minmax(0,1fr);} .side-panel{order:-1;}}
+
+.role-note{max-width:1480px;margin:0 auto;padding:0 32px;}
+.scope-banner{background:var(--status-info-bg);color:var(--status-info);border-radius:var(--r-md);padding:11px 15px;font-size:12px;margin:18px 0 0;}
+.scope-banner.warn{background:var(--status-watch-bg);color:var(--status-watch);}
+
+.cal-card{background:var(--paper-1);border:1px solid var(--line);border-radius:var(--r-lg);padding:20px;}
+.cal-toolbar{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;margin-bottom:18px;}
+.cal-toolbar-left{display:flex;align-items:center;gap:8px;}
+.btn{font-family:var(--font-display);font-size:12.5px;font-weight:700;padding:8px 14px;border-radius:var(--r-sm);border:1px solid var(--line);background:var(--paper-1);cursor:pointer;transition:border-color .15s ease, color .15s ease, background .15s ease;}
+.btn:hover{border-color:var(--brand-orange);color:var(--brand-orange);}
+.btn.dark{background:var(--ink-900);color:#fff;border-color:var(--ink-900);}
+.btn.dark:hover{background:var(--brand-orange);border-color:var(--brand-orange);color:#fff;}
+.btn.icon{padding:8px 11px;}
+.cal-month-label{font-family:var(--font-display);font-weight:700;font-size:17px;margin:0 4px;color:var(--ink-900);}
+.view-toggle{display:flex;border:1px solid var(--line);border-radius:var(--r-sm);overflow:hidden;}
+.view-toggle button{background:var(--paper-1);border:none;padding:8px 14px;cursor:pointer;font-size:12.5px;font-weight:700;font-family:var(--font-display);color:var(--muted);}
+.view-toggle button.active{background:var(--ink-900);color:#fff;}
+.proj-filter{padding:8px 10px;border:1px solid var(--line);border-radius:var(--r-sm);font-size:12px;font-family:var(--font-display);background:var(--paper-1);color:var(--ink-800);}
+
+.grid{display:grid;grid-template-columns:repeat(7,1fr);gap:1px;background:var(--line);border:1px solid var(--line);border-radius:var(--r-md);overflow:hidden;}
+.grid .dow{background:var(--paper-0);padding:9px;text-align:center;font-size:11px;font-weight:700;color:var(--muted);font-family:var(--font-display);text-transform:uppercase;}
+.day-cell{background:var(--paper-1);min-height:112px;padding:7px;position:relative;}
+.day-cell.other-month{background:var(--paper-0);color:var(--muted-2);}
+.day-cell .dnum{font-family:var(--font-display);font-weight:600;font-size:11.5px;color:var(--muted);margin-bottom:5px;}
+.day-cell.today .dnum{background:var(--brand-orange);color:#fff;width:20px;height:20px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;}
+.task-pill{font-size:10px;padding:4px 6px;border-radius:var(--r-sm);margin-bottom:3px;overflow:hidden;text-overflow:ellipsis;border-left:3px solid;transition:transform .1s ease;cursor:pointer;}
+.task-pill:hover{transform:translateX(1px);}
+.task-pill b{display:block;font-size:10.5px;font-weight:700;white-space:normal;line-height:1.25;}
+.task-pill .ptime{font-size:9px;margin-top:1px;display:block;opacity:.75;}
+
+.side-panel{display:flex;flex-direction:column;gap:16px;}
+.panel-card{background:var(--paper-1);border:1px solid var(--line);border-radius:var(--r-lg);padding:18px;}
+.panel-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:13px;}
+.panel-head h3{font-family:var(--font-display);font-size:14px;margin:0;color:var(--ink-900);}
+.summary-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.summary-mini{background:var(--paper-0);border-radius:var(--r-md);padding:12px;}
+.summary-mini .n{font-family:var(--font-display);font-size:20px;font-weight:700;color:var(--ink-900);}
+.summary-mini .n.bad{color:var(--status-bad);}
+.summary-mini .n.watch{color:var(--status-watch);}
+.summary-mini .n.good{color:var(--status-good);}
+.summary-mini .l{font-size:10px;color:var(--muted);margin-top:2px;}
+.up-task{display:flex;gap:9px;padding:9px 0;border-bottom:1px solid var(--line-2);cursor:pointer;}
+.up-task:last-child{border-bottom:none;}
+.up-dot{width:8px;height:8px;border-radius:50%;margin-top:5px;flex-shrink:0;}
+.up-task b{font-size:12.5px;display:block;}
+.up-task .sub{font-size:10.5px;color:var(--muted);}
+.tag{font-size:9.5px;font-weight:700;padding:2px 8px;border-radius:var(--r-pill);white-space:nowrap;}
+.tag.today{background:var(--status-watch-bg);color:var(--status-watch);}
+.tag.done{background:var(--status-good-bg);color:var(--brand-green);}
+.tag.progress{background:var(--status-info-bg);color:var(--status-info);}
+.tag.overdue{background:var(--status-bad-bg);color:var(--status-bad);}
+.tag.reminder{background:var(--paper-0);color:var(--muted);border:1px solid var(--line);}
+.tag.pace{background:var(--status-watch-bg);color:var(--status-watch);}
+.legend{display:flex;flex-wrap:wrap;gap:8px;margin-top:16px;}
+.legend span{display:inline-flex;align-items:center;gap:5px;font-size:10.5px;color:var(--muted);}
+.legend i{width:8px;height:8px;border-radius:50%;display:inline-block;}
+.empty{padding:20px;text-align:center;color:var(--muted);font-size:12.5px;}
+
+.detail-panel{display:flex;flex-direction:column;gap:4px;}
+.detail-title{font-family:var(--font-display);font-size:15px;color:var(--ink-900);}
+.detail-badge{font-size:9.5px;font-weight:700;padding:3px 9px;border-radius:var(--r-pill);margin-top:5px;display:inline-block;}
+.detail-row{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--line-2);font-size:12px;gap:10px;}
+.detail-row span:first-child{color:var(--muted);flex-shrink:0;}
+.detail-row span:last-child{font-weight:600;text-align:right;}
+.detail-note{font-size:11.5px;color:var(--muted);background:var(--paper-0);border-radius:var(--r-md);padding:9px 11px;margin-top:10px;}
+.detail-btns{display:flex;gap:8px;margin-top:10px;}
+.detail-btns .btn{flex:1;text-align:center;}
+.btn.green{background:var(--brand-green);color:#fff;border-color:var(--brand-green);}
+.btn.green:hover{background:#15803D;border-color:#15803D;color:#fff;}
+.readonly-pill{font-size:10.5px;color:var(--muted);background:var(--paper-0);border-radius:var(--r-pill);padding:6px 10px;text-align:center;margin-top:10px;}
+
+.bd-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 0;border-bottom:1px solid var(--line-2);}
+.bd-row:last-child{border-bottom:none;}
+.bd-name{font-size:12.5px;font-weight:600;color:var(--ink-800);}
+.bd-sub{font-size:10.5px;color:var(--muted);margin-top:1px;}
+.bd-counts{display:flex;gap:6px;flex-shrink:0;}
+.bd-chip{font-size:10px;font-weight:700;padding:3px 7px;border-radius:var(--r-pill);white-space:nowrap;}
+.bd-chip.total{background:var(--paper-0);color:var(--ink-700);}
+.bd-chip.good{background:var(--status-good-bg);color:var(--status-good);}
+.bd-chip.bad{background:var(--status-bad-bg);color:var(--status-bad);}
+.bd-chip.watch{background:var(--status-watch-bg);color:var(--status-watch);}
+
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(20,21,26,0.5);z-index:200;align-items:center;justify-content:center;}
+.modal-overlay.open{display:flex;}
+.modal-box{background:var(--paper-1);border-radius:var(--r-lg);width:420px;max-width:92vw;padding:20px 22px;}
+.modal-box h3{font-family:var(--font-display);font-size:15px;margin:0 0 10px;}
+.modal-box input[type=file]{width:100%;font-size:12.5px;margin-bottom:10px;}
+.modal-box input[type=text]{width:100%;font-size:12.5px;padding:8px;border:1px solid var(--line);border-radius:var(--r-sm);margin-bottom:10px;}
+.modal-foot{display:flex;justify-content:flex-end;gap:8px;}
+.modal-msg{font-size:11.5px;margin-bottom:8px;}
+.modal-msg.err{color:var(--status-bad);}
+.modal-msg.ok{color:var(--status-good);}
+</style>
+</head>
+<body>
+
+<div id="sips-sidebar-mount"></div>
+
+<div class="app-main">
+  <div class="app-lanes"><span class="l1"></span><span class="l2"></span><span class="l3"></span><span class="l4"></span></div>
+  <div class="app-topbar">
+    <div style="display:flex;align-items:center;gap:12px;">
+    <button class="app-hamburger" id="app-hamburger-btn" aria-label="Toggle menu">&#9776;</button>
+    <div>
+      <div class="app-title">My Tasks</div>
+      <div class="app-subtitle" id="pageSubtitle">View and manage your tasks in calendar view</div>
+    </div>
+    </div>
+    <div class="app-user-chip">
+      <div class="app-user-avatar" id="userAvatar">–</div>
+      <div class="app-user-meta">
+        <div class="app-user-name" id="userName">—</div>
+        <div class="app-user-role" id="userRole">—</div>
+      </div>
+      <button class="app-logout-btn" id="logoutBtn">Log out</button>
+    </div>
+  </div>
+
+  <div class="role-note" id="scopeBannerWrap"></div>
+
+  <div class="main">
+    <div class="cal-card">
+      <div class="cal-toolbar">
+        <div class="cal-toolbar-left">
+          <button class="btn" id="btnToday">Today</button>
+          <button class="btn icon" id="btnPrev">‹</button>
+          <button class="btn icon" id="btnNext">›</button>
+          <div class="cal-month-label" id="monthLabel">—</div>
+          <select class="proj-filter" id="projFilter" style="display:none;"></select>
+        </div>
+        <div class="view-toggle" id="viewToggle">
+          <button data-view="month" class="active">Month</button>
+          <button data-view="week">Week</button>
+          <button data-view="day">Day</button>
+        </div>
+      </div>
+      <div id="calBody"><div class="empty">Generating your tasks…</div></div>
+      <div class="legend" id="legend"></div>
+    </div>
+
+    <div class="side-panel">
+      <div class="panel-card" id="detailPanelCard" style="display:none;">
+        <div class="detail-panel" id="detailPanel"></div>
+      </div>
+      <div class="panel-card">
+        <div class="panel-head"><h3 id="summaryTitle">Task Summary</h3></div>
+        <div class="summary-grid" id="summaryGrid"></div>
+      </div>
+      <div class="panel-card" id="breakdownCard" style="display:none;">
+        <div class="panel-head"><h3 id="breakdownTitle">Project-wise</h3></div>
+        <div id="breakdownList"></div>
+      </div>
+      <div class="panel-card">
+        <div class="panel-head"><h3 id="upcomingTitle">Upcoming Tasks</h3></div>
+        <div id="upcomingList"><div class="empty">Loading…</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="photoModal">
+  <div class="modal-box">
+    <h3>Upload site photo</h3>
+    <div class="modal-msg" id="photoModalMsg"></div>
+    <input type="file" id="photoFile" accept="image/*">
+    <input type="text" id="photoCaption" placeholder="Caption (optional)">
+    <div class="modal-foot">
+      <button class="btn" id="photoCancel">Cancel</button>
+      <button class="btn dark" id="photoSubmit">Upload</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ===========================================================================
+   My Tasks — CALENDAR UI (Month/Week/Day), unchanged in structure from the
+   original module. What's new is only the data feeding it: each calendar
+   entry is a GENERATED obligation, computed per project/day from existing
+   signals (project deadline & progress, Schedule as reference, open NCRs),
+   scoped by the user's existing user_project_access and role. Nothing from
+   Schedule/NCRs/other tables is copied onto the calendar as its own row —
+   only used to compute what a role needs to do, and when.
+
+   No schema change. No other module (Schedule, Quality, User Management,
+   Approvals, auth) is touched. Verifiable obligations: site photo upload
+   (existing site_photos table) and NCR resolution (existing ncrs table,
+   deep-links to quality.html). Everything else is a reminder, regenerated
+   on load, not persisted — per the agreed v1 scope.
+   =========================================================================== */
+
+let myRole = null, myFullName = '', myUserId = null;
+let scopedProjectIds = null; // null = director (unrestricted)
+let projects = [];
+let scheduleTasksByProject = {};
+let openNcrsByProject = {};
+let sitePhotosByProjectDate = {}; // 'projectId|YYYY-MM-DD' -> true
+let activeProjectFilter = '';
+let currentDate = new Date();
+let currentView = 'month';
+let allObligations = []; // flattened, currently-rendered-range obligations
+let selectedObligation = null;
+
+const COLORS = ['#2E8B57','#2563EB','#8B5CF6','#FF6A00','#0EA5A5','#DC2626','#B45309','#3B82F6'];
+function colorFor(id){ let h=0; for(const c of String(id)) h=(h*31+c.charCodeAt(0))>>>0; return COLORS[h%COLORS.length]; }
+function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function ymd(d){ return d.toISOString().slice(0,10); }
+function addDays(d,n){ const x=new Date(d); x.setDate(x.getDate()+n); return x; }
+function todayStart(){ const d=new Date(); d.setHours(0,0,0,0); return d; }
+function parseDate(s){ if(!s) return null; const d=new Date(s); return isNaN(d)?null:d; }
+
+/* -------------------------------------------------------------------------
+   Scope + data loading (all read-only; same tables as before)
+   ------------------------------------------------------------------------- */
+async function resolveScope(role, userId){
+  if(role === 'director') return null;
+  const { data, error } = await sb.from('user_project_access').select('project_id').eq('profile_id', userId);
+  if(error){ console.warn('user_project_access query failed:', error.message); return []; }
+  return (data||[]).map(r=>r.project_id);
+}
+
+function showScopeBanner(){
+  const wrap = document.getElementById('scopeBannerWrap');
+  if(myRole === 'director'){ wrap.innerHTML=''; return; }
+  if(scopedProjectIds !== null && scopedProjectIds.length === 0){
+    wrap.innerHTML = `<div class="scope-banner warn">No projects have been assigned to your account yet. Ask your Director or PM to grant you project access in User Management, then refresh this page.</div>`;
+  } else wrap.innerHTML = '';
+}
+
+async function loadAll(){
+  scopedProjectIds = await resolveScope(myRole, myUserId);
+  showScopeBanner();
+
+  let pq = sb.from('projects').select('id, name, start_date, end_date, progress_pct');
+  if(scopedProjectIds !== null){
+    if(scopedProjectIds.length === 0){ projects=[]; renderAll(); return; }
+    pq = pq.in('id', scopedProjectIds);
+  }
+  const { data: projData, error: perr } = await pq;
+  if(perr || !projData){ document.getElementById('calBody').innerHTML = '<div class="empty">Could not load projects.</div>'; return; }
+  projects = projData;
+  const ids = projects.map(p=>p.id);
+  if(!ids.length){ renderAll(); return; }
+
+  // Schedule read as REFERENCE only — select('*') so a column that may not
+  // exist in the live schema never breaks the query; fields read defensively.
+  const { data: tasks } = await sb.from('schedule_tasks').select('*').in('project_id', ids);
+  scheduleTasksByProject = {};
+  (tasks||[]).forEach(t=>{ (scheduleTasksByProject[t.project_id] = scheduleTasksByProject[t.project_id]||[]).push(t); });
+
+  const { data: ncrs } = await sb.from('ncrs').select('*').in('project_id', ids).eq('status','open');
+  openNcrsByProject = {};
+  (ncrs||[]).forEach(n=>{ (openNcrsByProject[n.project_id] = openNcrsByProject[n.project_id]||[]).push(n); });
+
+  const { data: photos, error: photoErr } = await sb.from('site_photos').select('project_id, created_at').in('project_id', ids);
+  sitePhotosByProjectDate = {};
+  if(!photoErr){
+    (photos||[]).forEach(p=>{
+      const d = parseDate(p.created_at);
+      if(!d) return;
+      sitePhotosByProjectDate[p.project_id+'|'+ymd(d)] = true;
+    });
+  }
+
+  populateProjectFilter();
+  renderAll();
+}
+
+function populateProjectFilter(){
+  const sel = document.getElementById('projFilter');
+  if(projects.length <= 1){ sel.style.display='none'; return; }
+  sel.style.display = '';
+  sel.innerHTML = '<option value="">All Projects</option>' + projects.map(p=>`<option value="${p.id}">${esc(p.name)}</option>`).join('');
+  sel.value = activeProjectFilter;
+}
+function projectsInView(){ return activeProjectFilter ? projects.filter(p=>String(p.id)===String(activeProjectFilter)) : projects; }
+
+/* -------------------------------------------------------------------------
+   Rule engine — obligations for ONE project on ONE date. Schedule/NCR rows
+   are signals only; the sentence generated is new, nothing is copied.
+   ------------------------------------------------------------------------- */
+function classifyByKeyword(text){
+  const t = (text||'').toLowerCase();
+  if(t.includes('material')) return 'Material Inspection';
+  if(t.includes('measure')) return 'Measurement & Checking';
+  return 'Site Inspection';
+}
+
+function generateObligations(project, forDate){
+  const obligations = [];
+  const start = parseDate(project.start_date), end = parseDate(project.end_date);
+  if(!start || !end) return obligations;
+  if(forDate < start || forDate > end) return obligations;
+
+  const daysTotal = Math.max(1, Math.round((end-start)/86400000));
+  const daysElapsed = Math.max(0, Math.round((forDate-start)/86400000));
+  const paceExpected = Math.min(100, Math.max(0, (daysElapsed/daysTotal)*100));
+  const progressPct = project.progress_pct ?? 0;
+  const paceGap = paceExpected - progressPct;
+  const dateStr = ymd(forDate);
+  const isToday = dateStr === ymd(todayStart());
+  const isPast = forDate < todayStart();
+  const isEngineerLike = (myRole === 'engineer' || myRole === 'vendor');
+
+  if(isEngineerLike){
+    const hasPhoto = !!sitePhotosByProjectDate[project.id+'|'+dateStr];
+    obligations.push({
+      key:'photo|'+project.id+'|'+dateStr, project, date:forDate, kind:'photo', verifiable:true, done:hasPhoto,
+      title:'Upload site photos',
+      sub: hasPhoto ? 'Photo on record for this day.' : 'No photo on record for this day.'
+    });
+
+    obligations.push({
+      key:'report|'+project.id+'|'+dateStr, project, date:forDate, kind:'reminder', verifiable:false, done:false,
+      title:'Submit daily site report',
+      sub:'Reminder only — not tracked in the system yet.'
+    });
+
+    (openNcrsByProject[project.id]||[]).forEach(n=>{
+      const target = parseDate(n.target_date);
+      const relevant = target ? (ymd(target)===dateStr) : isToday;
+      if(!relevant) return;
+      obligations.push({
+        key:'ncr|'+n.id+'|'+dateStr, project, date:forDate, kind:'ncr', verifiable:true, done:n.status==='closed', link:'quality.html',
+        title:'Resolve quality issue: '+(n.title||('NCR #'+(n.ncr_no||n.id))),
+        sub:(n.severity?n.severity+' · ':'')+(target?('Target '+target.toLocaleDateString('en-IN',{day:'numeric',month:'short'})):'No target date')
+      });
+    });
+
+    (scheduleTasksByProject[project.id]||[]).forEach(t=>{
+      if(t.status === 'completed') return;
+      const due = parseDate(t.due_date || t.planned_end || t.baseline_start);
+      if(!due || ymd(due) !== dateStr) return;
+      obligations.push({
+        key:'sched|'+t.id+'|'+dateStr, project, date:forDate, kind:'reminder', verifiable:false, done:false,
+        title: classifyByKeyword(t.milestone||t.task)+' — supporting "'+(t.milestone||t.task)+'"',
+        sub:'Due '+due.toLocaleDateString('en-IN',{day:'numeric',month:'short'})
+      });
+    });
+  }
+
+  if(isToday && paceGap >= 15 && myRole !== 'client'){
+    obligations.push({
+      key:'pace|'+project.id, project, date:forDate, kind:'pace', verifiable:false, done:false,
+      title:'Project behind schedule pace',
+      sub:`${Math.round(progressPct)}% complete vs ~${Math.round(paceExpected)}% expected.`
+    });
+  }
+
+  obligations.forEach(o=>{ o.overdue = !o.done && o.verifiable && isPast; o.color = colorFor(project.id); o.projectName = project.name; });
+  return obligations;
+}
+
+function generateRange(fromDate, toDate){
+  const out = [];
+  let d = new Date(fromDate);
+  while(d <= toDate){
+    projectsInView().forEach(p=> out.push(...generateObligations(p, new Date(d))));
+    d = addDays(d,1);
+  }
+  return out;
+}
+
+/* -------------------------------------------------------------------------
+   Status styling — same visual language as before, applied to obligations.
+   ------------------------------------------------------------------------- */
+function statusFor(o){
+  if(o.kind==='pace') return { bg:'#FEF3E2', text:'#B45309', label:'Behind Pace', key:'pace' };
+  if(o.verifiable){
+    if(o.done) return { bg:'#E7F7ED', text:'#16A34A', label:'Verified Done', key:'done' };
+    if(o.overdue) return { bg:'#FDEAEA', text:'#DC2626', label:'Overdue', key:'overdue' };
+    return { bg:'#EAF1FE', text:'#2563EB', label:'To Verify', key:'progress' };
+  }
+  if(o.overdue) return { bg:'#FDEAEA', text:'#DC2626', label:'Overdue Reminder', key:'overdue' };
+  return { bg:'#F4F4F6', text:'#6B7280', label:'Reminder', key:'reminder' };
+}
+
+/* -------------------------------------------------------------------------
+   Calendar rendering — structure unchanged from the original module.
+   ------------------------------------------------------------------------- */
+function renderAll(){
+  renderCalendar();
+  renderSummary();
+  renderBreakdowns();
+  renderUpcoming();
+}
+
+function renderCalendar(){
+  const body = document.getElementById('calBody');
+  if(currentView !== 'month'){
+    body.innerHTML = '<div class="empty">' + (currentView==='week'?'Week':'Day') + ' view coming soon — showing Month view.</div>';
+    currentView = 'month';
+    document.querySelectorAll('#viewToggle button').forEach(b=>b.classList.toggle('active', b.dataset.view==='month'));
+  }
+
+  const year = currentDate.getFullYear();
+  const month = currentDate.getMonth();
+  document.getElementById('monthLabel').textContent = currentDate.toLocaleDateString('en-IN',{month:'long',year:'numeric'});
+
+  const firstDay = new Date(year, month, 1);
+  const startOffset = firstDay.getDay();
+  const gridStart = new Date(year, month, 1 - startOffset);
+  const gridEnd = addDays(gridStart, 41);
+  const today = todayStart();
+
+  allObligations = generateRange(gridStart, gridEnd);
+
+  const byDate = {};
+  allObligations.forEach(o=>{ const k=ymd(o.date); (byDate[k]=byDate[k]||[]).push(o); });
+
+  let html = '<div class="grid">';
+  ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].forEach(d=> html += `<div class="dow">${d}</div>`);
+
+  for(let i=0;i<42;i++){
+    const d = addDays(gridStart, i);
+    const isOther = d.getMonth() !== month;
+    const isToday = d.toDateString() === today.toDateString();
+    const dayObs = byDate[ymd(d)] || [];
+    html += `<div class="day-cell ${isOther?'other-month':''} ${isToday?'today':''}">
+      <div class="dnum">${d.getDate()}</div>
+      ${dayObs.slice(0,3).map(o=>{ const st=statusFor(o); return `<div class="task-pill" data-key="${esc(o.key)}" style="border-left-color:${st.text};background:${st.bg};color:${st.text}"><b>${esc(o.title)}</b><span class="ptime">${esc(o.projectName)}</span></div>`; }).join('')}
+      ${dayObs.length>3?`<div class="task-pill" style="border-left-color:var(--line);color:var(--muted)">+${dayObs.length-3} more</div>`:''}
+    </div>`;
+  }
+  html += '</div>';
+  body.innerHTML = html;
+  body.querySelectorAll('.task-pill[data-key]').forEach(el=>{ el.onclick = ()=> selectObligation(el.dataset.key); });
+
+  const projSet = {};
+  allObligations.forEach(o=> projSet[o.projectName]=o.color);
+  document.getElementById('legend').innerHTML = Object.entries(projSet).map(([n,c])=>`<span><i style="background:${c}"></i>${esc(n)}</span>`).join('');
+}
+
+function renderSummary(){
+  const grid = document.getElementById('summaryGrid');
+  const titleEl = document.getElementById('summaryTitle');
+  const list = allObligations;
+  const done = list.filter(o=>statusFor(o).key==='done').length;
+  const overdue = list.filter(o=>statusFor(o).key==='overdue').length;
+  const reminders = list.filter(o=>o.kind==='reminder').length;
+  const paceAlerts = list.filter(o=>o.kind==='pace').length;
+
+  if(myRole === 'director' || myRole === 'pm'){
+    titleEl.textContent = myRole==='director' ? 'Task Overview — All Projects' : 'My Projects — Task Summary';
+    grid.innerHTML = `
+      <div class="summary-mini"><div class="n">${list.length}</div><div class="l">Generated This Month</div></div>
+      <div class="summary-mini"><div class="n good">${done}</div><div class="l">Verified Done</div></div>
+      <div class="summary-mini"><div class="n bad">${overdue}</div><div class="l">Overdue</div></div>
+      <div class="summary-mini"><div class="n watch">${paceAlerts}</div><div class="l">Behind-Pace Alerts</div></div>`;
+  } else if(myRole === 'client'){
+    titleEl.textContent = 'Project Status';
+    grid.innerHTML = `<div class="summary-mini"><div class="n">${projects.length}</div><div class="l">Your Project(s)</div></div>`;
+  } else {
+    titleEl.textContent = 'My Tasks — Summary';
+    grid.innerHTML = `
+      <div class="summary-mini"><div class="n">${list.length}</div><div class="l">Generated This Month</div></div>
+      <div class="summary-mini"><div class="n good">${done}</div><div class="l">Verified Done</div></div>
+      <div class="summary-mini"><div class="n">${reminders}</div><div class="l">Reminders</div></div>
+      <div class="summary-mini"><div class="n bad">${overdue}</div><div class="l">Overdue</div></div>`;
+  }
+}
+
+function renderBreakdowns(){
+  const bCard = document.getElementById('breakdownCard');
+  if(myRole !== 'director' && myRole !== 'pm'){ bCard.style.display='none'; return; }
+  bCard.style.display='';
+  document.getElementById('breakdownTitle').textContent = 'Project-wise (this month)';
+  const byProject = {};
+  allObligations.forEach(o=>{ (byProject[o.project.id]=byProject[o.project.id]||[]).push(o); });
+  document.getElementById('breakdownList').innerHTML = projects
+    .filter(p=>byProject[p.id] && byProject[p.id].length)
+    .map(p=>{
+      const obs = byProject[p.id];
+      const overdue = obs.filter(o=>statusFor(o).key==='overdue').length;
+      const pace = obs.some(o=>o.kind==='pace');
+      return `<div class="bd-row">
+        <div><div class="bd-name">${esc(p.name)}</div><div class="bd-sub">${obs.length} generated obligations</div></div>
+        <div class="bd-counts">${pace?'<span class="bd-chip watch">behind pace</span>':'<span class="bd-chip good">on pace</span>'}${overdue?`<span class="bd-chip bad">${overdue} overdue</span>`:''}</div>
+      </div>`;
+    }).join('') || '<div class="empty">No obligations generated.</div>';
+}
+
+function renderUpcoming(){
+  const today = todayStart();
+  const list = allObligations.filter(o=>o.date>=today || o.overdue).sort((a,b)=>a.date-b.date).slice(0,8);
+  const el = document.getElementById('upcomingList');
+  if(myRole === 'client'){ el.innerHTML = '<div class="readonly-pill">View-only access — see Project Overview for status.</div>'; return; }
+  if(!list.length){ el.innerHTML = '<div class="empty">No upcoming tasks.</div>'; return; }
+  el.innerHTML = list.map(o=>{
+    const st = statusFor(o);
+    const isToday = o.date.toDateString()===today.toDateString();
+    const cls = st.key==='overdue'?'overdue':(st.key==='done'?'done':(st.key==='progress'?'progress':(st.key==='pace'?'pace':'reminder')));
+    return `<div class="up-task" data-key="${esc(o.key)}">
+      <div class="up-dot" style="background:${o.color}"></div>
+      <div style="flex:1">
+        <b>${esc(o.title)}</b>
+        <div class="sub">${esc(o.projectName)} · ${o.date.toLocaleDateString('en-IN',{day:'numeric',month:'short'})}</div>
+      </div>
+      <span class="tag ${isToday?'today':cls}">${isToday?'Today':st.label}</span>
+    </div>`;
+  }).join('');
+  el.querySelectorAll('.up-task[data-key]').forEach(elx=>{ elx.onclick = ()=> selectObligation(elx.dataset.key); });
+}
+
+/* -------------------------------------------------------------------------
+   Detail panel + actions
+   ------------------------------------------------------------------------- */
+function selectObligation(key){
+  const o = allObligations.find(x=>x.key===key);
+  if(!o) return;
+  selectedObligation = o;
+  renderDetailPanel(o);
+}
+
+function renderDetailPanel(o){
+  const st = statusFor(o);
+  document.getElementById('detailPanelCard').style.display = '';
+  let action = '';
+  if(myRole !== 'client'){
+    if(o.kind==='photo' && !o.done) action = `<div class="detail-btns"><button class="btn dark" id="btnUploadPhoto">Upload Photo</button></div>`;
+    else if(o.kind==='ncr') action = `<div class="detail-btns"><a class="btn" href="${o.link}" style="flex:1;text-align:center;">Open Quality</a></div>`;
+    else if(!o.verifiable) action = `<div class="readonly-pill">Reminder only — not tracked in the system yet</div>`;
+    else action = `<div class="readonly-pill">Verified automatically</div>`;
+  } else {
+    action = `<div class="readonly-pill">View only — this role cannot edit tasks</div>`;
+  }
+
+  document.getElementById('detailPanel').innerHTML = `
+    <div class="detail-title">${esc(o.title)}</div>
+    <span class="detail-badge" style="background:${st.bg};color:${st.text}">${st.label}</span>
+    <div class="detail-row"><span>Project</span><span>${esc(o.projectName)}</span></div>
+    <div class="detail-row"><span>Date</span><span>${o.date.toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'})}</span></div>
+    <div class="detail-row"><span>Type</span><span>${o.verifiable?'Verifiable':'Reminder'}</span></div>
+    ${o.sub?`<div class="detail-note">${esc(o.sub)}</div>`:''}
+    ${action}`;
+
+  if(o.kind==='photo' && !o.done && myRole !== 'client'){
+    document.getElementById('btnUploadPhoto').onclick = ()=> openPhotoModal(o.project.id);
+  }
+}
+
+/* -------------------------------------------------------------------------
+   Site photo upload — writes to the EXISTING site_photos table.
+   ------------------------------------------------------------------------- */
+let pendingPhotoProjectId = null;
+function openPhotoModal(projectId){
+  pendingPhotoProjectId = projectId;
+  document.getElementById('photoModalMsg').textContent = '';
+  document.getElementById('photoModalMsg').className = 'modal-msg';
+  document.getElementById('photoFile').value = '';
+  document.getElementById('photoCaption').value = '';
+  document.getElementById('photoModal').classList.add('open');
+}
+document.getElementById('photoCancel').onclick = ()=> document.getElementById('photoModal').classList.remove('open');
+document.getElementById('photoModal').addEventListener('click', (e)=>{ if(e.target.id==='photoModal') e.currentTarget.classList.remove('open'); });
+document.getElementById('photoSubmit').onclick = async ()=>{
+  const msg = document.getElementById('photoModalMsg');
+  const file = document.getElementById('photoFile').files[0];
+  const caption = document.getElementById('photoCaption').value.trim();
+  if(!file){ msg.className='modal-msg err'; msg.textContent='Choose a photo first.'; return; }
+  msg.className='modal-msg'; msg.textContent='Uploading…';
+  try{
+    const safe = file.name.replace(/[^a-zA-Z0-9._-]/g,'_');
+    const path = `${pendingPhotoProjectId}/mytasks/${Date.now()}_${safe}`;
+    const { error: upErr } = await sb.storage.from('project-media').upload(path, file, { contentType: file.type || undefined });
+    if(upErr) throw upErr;
+    const { data: pub } = sb.storage.from('project-media').getPublicUrl(path);
+    const { error: insErr } = await sb.from('site_photos').insert({
+      project_id: pendingPhotoProjectId,
+      url: pub ? pub.publicUrl : null,
+      caption: caption || null
+    });
+    if(insErr) throw insErr;
+    msg.className='modal-msg ok'; msg.textContent='Uploaded.';
+    setTimeout(async ()=>{ document.getElementById('photoModal').classList.remove('open'); await loadAll(); }, 500);
+  }catch(err){
+    msg.className='modal-msg err'; msg.textContent = 'Upload failed: '+err.message;
+  }
+};
+
+/* -------------------------------------------------------------------------
+   Toolbar wiring — identical to the original module.
+   ------------------------------------------------------------------------- */
+document.getElementById('btnToday').onclick = ()=>{ currentDate = new Date(); renderCalendar(); renderSummary(); renderBreakdowns(); renderUpcoming(); };
+document.getElementById('btnPrev').onclick = ()=>{ currentDate.setMonth(currentDate.getMonth()-1); renderCalendar(); renderSummary(); renderBreakdowns(); renderUpcoming(); };
+document.getElementById('btnNext').onclick = ()=>{ currentDate.setMonth(currentDate.getMonth()+1); renderCalendar(); renderSummary(); renderBreakdowns(); renderUpcoming(); };
+document.querySelectorAll('#viewToggle button').forEach(b=>{
+  b.onclick = ()=>{
+    document.querySelectorAll('#viewToggle button').forEach(x=>x.classList.remove('active'));
+    b.classList.add('active');
+    currentView = b.dataset.view;
+    renderCalendar();
+  };
+});
+document.getElementById('projFilter').onchange = (e)=>{ activeProjectFilter = e.target.value; renderAll(); };
+
+(async function(){
+  const auth = await requireAuth();
+  if(!auth) return;
+
+  myRole = auth.role;
+  myFullName = auth.fullName || '';
+  myUserId = auth.session.user.id;
+
+  const roleLabels = { director:'Director', pm:'Project Manager', engineer:'Site Engineer', vendor:'Vendor', client:'Client', accounts:'Accounts' };
+  const emailName = (auth.session.user.email || 'Signed in').split('@')[0];
+  document.getElementById('userName').textContent = myFullName || emailName;
+  document.getElementById('userRole').textContent = roleLabels[myRole] || myRole || '—';
+  document.getElementById('userAvatar').textContent = (myFullName||emailName).charAt(0).toUpperCase();
+  document.getElementById('logoutBtn').addEventListener('click', async ()=>{ await sb.auth.signOut(); window.location.href='login.html'; });
+
+  const subtitles = {
+    director: 'Management-level generated task calendar across all projects',
+    pm: 'Generated task calendar for the projects you manage',
+    engineer: 'Your generated task calendar, by day',
+    vendor: 'Your generated work calendar and deadlines',
+    client: 'Project activity calendar (read-only)'
+  };
+  document.getElementById('pageSubtitle').textContent = subtitles[myRole] || 'View and manage your tasks in calendar view';
+
+  await loadAll();
+})();
+</script>
+<script>
+sipsRenderShell({ activeHref: "mytasks.html" });
+</script>
+</body>
+</html>

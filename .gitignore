@@ -1,0 +1,51 @@
+# Environment Variables (Secrets & Passwords)
+.env
+.env.local
+.env.*
+
+# Dependencies (Heavy files, can be reinstalled)
+node_modules/
+mobile/node_modules/
+
+# Mobile App (Expo / React Native Builds & Caches)
+.expo/
+mobile/.expo/
+dist/
+mobile/dist/
+*.apk
+*.aab
+android/
+ios/
+
+# Project Backups (To save GitHub space)
+mobile_backup/
+backup/
+
+# Supabase Local Data
+supabase/.temp/
+.supabase/
+
+# Editor / IDE configuration
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+*.log
+# Large SDK and Zip files
+*.zip
+android-sdk/
+mobile/cmdline-tools.zip

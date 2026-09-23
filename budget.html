@@ -1,0 +1,1874 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Budget &amp; Cost Control — Kinder Sports</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="sips-design-system.css">
+<link rel="stylesheet" href="sips-mobile.css">
+<script src="sips-shell.js"></script>
+<script src="sips-mobile.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+<script src="auth-guard.js"></script>
+<style>
+*{box-sizing:border-box;} html,body{margin:0;padding:0;}
+body{background:var(--paper-0);color:var(--ink-800);font-family:var(--font-body);-webkit-font-smoothing:antialiased;}
+a{text-decoration:none;color:inherit;}
+::-webkit-scrollbar{width:9px;height:9px;} ::-webkit-scrollbar-thumb{background:#D7DAE0;border-radius:6px;}
+/* (unused .sidebar/.nav-item/.lanes/.crumb/.header-title/.header-sub/.header-right rules
+   removed — this page actually uses the shared .app-sidebar/.app-lanes/.app-crumb/.app-title/
+   .app-subtitle/.app-topbar-actions classes rendered by sipsRenderShell()) */
+.btn{font-family:var(--font-display);font-size:12px;font-weight:600;padding:9px 14px;border-radius:var(--r-sm);border:1px solid var(--line);background:var(--paper-1);cursor:pointer;color:var(--ink-800);transition:border-color .15s ease, color .15s ease, background .15s ease;}
+.btn:hover{border-color:var(--brand-orange);color:var(--brand-orange);}
+.btn.dark{background:var(--ink-900);color:#fff;border-color:var(--ink-900);}
+.btn.dark:hover{background:var(--brand-orange);border-color:var(--brand-orange);color:#fff;}
+.btn.orange{background:var(--brand-orange);color:#fff;border-color:var(--brand-orange);}
+.btn.orange:hover{background:var(--brand-orange-600);border-color:var(--brand-orange-600);}
+.btn.green{background:var(--brand-green);color:#fff;border-color:var(--brand-green);}
+.btn.green:hover{background:#15803D;border-color:#15803D;}
+.btn.redline{background:var(--paper-0);color:var(--status-bad);border-color:var(--status-bad);}
+.btn.redline:hover{background:var(--status-bad);color:#fff;}
+.btn.sm{padding:6px 10px;font-size:11px;}
+.btn:disabled{opacity:.55;cursor:not-allowed;}
+#projSel2{font-family:var(--font-display);font-weight:600;font-size:12px;padding:9px 12px;border-radius:var(--r-sm);border:1px solid var(--line);background:var(--paper-1);color:var(--ink-800);max-width:220px;}
+.main{max-width:1200px;margin:0 auto;padding:26px 32px 60px 32px;}
+.card{background:var(--paper-1);border:1px solid var(--line);border-radius:var(--r-lg);padding:20px 22px;margin-bottom:20px;transition:box-shadow .15s ease;}
+.card:hover{box-shadow:var(--shadow-sm);}
+.card-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap;margin-bottom:14px;}
+.card-head h3{font-family:var(--font-display);font-size:15px;margin:0 0 4px 0;color:var(--ink-900);}
+.card-head p{font-size:11.5px;color:var(--muted);margin:0;max-width:680px;line-height:1.5;}
+.card-actions{display:flex;gap:8px;flex-shrink:0;flex-wrap:wrap;}
+#importMsg{font-size:11.5px;color:var(--muted);margin-top:4px;}
+#importMsg.err{color:var(--status-bad);} #importMsg.ok{color:var(--brand-green);}
+
+/* KPI strip */
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px;}
+.kpi::before{content:none;}
+.kpi{background:var(--paper-1);border:1px solid var(--line);border-radius:var(--r-lg);padding:16px 18px;box-shadow:var(--shadow-sm);position:relative;overflow:hidden;border-left:3px solid var(--line);}
+.kpi.approved{border-left-color:var(--status-info);}
+.kpi.accent{border-left-color:var(--brand-green);}
+.kpi.remaining{border-left-color:var(--brand-orange);}
+.kpi.statuskpi{border-left-color:var(--ink-700);}
+.kpi-icon{position:absolute;top:14px;right:14px;width:30px;height:30px;border-radius:var(--r-sm);display:flex;align-items:center;justify-content:center;font-size:14px;}
+.kpi.approved .kpi-icon{background:var(--status-info-bg);color:var(--status-info);}
+.kpi.accent .kpi-icon{background:var(--status-good-bg);color:var(--brand-green);}
+.kpi.remaining .kpi-icon{background:var(--brand-orange-100);color:var(--brand-orange);}
+.kpi.statuskpi .kpi-icon{background:var(--paper-0);color:var(--ink-700);}
+.kpi .l{font-family:var(--font-display);font-size:10px;letter-spacing:.6px;text-transform:uppercase;color:var(--muted);padding-right:38px;display:block;}
+.kpi .v{font-family:var(--font-display);font-size:22px;font-weight:700;margin-top:6px;color:var(--ink-900);}
+.kpi .sub{font-size:11px;color:var(--muted);margin-top:3px;}
+.kpi.accent .v{color:var(--brand-green);}
+.kpi.warn .v{color:var(--status-bad);}
+.bar-track{height:7px;background:var(--line-2);border-radius:var(--r-pill);margin-top:10px;overflow:hidden;}
+.bar-fill{height:100%;border-radius:var(--r-pill);}
+
+/* budget approval card */
+.appr-status-row{display:flex;align-items:center;gap:16px;flex-wrap:wrap;}
+.appr-big-pill{font-family:var(--font-display);font-weight:700;font-size:13px;padding:7px 16px;border-radius:var(--r-pill);text-transform:capitalize;}
+.appr-big-pill.pending{background:var(--status-watch-bg);color:var(--status-watch);}
+.appr-big-pill.approved{background:var(--status-good-bg);color:var(--brand-green);}
+.appr-big-pill.rejected{background:var(--status-bad-bg);color:var(--status-bad);}
+.appr-note{font-size:12px;color:var(--muted);}
+.appr-actions{display:flex;gap:8px;flex-wrap:wrap;margin-left:auto;}
+
+/* ===== budget sheet — card-per-milestone layout ===== */
+.mile-card{border:1px solid var(--line);border-radius:var(--r-lg);margin-bottom:16px;overflow:hidden;background:var(--paper-1);box-shadow:var(--shadow-sm);}
+.mile-card-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 16px;background:var(--paper-0);border-bottom:1px solid var(--line);cursor:pointer;user-select:none;}
+.mile-card-head:hover{background:var(--line-2);}
+.mile-card-head-left{display:flex;align-items:center;gap:10px;min-width:0;flex:1;overflow:hidden;}
+.mile-head-right{display:flex;align-items:center;gap:10px;flex-shrink:0;}
+.mile-mini-fin{font-family:var(--font-mono);font-size:12px;font-weight:700;white-space:nowrap;background:var(--paper-1);border:1px solid var(--line);border-radius:var(--r-sm);padding:4px 10px;color:var(--ink-800);}
+.mile-mini-fin .l{font-family:var(--font-display);font-size:8.5px;letter-spacing:.4px;text-transform:uppercase;font-weight:700;margin-right:4px;opacity:.65;}
+.mile-mini-fin.paid{background:var(--status-good-bg);border-color:var(--status-good-bg);color:var(--brand-green);}
+.mile-mini-fin.bal-over{background:#F3B4B4;border-color:#E88888;color:#B91C1C;}
+.mile-mini-fin.bal-ok{background:var(--status-good-bg);border-color:var(--status-good-bg);color:var(--brand-green);}
+@media(max-width:760px){ .mile-card-head{flex-wrap:wrap;} .mile-head-right{width:100%;justify-content:flex-start;flex-wrap:wrap;padding-left:32px;gap:8px;} }
+.mile-badge{display:inline-block;width:22px;height:22px;line-height:22px;text-align:center;border-radius:var(--r-sm);background:var(--ink-900);color:#fff;font-size:11px;font-weight:600;font-family:var(--font-mono);flex-shrink:0;}
+.mile-chevron{display:inline-block;width:14px;font-size:11px;color:var(--muted);transition:transform .15s ease;flex-shrink:0;}
+.mile-card.collapsed .mile-chevron{transform:rotate(-90deg);}
+.mname{font-family:var(--font-display);font-weight:700;font-size:13px;color:var(--ink-900);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.mile-count{font-size:10.5px;color:var(--muted);font-weight:500;flex-shrink:0;}
+.sheet-scroll{overflow-x:auto;}
+.mile-table-scroll{overflow-x:auto;}
+.mile-card table{width:100%;border-collapse:collapse;min-width:1020px;}
+.mile-card.collapsed .mile-body{display:none;}
+th.col-paysummary, td.col-paysummary{min-width:90px;white-space:nowrap;}
+th.col-inv, td.col-inv{min-width:0;max-width:120px;width:120px;white-space:normal;}
+td.col-inv{line-height:1.3;}
+.inv-received-main{font-family:var(--font-mono);font-weight:600;color:var(--ink-800);white-space:nowrap;}
+.inv-received-main.zero{color:var(--muted-2);font-weight:400;}
+
+th{text-align:left;padding:10px 14px;font-family:var(--font-display);font-size:9.5px;letter-spacing:.3px;text-transform:uppercase;color:var(--ink-700);font-weight:700;white-space:nowrap;background:var(--paper-0);border-bottom:2px solid var(--line);}
+td{padding:7px 14px;border-bottom:1px solid var(--line-2);font-size:12.5px;vertical-align:top;line-height:1.35;}
+td.n{font-family:var(--font-mono);text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums;}
+td.n .zero{color:var(--muted-2);}
+td.n .hasval{font-weight:600;color:var(--ink-800);}
+
+tbody tr.item-row:nth-child(even){background:var(--paper-0);}
+tbody tr.item-row:hover{background:var(--line-2);}
+tbody tr.item-row td{border-right:1px solid var(--line-2);}
+tbody tr.item-row td:last-child{border-right:none;}
+
+/* automatic payment-status row coloring — driven by Actual Paid vs Balance, not
+   manual. Softened to the same light status tints used everywhere else in the
+   app (was a set of much more saturated one-off pastels) — same 4 states,
+   same meaning, calmer to scan across a full sheet of rows. */
+tbody tr.item-row.pay-fully-paid{background:var(--status-good-bg);}
+tbody tr.item-row.pay-fully-paid:hover{background:#D8F0E0;}
+tbody tr.item-row.pay-fully-paid td{border-color:#CDEBD8;}
+tbody tr.item-row.pay-overpaid{background:#F3B4B4;}
+tbody tr.item-row.pay-overpaid:hover{background:#EFA3A3;}
+tbody tr.item-row.pay-overpaid td{border-color:#E88888;}
+tbody tr.item-row.pay-pending{background:var(--status-neutral-bg);}
+tbody tr.item-row.pay-pending:hover{background:#E4E6E9;}
+tbody tr.item-row.pay-pending td{border-color:var(--line);}
+.balance-value{font-family:var(--font-mono);font-weight:700;}
+.inv-variance{font-size:10px;font-weight:700;}
+.inv-variance.over{color:var(--status-bad);}
+.inv-variance.under{color:var(--muted);}
+.inv-edit-btn{border:none;background:none;cursor:pointer;font-size:11px;color:var(--muted);margin-left:4px;}
+.inv-edit-btn:hover{color:var(--ink-800);}
+
+.mile-summary{display:flex;gap:24px;padding:12px 16px;background:var(--paper-0);border-top:1px solid var(--line);flex-wrap:wrap;}
+.mile-summary-item{display:flex;flex-direction:column;gap:2px;}
+.mile-summary-item .sl{font-size:8.5px;letter-spacing:.5px;text-transform:uppercase;color:var(--muted);font-weight:600;font-family:var(--font-display);}
+.mile-summary-item .sv{font-family:var(--font-mono);font-size:13.5px;font-weight:700;color:var(--ink-800);}
+.mile-summary-item.paid .sv{color:var(--brand-green);}
+
+.sub-name{font-weight:600;color:var(--ink-800);}
+.sub-name-text{display:inline-block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:11.5px;max-width:110px;vertical-align:middle;}
+.sub-detail{display:block;font-size:10.5px;color:var(--muted);font-weight:400;margin-top:2px;line-height:1.35;max-width:280px;}
+.vendor{color:var(--ink-700);font-size:11.5px;font-weight:500;}
+
+.grand-card{display:flex;justify-content:space-between;align-items:center;padding:16px 20px;background:var(--ink-900);color:#fff;border-radius:var(--r-lg);font-family:var(--font-display);font-weight:700;font-size:13px;margin-bottom:20px;flex-wrap:wrap;gap:12px;}
+.grand-card .gtot{display:flex;gap:22px;flex-wrap:wrap;}
+.grand-card .gtot div{text-align:right;}
+.grand-card .gtot .gl{font-size:8.5px;letter-spacing:.5px;text-transform:uppercase;color:#9CA3AF;font-weight:600;display:block;margin-bottom:2px;}
+.grand-card .gtot .gv{font-family:var(--font-mono);font-size:14px;}
+.empty{padding:26px 14px;text-align:center;color:var(--muted);font-size:12.5px;}
+
+/* payment type pill (opens popup) */
+.paytype-btn{font-family:var(--font-display);font-size:10.5px;font-weight:600;padding:4px 10px;border-radius:var(--r-pill);border:1px solid var(--line);background:var(--paper-0);color:var(--ink-700);cursor:pointer;white-space:nowrap;}
+.paytype-btn.advance{background:var(--status-watch-bg);color:var(--status-watch);border-color:var(--status-watch-bg);}
+.paytype-btn.full{background:var(--status-good-bg);color:var(--brand-green);border-color:var(--status-good-bg);}
+.paytype-btn:hover{opacity:.85;}
+
+/* total amount cell with GST edit pencil icon */
+.total-amt{display:inline-block;}
+.gst-edit-btn{background:none;border:none;color:var(--muted);cursor:pointer;font-size:12px;margin-left:6px;padding:2px 4px;border-radius:4px;vertical-align:middle;}
+.gst-edit-btn:hover{background:var(--paper-0);color:var(--brand-orange);}
+
+/* GST pill + fixed-option popover */
+.gst-pill-btn{font-family:var(--font-mono);font-size:11.5px;font-weight:600;padding:4px 10px;border-radius:var(--r-pill);border:1px solid var(--line);background:var(--paper-0);color:var(--ink-700);cursor:pointer;white-space:nowrap;}
+.gst-pill-btn:hover{border-color:var(--brand-orange);}
+.gst-popover{position:absolute;display:flex;gap:6px;background:var(--paper-1);border:1px solid var(--line);border-radius:var(--r-md);padding:8px;box-shadow:var(--shadow-lg);z-index:300;}
+.gst-popover-opt{font-family:var(--font-display);font-size:12px;font-weight:600;padding:6px 12px;border-radius:var(--r-sm);border:1px solid var(--line);background:var(--paper-0);color:var(--ink-800);cursor:pointer;}
+.gst-popover-opt:hover{background:var(--brand-orange);color:#fff;border-color:var(--brand-orange);}
+
+/* Payment Type action buttons (Advance / Full) */
+.makepayment-btn{width:32px;height:32px;padding:0;border-radius:var(--r-sm);border:1px solid var(--status-watch-bg);background:var(--status-watch-bg);color:var(--status-watch);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;margin-left:4px;box-shadow:0 1px 2px rgba(255,106,0,0.15);}
+.makepayment-btn:hover{border-color:var(--brand-orange);color:#fff;background:var(--brand-orange);box-shadow:0 2px 6px rgba(255,106,0,0.35);}
+.makepayment-btn:disabled{opacity:.3;cursor:not-allowed;box-shadow:none;border-color:var(--line);background:var(--paper-1);color:var(--muted);}
+.lockaccount-btn{width:32px;height:32px;padding:0;border-radius:var(--r-sm);border:1px solid var(--line);background:var(--paper-1);color:var(--ink-700);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;margin-left:4px;}
+.lockaccount-btn:hover{border-color:var(--ink-700);color:var(--ink-800);background:var(--paper-0);}
+.lockaccount-btn.closed{background:var(--ink-700);border-color:var(--ink-700);color:#fff;}
+.lockaccount-btn.closed:hover{background:var(--ink-900);border-color:var(--ink-900);}
+.item-row.is-closed-row{background:var(--line-2) !important;}
+.item-row.is-closed-row:hover{background:#E7E8EB !important;}
+.closed-badge{font-size:9.5px;font-weight:700;color:#fff;background:var(--ink-700);display:inline-block;padding:1px 7px;border-radius:var(--r-pill);margin-top:3px;letter-spacing:.2px;}
+
+/* Item-level direct Edit button (Option A) — opens the milestone modal but
+   jumps straight to that particular's edit form instead of showing the list */
+.item-edit-btn{width:32px;height:32px;padding:0;border-radius:var(--r-sm);border:1px solid var(--line);background:var(--paper-1);color:var(--ink-700);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;margin-left:4px;}
+.item-edit-btn:hover{border-color:var(--brand-orange);color:var(--brand-orange);background:var(--paper-0);}
+
+/* Payment Summary button — matched height/padding with paytype-action-btn */
+.paysummary-btn{width:32px;height:32px;padding:0;border-radius:var(--r-sm);border:1px solid var(--line);background:var(--paper-1);color:var(--ink-700);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;position:relative;}
+.paysummary-btn:hover{border-color:var(--status-info);color:var(--status-info);background:var(--paper-0);}
+.ps-count{position:absolute;top:-6px;right:-6px;background:var(--status-info);color:#fff;font-size:8.5px;font-weight:700;font-family:var(--font-mono);border-radius:var(--r-pill);padding:1px 4px;line-height:1.3;min-width:14px;text-align:center;}
+.detail-clickable{cursor:pointer;}
+.detail-clickable:hover{background:var(--paper-0);}
+
+/* modal form fields (advance/full payment) */
+.modal-field-label{display:block;font-size:10px;letter-spacing:.4px;text-transform:uppercase;color:var(--muted);font-weight:600;margin:10px 0 4px 0;font-family:var(--font-display);}
+.modal-input{width:100%;padding:9px 10px;border:1px solid var(--line);border-radius:var(--r-sm);font-family:var(--font-mono);font-size:13px;background:var(--paper-1);}
+.modal-input:focus{outline:none;border-color:var(--status-info);}
+.modal-final-row{display:flex;justify-content:space-between;align-items:center;background:var(--paper-0);border-radius:var(--r-sm);padding:10px 12px;margin-top:10px;font-family:var(--font-display);font-weight:700;font-size:14px;}
+.modal-err{color:var(--status-bad);font-size:11.5px;margin-top:8px;min-height:14px;}
+.approval-status-line{font-size:11.5px;color:var(--muted);margin-top:6px;font-family:var(--font-display);}
+.approval-status-pill{display:inline-block;padding:2px 9px;border-radius:var(--r-pill);font-size:10.5px;font-weight:600;}
+.approval-status-pill.none{background:var(--paper-0);color:var(--muted);border:1px solid var(--line);}
+.approval-status-pill.pending{background:var(--status-watch-bg);color:var(--status-watch);}
+.approval-status-pill.approved{background:var(--status-good-bg);color:var(--brand-green);}
+.approval-status-pill.rejected{background:var(--status-bad-bg);color:var(--status-bad);}
+
+/* Choose Payment Type modal — side-by-side Advance / Full options */
+.choose-payment-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px;}
+.choose-payment-option{display:flex;flex-direction:column;align-items:center;gap:6px;padding:18px 10px;border-radius:var(--r-md);border:1px solid var(--line);background:var(--paper-1);cursor:pointer;text-align:center;transition:border-color .15s ease, background .15s ease;}
+.choose-payment-option .cp-icon{font-size:20px;width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;}
+.choose-payment-option.advance .cp-icon{background:var(--status-watch-bg);color:var(--status-watch);}
+.choose-payment-option.advance:hover{border-color:var(--status-watch);background:var(--paper-0);}
+.choose-payment-option.full .cp-icon{background:var(--status-good-bg);color:var(--brand-green);}
+.choose-payment-option.full:hover{border-color:var(--brand-green);background:var(--status-good-bg);}
+.choose-payment-option .cp-label{font-family:var(--font-display);font-weight:700;font-size:13px;color:var(--ink-800);}
+.choose-payment-option .cp-sub{font-size:10.5px;color:var(--muted);}
+
+/* Make Payment modal — two columns side by side */
+.mp-columns{display:flex;gap:0;margin-top:14px;}
+.mp-col{flex:1;padding:4px 14px;min-width:0;}
+.mp-col-divider{width:1px;background:var(--line);}
+.mp-col-head{display:flex;align-items:center;gap:8px;font-family:var(--font-display);font-weight:700;font-size:13px;margin-bottom:10px;color:var(--ink-800);}
+.mp-col .cp-icon{width:26px;height:26px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0;}
+.mp-col.advance .cp-icon{background:var(--status-watch-bg);color:var(--status-watch);}
+.mp-col.full .cp-icon{background:var(--status-good-bg);color:var(--brand-green);}
+@media(max-width:600px){ .mp-columns{flex-direction:column;} .mp-col-divider{width:100%;height:1px;margin:12px 0;} .choose-payment-grid{grid-template-columns:1fr;} .ps-header-grid{grid-template-columns:1fr 1fr;} }
+
+/* Edit Panel tabs */
+.edit-panel-strip{height:4px;border-radius:var(--r-lg) var(--r-lg) 0 0;background:linear-gradient(90deg,var(--brand-orange),var(--brand-green));margin:-20px -20px 16px -20px;}
+.edit-tabs{display:flex;gap:6px;margin-top:14px;margin-bottom:16px;padding-bottom:10px;border-bottom:1px solid var(--line);}
+.edit-tab-btn{font-family:var(--font-display);font-size:12px;font-weight:600;padding:7px 13px;border:1px solid var(--line);border-radius:var(--r-pill);background:var(--paper-0);color:var(--ink-700);cursor:pointer;}
+.edit-tab-btn.active{color:#fff;border-color:var(--brand-orange);background:var(--brand-orange);}
+.edit-tab-btn:hover:not(.active){background:var(--paper-1);border-color:var(--ink-700);}
+.edit-tab-panel .modal-input:focus{border-color:var(--brand-orange);box-shadow:0 0 0 3px rgba(255,106,0,0.12);}
+.ei-result-row{padding:8px 10px;font-size:12px;cursor:pointer;border-bottom:1px solid var(--line);}
+.ei-result-row:last-child{border-bottom:none;}
+.ei-result-row:hover{background:var(--paper-0);}
+.ei-result-row.selected{background:var(--status-watch-bg);border-left:3px solid var(--brand-orange);}
+.ei-result-row .r-item{font-weight:600;color:var(--ink-800);}
+.ei-result-row .r-meta{font-size:10.5px;color:var(--muted);}
+
+/* payment summary header grid */
+.ps-header-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:12px;background:var(--paper-0);border-radius:var(--r-sm);padding:12px;}
+.ps-header-grid .sl{display:block;font-size:9px;letter-spacing:.4px;text-transform:uppercase;color:var(--muted);font-weight:600;font-family:var(--font-display);margin-bottom:3px;}
+.ps-header-grid .sv{display:block;font-family:var(--font-mono);font-size:13px;font-weight:600;color:var(--ink-800);}
+
+/* payment history status + action menu */
+.tx-status-pill{display:inline-block;padding:3px 10px;border-radius:var(--r-pill);font-size:10px;font-weight:600;}
+.tx-status-pill.active{background:var(--status-good-bg);color:var(--brand-green);}
+.tx-status-pill.reversed{background:var(--status-bad-bg);color:var(--status-bad);}
+.tx-row.reversed td{opacity:.55;}
+.tx-action-wrap{position:relative;display:inline-block;}
+.tx-action-btn{background:none;border:none;color:var(--muted);cursor:pointer;font-size:15px;padding:2px 8px;border-radius:var(--r-sm);}
+.tx-action-btn:hover{background:var(--paper-0);color:var(--ink-800);}
+.tx-action-btn:disabled{opacity:.3;cursor:not-allowed;}
+.tx-action-menu{position:absolute;right:0;top:100%;margin-top:4px;background:var(--paper-1);border:1px solid var(--line);border-radius:var(--r-md);box-shadow:var(--shadow-md);z-index:400;min-width:160px;overflow:hidden;}
+.tx-action-menu button{display:block;width:100%;text-align:left;padding:9px 12px;font-size:12px;font-family:var(--font-display);font-weight:600;color:var(--status-bad);background:none;border:none;cursor:pointer;}
+.tx-action-menu button:hover{background:var(--status-bad-bg);}
+
+/* payment type popup modal */
+.modal-overlay{position:fixed;inset:0;background:rgba(20,21,26,0.5);display:none;align-items:center;justify-content:center;z-index:200;}
+.modal-overlay.open{display:flex;}
+.modal-box{background:var(--paper-1);border-radius:var(--r-lg);padding:20px;width:280px;box-shadow:var(--shadow-lg);}
+.modal-box h4{margin:0 0 4px 0;font-family:var(--font-display);font-size:14px;color:var(--ink-900);}
+.modal-box p{margin:0 0 16px 0;font-size:11.5px;color:var(--muted);}
+.modal-choices{display:flex;flex-direction:column;gap:8px;}
+.modal-choice-btn{font-family:var(--font-display);font-size:13px;font-weight:600;padding:11px 14px;border-radius:var(--r-sm);border:1px solid var(--line);background:var(--paper-0);color:var(--ink-800);cursor:pointer;text-align:left;}
+.modal-choice-btn:hover{background:var(--paper-1);border-color:var(--brand-orange);}
+.modal-choice-btn.selected{border-color:var(--brand-orange);background:var(--status-watch-bg);}
+.modal-cancel{margin-top:14px;font-size:11.5px;color:var(--muted);text-align:center;cursor:pointer;}
+.modal-cancel:hover{color:var(--ink-800);}
+
+/* paid/unpaid toggle */
+.status-btn{font-family:var(--font-display);font-size:10.5px;font-weight:600;padding:5px 12px;border-radius:var(--r-pill);border:1px solid var(--line);cursor:pointer;white-space:nowrap;}
+.status-btn.paid{background:var(--status-good-bg);color:var(--brand-green);border-color:var(--status-good-bg);}
+.status-btn.unpaid{background:var(--paper-0);color:var(--muted);}
+.status-btn:disabled{cursor:wait;opacity:.6;}
+
+.pill{display:inline-block;padding:3px 11px;border-radius:var(--r-pill);font-size:10.5px;font-weight:600;}
+.pill.ok{background:var(--status-good-bg);color:var(--brand-green);}
+.pill.over{background:var(--status-bad-bg);color:var(--status-bad);}
+
+/* milestone distribution bars */
+.dist-row{display:flex;align-items:center;gap:12px;margin-bottom:11px;}
+.dist-label{flex:0 0 200px;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.dist-track{flex:1;height:12px;background:var(--line-2);border-radius:var(--r-pill);overflow:hidden;}
+.dist-fill{height:100%;background:var(--status-info);border-radius:var(--r-pill);}
+.dist-val{flex:0 0 130px;text-align:right;font-family:var(--font-mono);font-size:12px;}
+
+@media(max-width:900px){.kpis{grid-template-columns:repeat(2,1fr);}}
+@media(max-width:820px){.main{padding-left:18px;padding-right:18px;}.dist-label{flex-basis:120px;}.appr-actions{margin-left:0;}}
+</style>
+
+</head>
+<body>
+<div id="sips-sidebar-mount"></div>
+
+<div class="app-main">
+  <div class="app-lanes"><span class="l1"></span><span class="l2"></span><span class="l3"></span><span class="l4"></span></div>
+  <div class="app-topbar">
+    <div style="display:flex;align-items:center;gap:12px;">
+    <button class="app-hamburger" id="app-hamburger-btn" aria-label="Toggle menu">&#9776;</button>
+    <div>
+      <div class="app-crumb">Projects › <span id="crumbName">—</span></div>
+      <div class="app-title">Budget &amp; cost control</div>
+      <div class="app-subtitle">Director-approved budget sheet, cost tracking &amp; change orders</div>
+    </div>
+    </div>
+    <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;">
+      <div class="app-topbar-actions">
+        <select id="projSel2"><option>Loading…</option></select>
+        <div style="position:relative;">
+          <button class="btn" id="budgetApprHeaderBtn">📋 Budget Approval</button>
+          <div id="budgetApprPopover" style="display:none;position:absolute;top:calc(100% + 8px);right:0;width:280px;background:var(--paper-1);border:1px solid var(--line);border-radius:var(--r-md);box-shadow:var(--shadow-lg);padding:16px;z-index:100;">
+            <div style="font-family:var(--font-display);font-weight:700;font-size:12px;margin-bottom:8px;">Budget Approval Status</div>
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+              <span class="appr-big-pill pending" id="budgetStatusPillMini">—</span>
+            </div>
+            <div id="budgetStatusNote" style="font-size:11.5px;color:var(--muted);line-height:1.5;margin-bottom:12px;">Loading…</div>
+            <a href="approvals.html" id="budgetApprLink" style="display:block;font-size:11.5px;font-weight:600;color:var(--brand-orange);text-align:center;padding:8px;border:1px solid var(--line);border-radius:6px;">Go to Approvals page →</a>
+          </div>
+        </div>
+        <button class="btn orange" id="importBtn">⬆ Import Budget Sheet</button>
+        <input type="file" id="budgetFileInput" accept=".xlsx,.xls,.csv" style="display:none">
+      </div>
+      <div class="app-user-chip">
+        <div class="app-user-avatar" id="userAvatar">–</div>
+        <div class="app-user-meta">
+          <div class="app-user-name" id="userName">—</div>
+          <div class="app-user-role" id="userRole">—</div>
+        </div>
+        <button class="app-logout-btn" id="logoutBtn">Log out</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="main">
+
+    <div id="importMsg"></div>
+
+    <!-- KPI strip -->
+    <div class="kpis" id="kpis">
+      <div class="kpi approved"><span class="kpi-icon">₹</span><div class="l">Approved Budget</div><div class="v" id="kApproved">—</div><div class="sub">Director approved total</div></div>
+      <div class="kpi accent"><span class="kpi-icon">✓</span><div class="l">Spent to Date</div><div class="v" id="kSpent">—</div><div class="sub" id="kSpentSub">paid items</div></div>
+      <div class="kpi remaining"><span class="kpi-icon">◷</span><div class="l">Remaining</div><div class="v" id="kRemaining">—</div><div class="bar-track"><div class="bar-fill" id="kBar" style="width:0%;background:var(--brand-green)"></div></div></div>
+      <div class="kpi statuskpi"><span class="kpi-icon">◈</span><div class="l">Status</div><div class="v" id="kStatusPill" style="font-family:var(--font-display);font-size:15px;">—</div><div class="sub" id="kVariance">variance</div></div>
+    </div>
+
+    <!-- budget approval status now lives in a small corner dropdown from the header button; no card here -->
+    <div id="budgetApprCard" style="display:none;"></div>
+
+    <!-- approved budget sheet -->
+    <div class="card">
+      <div class="card-head">
+        <div>
+          <h3>Approved Budget Sheet <button class="btn sm" id="editPanelBtn" style="margin-left:10px;vertical-align:middle;">✎ Edit</button></h3>
+          <p>The Director-approved sheet, milestone by milestone — sub tasks, Qty, Rate, Sub Total, Milestone Total and Vendor. Use the toggle on the right to mark an item as paid; Spent to Date updates live.</p>
+        </div>
+      </div>
+      <div class="sheet-scroll" id="sheetBody"><div class="empty">Loading…</div></div>
+    </div>
+
+    <!-- milestone cost distribution -->
+    <div class="card">
+      <div class="card-head"><div><h3>Milestone-wise Cost Distribution</h3><p>How the approved budget is allocated across milestones.</p></div></div>
+      <div id="distBody"><div class="empty">Loading…</div></div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Choose Payment Type modal — single entry point, opens either Advance or Full flow below (unchanged) -->
+<!-- Make Payment modal — Advance Payment and Full Payment side by side, single entry point -->
+<div class="modal-overlay" id="makePaymentModal">
+  <div class="modal-box" style="width:640px;max-width:95vw;position:relative;">
+    <button id="makePaymentCloseX" style="position:absolute;top:14px;right:14px;background:none;border:none;font-size:18px;color:var(--muted);cursor:pointer;line-height:1;padding:2px 6px;border-radius:6px;">×</button>
+    <div class="edit-panel-strip"></div>
+    <h4>Make Payment</h4>
+    <p>Fill in whichever side applies — Advance for a partial amount, Full Payment to settle the balance.</p>
+    <div class="mp-columns">
+      <div class="mp-col advance">
+        <div class="mp-col-head"><span class="cp-icon">⬆</span> Advance Payment</div>
+        <label class="modal-field-label">Payable Amount</label>
+        <div class="modal-final-row"><span>Payable Amount</span><span id="advPayableAmount">₹0</span></div>
+        <label class="modal-field-label">Amount</label>
+        <input type="number" id="advAmountInput" min="1" step="1" placeholder="₹ 0" class="modal-input">
+        <label class="modal-field-label">Payment Date</label>
+        <input type="date" id="advDateInput" class="modal-input">
+        <label class="modal-field-label">Final Amount</label>
+        <div class="modal-final-row"><span>Final Amount</span><span id="advFinalAmount">₹0</span></div>
+        <div id="advErrMsg" class="modal-err"></div>
+        <button class="btn dark sm" id="advConfirmBtn" style="width:100%;margin-top:6px;">Confirm Advance Payment</button>
+      </div>
+      <div class="mp-col-divider"></div>
+      <div class="mp-col full">
+        <div class="mp-col-head"><span class="cp-icon">✓</span> Full Payment</div>
+        <label class="modal-field-label">Payable Amount</label>
+        <div class="modal-final-row"><span>Payable Amount</span><span id="fullPayableAmount">₹0</span></div>
+
+        <label class="modal-field-label">Discount</label>
+        <input type="number" id="fullDiscountInput" min="0" step="1" placeholder="₹ 0" class="modal-input">
+        <button class="btn sm" id="fullDiscountSendBtn" style="width:100%;margin-top:6px;">Send for Approval</button>
+        <div class="approval-status-line">Status: <span id="fullDiscountStatus" class="approval-status-pill none">Not Sent</span></div>
+
+        <label class="modal-field-label">Extra Payment</label>
+        <input type="number" id="fullExtraInput" min="0" step="1" placeholder="₹ 0" class="modal-input">
+        <button class="btn sm" id="fullExtraSendBtn" style="width:100%;margin-top:6px;">Send for Approval</button>
+        <div class="approval-status-line">Status: <span id="fullExtraStatus" class="approval-status-pill none">Not Sent</span></div>
+
+        <label class="modal-field-label">Final Amount</label>
+        <div class="modal-final-row"><span>Final Amount</span><span id="fullFinalAmount">₹0</span></div>
+
+        <label class="modal-field-label">Payment Date</label>
+        <input type="date" id="fullDateInput" class="modal-input">
+        <div id="fullErrMsg" class="modal-err"></div>
+        <button class="btn green sm" id="fullConfirmBtn" style="width:100%;margin-top:6px;">Confirm Full Payment</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Payment Summary modal -->
+<div class="modal-overlay" id="paysummaryModal">
+  <div class="modal-box" style="width:520px;max-width:92vw;position:relative;">
+    <button id="psCloseX" style="position:absolute;top:14px;right:14px;background:none;border:none;font-size:18px;color:var(--muted);cursor:pointer;line-height:1;padding:2px 6px;border-radius:6px;">×</button>
+    <h4>Payment Summary</h4>
+    <p id="psItem" style="margin-top:-4px;font-weight:600;color:var(--ink-800);"></p>
+    <div class="ps-header-grid">
+      <div><span class="sl">Vendor</span><span class="sv" id="psVendor">—</span></div>
+      <div><span class="sl">Total Amount</span><span class="sv" id="psTotal">—</span></div>
+      <div><span class="sl">Total Paid</span><span class="sv" id="psPaid">—</span></div>
+      <div><span class="sl">Balance</span><span class="sv" id="psBalance">—</span></div>
+    </div>
+    <div class="sheet-scroll" style="margin-top:14px;max-height:280px;">
+      <table style="min-width:0;border-collapse:collapse;width:100%;">
+        <thead><tr><th>Payment Date</th><th>Payment Type</th><th class="n">Amount Paid</th><th class="n">Balance After Payment</th><th>Status</th><th>Action</th></tr></thead>
+        <tbody id="psHistoryBody"></tbody>
+      </table>
+    </div>
+    <div style="margin-top:14px;text-align:right;">
+      <button class="btn sm" id="psCloseBtn">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- Edit Panel — single entry point for all budget-sheet management actions -->
+<div class="modal-overlay" id="editPanelModal">
+  <div class="modal-box" style="width:460px;max-width:94vw;max-height:85vh;overflow-y:auto;position:relative;">
+    <button id="editPanelCloseX" style="position:absolute;top:14px;right:14px;background:none;border:none;font-size:18px;color:var(--muted);cursor:pointer;line-height:1;padding:2px 6px;border-radius:6px;">×</button>
+    <div class="edit-panel-strip"></div>
+    <h4>Milestones</h4>
+    <button class="btn dark sm" id="epAddNewBtn" style="width:100%;margin-bottom:12px;">+ Add New Milestone / Item</button>
+
+    <div id="epAddNewForm" style="display:none;margin-bottom:16px;padding-bottom:16px;border-bottom:1px solid var(--line);">
+      <p>Add ad-hoc/unexpected expenses directly to the live budget sheet — no re-import needed. Add particulars to an existing milestone, or create a brand-new milestone with as many particulars as you like.</p>
+
+      <div style="display:flex;gap:8px;margin-bottom:12px;">
+        <button type="button" class="btn sm" id="amModeExistingBtn">Existing Milestone</button>
+        <button type="button" class="btn sm" id="amModeNewBtn">New Milestone</button>
+      </div>
+      <div id="amExistingWrap">
+        <label class="modal-field-label" style="margin-top:0;">Choose Milestone</label>
+        <select id="amMilestoneSelect" class="modal-input"></select>
+      </div>
+      <div id="amNewWrap" style="display:none;">
+        <label class="modal-field-label" style="margin-top:0;">New Milestone Name</label>
+        <input type="text" id="amMilestoneInput" class="modal-input" placeholder="e.g. Site Engineer Expenses">
+      </div>
+
+      <div id="amRowsContainer" style="margin-top:12px;"></div>
+      <button type="button" class="btn sm" id="amAddRowBtn" style="width:100%;margin-bottom:12px;">+ Add another particular</button>
+
+      <div id="amErrMsg" class="modal-err"></div>
+      <div style="display:flex;gap:8px;margin-top:10px;">
+        <button class="btn dark sm" id="amSaveBtn" style="flex:1;">Add to Budget Sheet</button>
+        <button class="btn sm" id="amCancelBtn" style="flex:1;">Cancel</button>
+      </div>
+    </div>
+
+    <div id="epMilestoneList"></div>
+  </div>
+</div>
+
+
+<!-- Per-milestone Edit — list of that milestone's items, each with Edit/Delete -->
+<div class="modal-overlay" id="milestoneEditModal">
+  <div class="modal-box" style="width:520px;max-width:94vw;max-height:85vh;overflow-y:auto;position:relative;">
+    <button id="meCloseX" style="position:absolute;top:14px;right:14px;background:none;border:none;font-size:18px;color:var(--muted);cursor:pointer;line-height:1;padding:2px 6px;border-radius:6px;">×</button>
+    <h4 id="meMilestoneTitle">Edit Milestone</h4>
+    <div id="meItemList"></div>
+
+    <div id="eiEditForm" style="display:none;margin-top:14px;padding-top:14px;border-top:1px solid var(--line);">
+      <div style="font-weight:700;font-size:12.5px;margin-bottom:8px;" id="eiEditingLabel"></div>
+      <label class="modal-field-label">Item / Particulars</label>
+      <input type="text" id="eiItemInput" class="modal-input">
+      <label class="modal-field-label">Vendor</label>
+      <input type="text" id="eiVendorInput" class="modal-input">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+        <div><label class="modal-field-label">Qty</label><input type="number" id="eiQtyInput" class="modal-input"></div>
+        <div><label class="modal-field-label">Rate (₹)</label><input type="number" id="eiRateInput" class="modal-input"></div>
+      </div>
+      <label class="modal-field-label">Invoiced Amount (₹) — leave blank to clear</label>
+      <input type="number" id="eiInvoicedInput" class="modal-input" placeholder="₹ 0">
+
+      <div style="margin-top:14px;padding-top:12px;border-top:1px dashed var(--line);">
+        <label class="modal-field-label" style="margin-top:0;">Payment History</label>
+        <div id="eiPaymentsList"></div>
+      </div>
+
+      <div id="eiErrMsg" class="modal-err"></div>
+      <div style="display:flex;gap:8px;margin-top:10px;">
+        <button class="btn dark sm" id="eiSaveBtn" style="flex:1;">Save Changes</button>
+        <button class="btn redline sm" id="eiDeleteBtn" style="flex:1;">⚠ Delete Item</button>
+        <button class="btn sm" id="eiCancelEditBtn" style="flex:1;">Cancel</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Confirm Change/Delete warning modal — reused for both Save and Delete actions on Edit/Delete Item tab -->
+<div class="modal-overlay" id="eiConfirmModal">
+  <div class="modal-box" style="width:320px;">
+    <h4 id="eiConfirmTitle">Confirm Change</h4>
+    <p id="eiConfirmDesc">Are you sure you want to make this change?</p>
+    <div style="display:flex;gap:8px;margin-top:10px;">
+      <button class="btn redline sm" id="eiConfirmYesBtn" style="flex:1;">Yes, Continue</button>
+      <button class="btn sm" id="eiConfirmNoBtn" style="flex:1;">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- Settle & Close Account confirmation modal -->
+<div class="modal-overlay" id="closeAccountModal">
+  <div class="modal-box" style="width:360px;max-width:92vw;">
+    <h4>⚠ Settle &amp; Close Account</h4>
+    <p id="closeAccountItemLabel" style="font-weight:600;color:var(--ink-800);margin-top:-6px;"></p>
+    <p>This will permanently settle and close this item. Once closed:</p>
+    <ul style="font-size:12px;color:var(--ink-700);line-height:1.7;padding-left:18px;margin:8px 0;">
+      <li>No further Advance or Full payments can be made against this item.</li>
+      <li>Existing payments cannot be reversed or undone.</li>
+      <li>This is meant to be used only once all dues for this item are fully cleared.</li>
+    </ul>
+    <p style="font-size:11.5px;color:var(--muted);">You can reopen this item later if needed, but it's intended as a final closure step.</p>
+    <label class="modal-field-label">Reason for closing (optional)</label>
+    <input type="text" id="closeAccountReasonInput" class="modal-input" placeholder="e.g. All dues cleared and verified">
+    <div id="closeAccountErrMsg" class="modal-err"></div>
+    <div style="display:flex;gap:8px;margin-top:10px;">
+      <button class="btn redline sm" id="closeAccountYesBtn" style="flex:1;">Yes, Settle &amp; Close</button>
+      <button class="btn sm" id="closeAccountCancelBtn" style="flex:1;">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- Reopen Account confirmation modal -->
+<div class="modal-overlay" id="reopenAccountModal">
+  <div class="modal-box" style="width:340px;">
+    <h4>Reopen Account</h4>
+    <p id="reopenAccountItemLabel" style="font-weight:600;color:var(--ink-800);margin-top:-6px;"></p>
+    <p>This item is currently closed. Reopening it will allow further payments, edits, and reversals again. Continue?</p>
+    <div id="reopenAccountErrMsg" class="modal-err"></div>
+    <div style="display:flex;gap:8px;margin-top:10px;">
+      <button class="btn dark sm" id="reopenAccountYesBtn" style="flex:1;">Yes, Reopen</button>
+      <button class="btn sm" id="reopenAccountCancelBtn" style="flex:1;">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- Reverse Payment confirmation modal -->
+<div class="modal-overlay" id="reverseModal">
+  <div class="modal-box" style="width:340px;">
+    <h4>Reverse Payment?</h4>
+    <div class="ps-header-grid" style="grid-template-columns:1fr 1fr 1fr;">
+      <div><span class="sl">Date</span><span class="sv" id="revDate">—</span></div>
+      <div><span class="sl">Type</span><span class="sv" id="revType">—</span></div>
+      <div><span class="sl">Amount</span><span class="sv" id="revAmount">—</span></div>
+    </div>
+    <p style="margin-top:12px;">This payment will be reversed and will no longer be included in Actual Paid. The Balance will be recalculated automatically.</p>
+    <label class="modal-field-label">Reason for Reversal</label>
+    <input type="text" id="revReasonInput" class="modal-input" placeholder="e.g. Entered by mistake">
+    <div id="revErrMsg" class="modal-err"></div>
+    <div style="display:flex;gap:8px;margin-top:6px;">
+      <button class="btn redline sm" id="revConfirmBtn" style="flex:1;">Confirm Reverse</button>
+      <button class="btn sm" id="revCancelBtn" style="flex:1;">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="invoicedModal">
+  <div class="modal-box" style="width:340px;">
+    <h4>Set Invoiced Amount</h4>
+    <p style="margin-top:-4px;">Enter the amount the vendor has invoiced. The column will show the difference against Actual Paid.</p>
+    <label class="modal-field-label">Invoiced Amount (₹)</label>
+    <input type="number" id="invoicedAmountInput" class="modal-input" placeholder="₹ 0" min="0" step="1">
+    <div id="invoicedErrMsg" class="modal-err"></div>
+    <div style="display:flex;gap:8px;margin-top:10px;">
+      <button class="btn dark sm" id="invoicedSaveBtn" style="flex:1;">Save</button>
+      <button class="btn sm" id="invoicedCancelBtn" style="flex:1;">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<script>
+console.log('%c budget.html — v6 (per-particular direct edit button) ', 'background:#16A34A;color:#fff;padding:2px 6px;border-radius:4px;');
+let currentProj = null, allItems = [], currentRole = null;
+let collapsedMilestones = new Set();
+
+function esc(s){ return (s==null?'':String(s)).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function inr(n){ return '₹' + Math.round(n||0).toLocaleString('en-IN'); }
+function subTotal(i){
+  if(i.total_amount!=null && i.total_amount!=='') return Number(i.total_amount);
+  if(i.gross_amount!=null && i.gross_amount!=='') return Number(i.gross_amount);
+  return (Number(i.qty)||0)*(Number(i.rate)||0);
+}
+function setMsg(t, cls){ const m=document.getElementById('importMsg'); m.textContent=t||''; m.className=cls||''; }
+function nCell(val){ const v=Math.round(val||0); return `<span class="${v?'hasval':'zero'}">${inr(v)}</span>`; }
+
+/* ---------- group items by milestone (order preserve) ---------- */
+function groupByMilestone(items){
+  const groups=[]; const idx={};
+  items.forEach(i=>{
+    const key=i.milestone||'(No milestone)';
+    if(idx[key]==null){ idx[key]=groups.length; groups.push({milestone:key, rows:[]}); }
+    groups[idx[key]].rows.push(i);
+  });
+  groups.forEach(g=> g.total=g.rows.reduce((s,r)=>s+subTotal(r),0));
+  return groups;
+}
+
+/* ---------- KPIs ---------- */
+function renderKpis(){
+  const approved = allItems.reduce((s,i)=>s+getTotalAmountForItem(i),0);
+  const spent = allItems.reduce((s,i)=>s+getActualPaid(i.id),0);
+  const remaining = approved - spent;
+  const spentPct = approved ? Math.round((spent/approved)*100) : 0;
+  const over = spent > approved;
+  const paidItemCount = allItems.filter(i=>getActualPaid(i.id) >= getTotalAmountForItem(i) && getTotalAmountForItem(i)>0).length;
+  document.getElementById('kApproved').textContent = inr(approved);
+  document.getElementById('kSpent').textContent = inr(spent);
+  document.getElementById('kSpentSub').textContent = paidItemCount + ' of ' + allItems.length + ' items fully paid';
+  document.getElementById('kRemaining').textContent = inr(remaining);
+  const bar=document.getElementById('kBar');
+  bar.style.width = Math.min(spentPct,100)+'%';
+  bar.style.background = over ? 'var(--status-bad)' : 'var(--brand-green)';
+  document.getElementById('kStatusPill').innerHTML = `<span class="pill ${over?'over':'ok'}">${over?'Over budget':'On budget'}</span>`;
+  document.getElementById('kVariance').textContent = spentPct + '% spent';
+}
+
+/* ---------- budget approval status card ---------- */
+function renderBudgetApproval(){
+  const status = (currentProj && currentProj.budget_status) ? String(currentProj.budget_status).toLowerCase() : 'pending';
+  const cls = ['pending','approved','rejected'].includes(status) ? status : 'pending';
+  const pillMini = document.getElementById('budgetStatusPillMini');
+  pillMini.textContent = status;
+  pillMini.className = 'appr-big-pill ' + cls;
+
+  const notes = {
+    pending: 'Awaiting the Director\'s approval.',
+    approved: 'Approved by the Director \u2014 sheet is locked as approved.',
+    rejected: 'Rejected by the Director \u2014 please revise and resubmit.'
+  };
+  document.getElementById('budgetStatusNote').textContent = notes[cls] || '';
+}
+
+document.getElementById('budgetApprHeaderBtn').addEventListener('click', (ev)=>{
+  ev.stopPropagation();
+  const pop = document.getElementById('budgetApprPopover');
+  pop.style.display = (pop.style.display === 'none' || !pop.style.display) ? 'block' : 'none';
+});
+document.addEventListener('click', (ev)=>{
+  const pop = document.getElementById('budgetApprPopover');
+  const btn = document.getElementById('budgetApprHeaderBtn');
+  if(pop.style.display === 'block' && !pop.contains(ev.target) && ev.target !== btn){
+    pop.style.display = 'none';
+  }
+});
+
+async function setBudgetStatus(next){
+  if(!currentProj) return;
+  const actions = document.getElementById('budgetApprActions');
+  actions.querySelectorAll('button').forEach(b=>b.disabled=true);
+  const { data, error } = await sb.from('projects').update({ budget_status: next }).eq('id', currentProj.id).select();
+  actions.querySelectorAll('button').forEach(b=>b.disabled=false);
+  if(error){ setMsg('Failed to update budget status: '+error.message,'err'); return; }
+  if(!data || data.length===0){ setMsg('You do not have permission to change the budget status.','err'); return; }
+  currentProj.budget_status = next;
+  renderBudgetApproval();
+  setMsg('Budget status set to "'+next+'".','ok');
+}
+
+/* ---------- budget sheet ---------- */
+function renderSheet(){
+  const tb=document.getElementById('sheetBody');
+  if(!allItems.length){ tb.innerHTML='<div class="empty">No budget items yet — use "Import Budget Sheet" above to upload the Excel sheet.</div>'; return; }
+  const groups=groupByMilestone(allItems);
+  let html=''; let mno=0; let grand=0; let grandPaid=0;
+  groups.forEach(g=>{
+    mno++;
+    const mileTotal = g.rows.reduce((s,r)=>s+subTotal(r),0);
+    grand+=mileTotal;
+    const milePaid = g.rows.reduce((s,r)=>s+getActualPaid(r.id),0);
+    const mileBalance = mileTotal - milePaid;
+    let mileStatusCls = 'pending';
+    if(mileBalance<0){ mileStatusCls='overpaid'; }
+    else if(mileBalance<=0 && mileTotal>0){ mileStatusCls='fully-paid'; }
+    else if(milePaid>0 && mileBalance>0){ mileStatusCls='partially-paid'; }
+    grandPaid += milePaid;
+    const gid = 'mile-'+mno;
+    const isCollapsed = collapsedMilestones.has(gid);
+
+    let rowsHtml = '';
+    g.rows.forEach((r)=>{
+      const st = subTotal(r);
+      const totalAmt = st;
+      const actualPaid = getActualPaid(r.id);
+      const balance = totalAmt - actualPaid;
+      const qtyDisplay = (r.qty!=null&&r.qty!=='')?r.qty:(r.remarks||'—');
+      const txCount = (paymentTxByItem[r.id]||[]).length;
+
+      let payStatusCls = 'pending', payStatusLabel = 'Payment Pending';
+      if(balance<0){ payStatusCls='overpaid'; payStatusLabel='Overpaid'; }
+      else if(actualPaid>0){ payStatusCls='fully-paid'; payStatusLabel = (balance===0 ? 'Fully Paid' : 'Partially Paid'); }
+
+      const isClosed = r.is_closed === true;
+
+      rowsHtml += `<tr class="item-row pay-${payStatusCls} ${isClosed?'is-closed-row':''}">
+        <td class="sub-name detail-clickable" data-detailid="${r.id}"><span class="sub-name-text" title="${esc(r.item||'')}">${esc((r.item||'').split(' ').slice(0,2).join(' '))}</span>${isClosed?'<div class="closed-badge">🔒 Settled</div>':''}</td>
+        <td class="vendor" style="max-width:120px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${r.vendor?esc(r.vendor):''}">${r.vendor?esc(r.vendor):'—'}</td>
+        <td class="detail-clickable" data-detailid="${r.id}"><span class="sub-name-text" title="${esc(qtyDisplay)}">${esc((String(qtyDisplay).match(/^[\d.,]+/)||[String(qtyDisplay).split(' ')[0]])[0])}</span></td>
+        <td>${esc(r.area_unit||'—')}</td>
+        <td class="n">${r.rate!=null&&r.rate!==''?nCell(r.rate):'<span class="zero">—</span>'}</td>
+        <td class="n">${nCell(st)}</td>
+        <td class="n col-inv">
+          <span class="inv-received-val" data-id="${r.id}">${r.invoiced_amount!=null&&r.invoiced_amount!==''?(()=>{
+            const invAmt = Number(r.invoiced_amount);
+            const d = invAmt - actualPaid;
+            return `<div class="inv-received-main">${inr(invAmt)}</div><div class="inv-variance ${d>0?'over':(d<0?'under':'')}">${d>0?'+':(d<0?'-':'')}${inr(Math.abs(d))}</div>`;
+          })():'<div class="inv-received-main zero">—</div>'}</span>
+          <button class="inv-edit-btn" data-id="${r.id}" title="Set Invoiced Amount">✎</button>
+        </td>
+        <td class="n">${nCell(actualPaid)}</td>
+        <td class="n"><span class="balance-value" title="${payStatusLabel}">${balance<0?'-':''}${inr(Math.abs(balance))}</span></td>
+        <td class="col-paysummary" style="vertical-align:middle;">
+          <button class="paysummary-btn" data-id="${r.id}" title="View Payment Summary"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>${txCount?`<span class="ps-count">${txCount}</span>`:''}</button>
+          <button class="makepayment-btn" data-id="${r.id}" ${(balance===0||isClosed)?'disabled':''} title="Make Payment"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="3"></rect><line x1="1" y1="10" x2="23" y2="10"></line><line x1="5" y1="15" x2="9" y2="15"></line></svg></button>
+          <button class="lockaccount-btn ${isClosed?'closed':''}" data-id="${r.id}" data-closed="${isClosed}" title="${isClosed?'Reopen Account':'Settle & Close Account'}"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${isClosed?'<rect x="3" y="11" width="18" height="11" rx="2"></rect><path d="M7 11V7a5 5 0 0 1 9.9-1"></path>':'<rect x="3" y="11" width="18" height="11" rx="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path>'}</svg></button>
+          ${BUDGET_PERM.can_edit ? `<button class="item-edit-btn" data-id="${r.id}" data-milestone="${esc(g.milestone)}" title="Edit Particular"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4Z"></path></svg></button>` : ''}
+        </td>
+      </tr>
+      <tr class="detail-row" id="detail-${r.id}" style="display:none;"><td colspan="10" style="background:#F7F8FA;border-top:1px dashed var(--line);padding:10px 14px;font-size:11.5px;color:var(--ink-700);">
+        <div><strong>Subtask:</strong> ${esc((r.item||'').split(' ').slice(2).join(' ')) || esc(r.item||'')}</div>
+        <div style="margin-top:4px;"><strong>Qty Details:</strong> ${esc(qtyDisplay)}</div>
+      </td></tr>`;
+    });
+
+    html += `<div class="mile-card ${isCollapsed?'collapsed':''}" data-gid="${gid}">
+      <div class="mile-card-head">
+        <div class="mile-card-head-left">
+          <span class="mile-chevron">▾</span>
+          <span class="mile-badge">${mno}</span>
+          <span class="mname">${esc(g.milestone)}</span>
+        </div>
+        <div class="mile-head-right">
+          <span class="mile-mini-fin"><span class="l">Total</span> ${inr(mileTotal)}</span>
+          <span class="mile-mini-fin paid"><span class="l">Paid</span> ${inr(milePaid)}</span>
+          <span class="mile-mini-fin ${mileBalance<0?'bal-over':'bal-ok'}"><span class="l">Balance</span> ${inr(mileBalance)}</span>
+          <span class="mile-count">${g.rows.length} item${g.rows.length===1?'':'s'}</span>
+        </div>
+      </div>
+      <div class="mile-body">
+        <div class="mile-table-scroll scroll-hint-x">
+          <table>
+            <thead>
+              <tr>
+                <th>Particulars</th><th>Vendor</th><th>Qty</th><th>Unit</th>
+                <th class="n">Rate</th><th class="n">Budgeted</th><th class="n col-inv">Invoiced Received</th>
+                <th class="n">Actual Paid</th><th class="n">Balance</th>
+                <th class="col-paysummary">Payment Summary</th>
+              </tr>
+            </thead>
+            <tbody>${rowsHtml}</tbody>
+          </table>
+        </div>
+      </div>
+    </div>`;
+  });
+
+  const grandBalance = grand - grandPaid;
+  html += `<div class="grand-card">
+      <span>GRAND TOTAL</span>
+      <div class="gtot">
+        <div><span class="gl">Approved</span><span class="gv">${inr(grand)}</span></div>
+        <div><span class="gl">Paid</span><span class="gv">${inr(grandPaid)}</span></div>
+        <div><span class="gl">Balance</span><span class="gv">${inr(grandBalance)}</span></div>
+      </div>
+    </div>`;
+  tb.innerHTML=html;
+
+  tb.querySelectorAll('.item-edit-btn').forEach(btn=>{
+    btn.addEventListener('click', (ev)=>{ ev.stopPropagation(); openItemEditDirect(btn.dataset.id, btn.dataset.milestone); });
+  });
+  tb.querySelectorAll('.makepayment-btn').forEach(btn=>{
+    btn.addEventListener('click', (ev)=>{ ev.stopPropagation(); openMakePaymentModal(btn.dataset.id); });
+  });
+  tb.querySelectorAll('.lockaccount-btn').forEach(btn=>{
+    btn.addEventListener('click', (ev)=>{
+      ev.stopPropagation();
+      const isClosed = btn.dataset.closed === 'true';
+      if(isClosed) openReopenAccountModal(btn.dataset.id);
+      else openCloseAccountModal(btn.dataset.id);
+    });
+  });
+  tb.querySelectorAll('.paysummary-btn').forEach(btn=>{
+    btn.addEventListener('click', (ev)=>{ ev.stopPropagation(); openPaymentSummary(btn.dataset.id); });
+  });
+  tb.querySelectorAll('.inv-edit-btn').forEach(btn=>{
+    btn.addEventListener('click', (ev)=>{
+      ev.stopPropagation();
+      invoicedTargetId = btn.dataset.id;
+      const item = allItems.find(x=>String(x.id)===String(invoicedTargetId));
+      document.getElementById('invoicedAmountInput').value = (item && item.invoiced_amount!=null) ? item.invoiced_amount : '';
+      document.getElementById('invoicedErrMsg').textContent = '';
+      document.getElementById('invoicedModal').classList.add('open');
+      setTimeout(()=>document.getElementById('invoicedAmountInput').focus(),50);
+    });
+  });
+
+  tb.querySelectorAll('.detail-clickable').forEach(cell=>{
+    cell.addEventListener('click', (ev)=>{
+      ev.stopPropagation();
+      const id = cell.dataset.detailid;
+      const row = document.getElementById('detail-'+id);
+      if(!row) return;
+      const isOpen = row.style.display !== 'none';
+      row.style.display = isOpen ? 'none' : 'table-row';
+    });
+  });
+
+  tb.querySelectorAll('.mile-card-head').forEach(head=>{
+    head.addEventListener('click', ()=>{
+      const card = head.closest('.mile-card');
+      const gid = card.dataset.gid;
+      if(collapsedMilestones.has(gid)){ collapsedMilestones.delete(gid); } else { collapsedMilestones.add(gid); }
+      card.classList.toggle('collapsed', collapsedMilestones.has(gid));
+    });
+  });
+  if(typeof sipsWireScrollHints === 'function') sipsWireScrollHints(tb);
+}
+
+/* ---------- payment transactions: load + derive actual paid ---------- */
+let paymentTxByItem = {}; // { budget_item_id: [ {id, payment_date, payment_type, amount, discount, final_amount, balance_after}, ... ] }
+
+async function loadPaymentTransactions(){
+  paymentTxByItem = {};
+  if(!currentProj) return;
+  const { data, error } = await sb.from('payment_transactions').select('*').eq('project_id', currentProj.id).order('payment_date', {ascending:true}).order('created_at', {ascending:true});
+  if(error){
+    // Table probably doesn't exist yet — fail quietly, actual paid will show 0 until it's created.
+    console.warn('payment_transactions load failed (has the table been created?):', error.message);
+    return;
+  }
+  (data||[]).forEach(tx=>{
+    if(!paymentTxByItem[tx.budget_item_id]) paymentTxByItem[tx.budget_item_id]=[];
+    paymentTxByItem[tx.budget_item_id].push(tx);
+  });
+}
+
+function getActualPaid(itemId){
+  const txs = paymentTxByItem[itemId] || [];
+  return txs.filter(t=>t.status!=='reversed').reduce((s,t)=> s + Number(t.final_amount!=null?t.final_amount:t.amount||0), 0);
+}
+
+function getTotalAmountForItem(item){
+  return subTotal(item);
+}
+
+/* ---------- Settle & Close Account / Reopen Account ---------- */
+let closeAccountTargetId = null;
+function openCloseAccountModal(id){
+  const item = allItems.find(x=>String(x.id)===String(id));
+  if(!item) return;
+  closeAccountTargetId = id;
+  document.getElementById('closeAccountItemLabel').textContent = item.item || '';
+  document.getElementById('closeAccountReasonInput').value = '';
+  document.getElementById('closeAccountErrMsg').textContent = '';
+  document.getElementById('closeAccountModal').classList.add('open');
+}
+function closeCloseAccountModal(){
+  document.getElementById('closeAccountModal').classList.remove('open');
+  closeAccountTargetId = null;
+}
+document.getElementById('closeAccountCancelBtn').addEventListener('click', closeCloseAccountModal);
+document.getElementById('closeAccountModal').addEventListener('click', (ev)=>{ if(ev.target.id==='closeAccountModal') closeCloseAccountModal(); });
+
+let closeAccountSubmitting = false;
+document.getElementById('closeAccountYesBtn').addEventListener('click', async ()=>{
+  if(closeAccountSubmitting || !closeAccountTargetId) return;
+  const id = closeAccountTargetId;
+  const reason = document.getElementById('closeAccountReasonInput').value.trim();
+  const errEl = document.getElementById('closeAccountErrMsg');
+  closeAccountSubmitting = true;
+  document.getElementById('closeAccountYesBtn').disabled = true;
+  const { data, error } = await sb.from('budget_items').update({
+    is_closed: true,
+    closed_by: currentRole || null,
+    closed_at: new Date().toISOString(),
+    close_reason: reason || null
+  }).eq('id', id).select();
+  closeAccountSubmitting = false;
+  document.getElementById('closeAccountYesBtn').disabled = false;
+  if(error){ errEl.textContent = 'Could not close (has the "is_closed" column been added to budget_items?): '+error.message; return; }
+  if(!data || data.length===0){ errEl.textContent = 'You do not have permission to edit this budget item.'; return; }
+  closeCloseAccountModal();
+  const item = allItems.find(x=>String(x.id)===String(id));
+  if(item) item.is_closed = true;
+  renderSheet(); renderKpis(); renderDist();
+  setMsg('Item settled and closed.', 'ok');
+});
+
+let reopenAccountTargetId = null;
+function openReopenAccountModal(id){
+  const item = allItems.find(x=>String(x.id)===String(id));
+  if(!item) return;
+  reopenAccountTargetId = id;
+  document.getElementById('reopenAccountItemLabel').textContent = item.item || '';
+  document.getElementById('reopenAccountErrMsg').textContent = '';
+  document.getElementById('reopenAccountModal').classList.add('open');
+}
+function closeReopenAccountModal(){
+  document.getElementById('reopenAccountModal').classList.remove('open');
+  reopenAccountTargetId = null;
+}
+document.getElementById('reopenAccountCancelBtn').addEventListener('click', closeReopenAccountModal);
+document.getElementById('reopenAccountModal').addEventListener('click', (ev)=>{ if(ev.target.id==='reopenAccountModal') closeReopenAccountModal(); });
+
+let reopenAccountSubmitting = false;
+document.getElementById('reopenAccountYesBtn').addEventListener('click', async ()=>{
+  if(reopenAccountSubmitting || !reopenAccountTargetId) return;
+  const id = reopenAccountTargetId;
+  const errEl = document.getElementById('reopenAccountErrMsg');
+  reopenAccountSubmitting = true;
+  document.getElementById('reopenAccountYesBtn').disabled = true;
+  const { data, error } = await sb.from('budget_items').update({
+    is_closed: false,
+    reopened_by: currentRole || null,
+    reopened_at: new Date().toISOString()
+  }).eq('id', id).select();
+  reopenAccountSubmitting = false;
+  document.getElementById('reopenAccountYesBtn').disabled = false;
+  if(error){ errEl.textContent = 'Could not reopen: '+error.message; return; }
+  if(!data || data.length===0){ errEl.textContent = 'You do not have permission to edit this budget item.'; return; }
+  closeReopenAccountModal();
+  const item = allItems.find(x=>String(x.id)===String(id));
+  if(item) item.is_closed = false;
+  renderSheet(); renderKpis(); renderDist();
+  setMsg('Item reopened.', 'ok');
+});
+
+/* ---------- Advance Payment modal — simple entry, no discount/extra ---------- */
+let advanceTargetId = null;
+
+/* Single entry point: opens the combined Make Payment modal and populates BOTH sides */
+function openMakePaymentModal(id){
+  const item = allItems.find(x=>String(x.id)===String(id));
+  if(item && item.is_closed){ setMsg('This item is closed/settled — reopen it first to make a payment.', 'err'); return; }
+  document.getElementById('makePaymentModal').classList.add('open');
+  populateAdvanceSide(id);
+  populateFullSide(id);
+}
+function closeMakePaymentModal(){
+  document.getElementById('makePaymentModal').classList.remove('open');
+}
+document.getElementById('makePaymentCloseX').addEventListener('click', closeMakePaymentModal);
+document.getElementById('makePaymentModal').addEventListener('click', (ev)=>{ if(ev.target.id==='makePaymentModal') closeMakePaymentModal(); });
+
+function populateAdvanceSide(id){
+  advanceTargetId = id;
+  const item = allItems.find(x=>String(x.id)===String(id));
+  if(!item) return;
+  const totalAmt = getTotalAmountForItem(item);
+  const paidSoFar = getActualPaid(id);
+  const balance = totalAmt - paidSoFar;
+  document.getElementById('advPayableAmount').textContent = (balance<0?'-':'') + inr(Math.abs(balance));
+  document.getElementById('advAmountInput').value = '';
+  document.getElementById('advAmountInput').removeAttribute('max');
+  document.getElementById('advFinalAmount').textContent = inr(0);
+  document.getElementById('advDateInput').value = new Date().toISOString().slice(0,10);
+  document.getElementById('advErrMsg').textContent = '';
+}
+function recalcAdvanceFinal(){
+  const amt = parseFloat(document.getElementById('advAmountInput').value) || 0;
+  document.getElementById('advFinalAmount').textContent = inr(amt);
+}
+document.getElementById('advAmountInput').addEventListener('input', recalcAdvanceFinal);
+
+let advanceSubmitting = false;
+document.getElementById('advConfirmBtn').addEventListener('click', async ()=>{
+  if(advanceSubmitting) return;
+  const id = advanceTargetId;
+  const item = allItems.find(x=>String(x.id)===String(id));
+  const errEl = document.getElementById('advErrMsg');
+  if(!item){ closeMakePaymentModal(); return; }
+  const amount = parseFloat(document.getElementById('advAmountInput').value);
+  const payDate = document.getElementById('advDateInput').value;
+  const totalAmt = getTotalAmountForItem(item);
+  const paidSoFar = getActualPaid(id);
+  const balance = totalAmt - paidSoFar;
+
+  if(isNaN(amount) || amount<=0){ errEl.textContent='Enter a payment amount greater than zero.'; return; }
+  if(!payDate){ errEl.textContent='Select a payment date.'; return; }
+
+  const finalAmount = Math.round(amount);
+  const balanceAfter = balance - finalAmount;
+
+  advanceSubmitting = true;
+  document.getElementById('advConfirmBtn').disabled = true;
+  const row = {
+    project_id: currentProj.id,
+    budget_item_id: item.id,
+    vendor: item.vendor || null,
+    payment_date: payDate,
+    payment_type: 'advance',
+    status: 'active',
+    amount: amount,
+    discount: 0,
+    final_amount: finalAmount,
+    balance_after: balanceAfter,
+    created_by: currentRole || null
+  };
+  const { error } = await sb.from('payment_transactions').insert(row);
+  advanceSubmitting = false;
+  document.getElementById('advConfirmBtn').disabled = false;
+  if(error){ errEl.textContent = 'Could not save payment (has the "payment_transactions" table been created?): '+error.message; return; }
+  closeMakePaymentModal();
+  await loadPaymentTransactions();
+  renderSheet(); renderKpis(); renderDist();
+  setMsg('Advance payment of '+inr(finalAmount)+' recorded.', 'ok');
+});
+
+/* ---------- Full Payment modal — discount & extra payment go through the REAL payment_adjustments
+   approval table (read by approvals.html, the existing Director Approval page). ---------- */
+let fullTargetId = null;
+let fullPayableAmount = 0;
+let discountAdj = null; // latest row from payment_adjustments for this item, request_type='discount'
+let extraAdj = null;    // latest row from payment_adjustments for this item, request_type='extra'
+
+async function loadAdjustmentsForItem(itemId){
+  const { data, error } = await sb.from('payment_adjustments').select('*').eq('budget_item_id', itemId).order('id', {ascending:false});
+  if(error){ console.warn('payment_adjustments load failed (has the table been created?):', error.message); return { discount:null, extra:null }; }
+  const rows = data || [];
+  const discount = rows.find(r=>r.request_type==='discount') || null;
+  const extra = rows.find(r=>r.request_type==='extra') || null;
+  return { discount, extra };
+}
+
+function statusInfo(row){
+  if(!row) return { status:'none', amount:0 };
+  const s = (row.approval_status||'pending').toLowerCase();
+  return { status: s==='approved' ? 'approved' : (s==='rejected' ? 'rejected' : 'pending'), amount: Number(row.requested_amount||0) };
+}
+function renderApprovalStatus(kind){
+  const row = kind==='discount' ? discountAdj : extraAdj;
+  const info = statusInfo(row);
+  const el = document.getElementById(kind==='discount' ? 'fullDiscountStatus' : 'fullExtraStatus');
+  const labelMap = { none:'Not Sent', pending:'Pending Approval', approved:'Approved', rejected:'Not Approved' };
+  el.textContent = labelMap[info.status];
+  el.className = 'approval-status-pill ' + info.status;
+  const sendBtn = document.getElementById(kind==='discount' ? 'fullDiscountSendBtn' : 'fullExtraSendBtn');
+  const input = document.getElementById(kind==='discount' ? 'fullDiscountInput' : 'fullExtraInput');
+  if(info.status === 'pending'){
+    sendBtn.disabled = true; sendBtn.textContent = 'Approval Pending';
+    input.value = info.amount || '';
+    input.disabled = true;
+  } else {
+    sendBtn.disabled = false; sendBtn.textContent = 'Send for Approval';
+    input.disabled = false;
+    if(info.status === 'approved') input.value = info.amount || '';
+  }
+}
+function getApprovedDiscount(){ const i = statusInfo(discountAdj); return i.status==='approved' ? i.amount : 0; }
+function getApprovedExtra(){ const i = statusInfo(extraAdj); return i.status==='approved' ? i.amount : 0; }
+
+function recalcFullPayment(){
+  const approvedDiscount = getApprovedDiscount();
+  const approvedExtra = getApprovedExtra();
+  const finalAmount = fullPayableAmount - approvedDiscount + approvedExtra;
+  document.getElementById('fullFinalAmount').textContent = (finalAmount<0?'-':'') + inr(Math.abs(finalAmount));
+  return { approvedDiscount, approvedExtra, finalAmount };
+}
+
+async function populateFullSide(id){
+  fullTargetId = id;
+  const item = allItems.find(x=>String(x.id)===String(id));
+  if(!item) return;
+  const totalAmt = getTotalAmountForItem(item);
+  const paidSoFar = getActualPaid(id);
+  const balance = totalAmt - paidSoFar;
+  fullPayableAmount = balance;
+
+  document.getElementById('fullPayableAmount').textContent = (balance<0?'-':'') + inr(Math.abs(balance));
+  document.getElementById('fullDiscountInput').value = '';
+  document.getElementById('fullExtraInput').value = '';
+  document.getElementById('fullFinalAmount').textContent = (balance<0?'-':'') + inr(Math.abs(balance));
+  document.getElementById('fullDateInput').value = new Date().toISOString().slice(0,10);
+  document.getElementById('fullErrMsg').textContent = '';
+
+  const adj = await loadAdjustmentsForItem(id);
+  discountAdj = adj.discount;
+  extraAdj = adj.extra;
+  renderApprovalStatus('discount');
+  renderApprovalStatus('extra');
+  recalcFullPayment();
+}
+
+async function sendForApproval(kind){
+  const item = allItems.find(x=>String(x.id)===String(fullTargetId));
+  const errEl = document.getElementById('fullErrMsg');
+  errEl.textContent = '';
+  const inputEl = document.getElementById(kind==='discount' ? 'fullDiscountInput' : 'fullExtraInput');
+  const sendBtn = document.getElementById(kind==='discount' ? 'fullDiscountSendBtn' : 'fullExtraSendBtn');
+  const val = parseFloat(inputEl.value);
+
+  if(isNaN(val) || val<0){ errEl.textContent = (kind==='discount'?'Discount':'Extra payment')+' cannot be negative.'; return; }
+  if(kind==='discount' && val > fullPayableAmount){ errEl.textContent='Discount cannot exceed the Payable Amount.'; return; }
+  const existing = kind==='discount' ? discountAdj : extraAdj;
+  if(statusInfo(existing).status === 'pending'){ errEl.textContent='A request for this is already pending approval.'; return; }
+
+  sendBtn.disabled = true;
+  sendBtn.textContent = 'Sending for Approval...';
+  setMsg('Sending approval request…', '');
+
+  const row = {
+    request_type: kind,
+    budget_item_id: item.id,
+    project_id: currentProj.id,
+    subtask: item.item || null,
+    vendor: item.vendor || null,
+    payable_amount: fullPayableAmount,
+    requested_amount: val,
+    approval_status: 'pending',
+    requested_by: currentRole || null,
+    requested_at: new Date().toISOString()
+  };
+  const { data, error } = await sb.from('payment_adjustments').insert(row).select().single();
+  if(error){
+    sendBtn.disabled = false; sendBtn.textContent = 'Send for Approval';
+    errEl.textContent = 'Could not send approval request (has the "payment_adjustments" table been created?): '+error.message;
+    setMsg('', '');
+    return;
+  }
+  if(kind==='discount') discountAdj = data; else extraAdj = data;
+  renderApprovalStatus(kind);
+  recalcFullPayment();
+  setMsg('Approval request sent successfully.', 'ok');
+}
+document.getElementById('fullDiscountSendBtn').addEventListener('click', ()=> sendForApproval('discount'));
+document.getElementById('fullExtraSendBtn').addEventListener('click', ()=> sendForApproval('extra'));
+
+
+
+let fullSubmitting = false;
+document.getElementById('fullConfirmBtn').addEventListener('click', async ()=>{
+  if(fullSubmitting) return;
+  const id = fullTargetId;
+  const item = allItems.find(x=>String(x.id)===String(id));
+  const errEl = document.getElementById('fullErrMsg');
+  if(!item){ closeMakePaymentModal(); return; }
+  const payDate = document.getElementById('fullDateInput').value;
+  if(!payDate){ errEl.textContent='Select a payment date.'; return; }
+  if(fullPayableAmount===0){ errEl.textContent='This item is already fully paid.'; return; }
+
+  const { approvedDiscount, approvedExtra, finalAmount } = recalcFullPayment();
+
+  fullSubmitting = true;
+  document.getElementById('fullConfirmBtn').disabled = true;
+  const row = {
+    project_id: currentProj.id,
+    budget_item_id: item.id,
+    vendor: item.vendor || null,
+    payment_date: payDate,
+    payment_type: 'full',
+    status: 'active',
+    amount: fullPayableAmount,
+    discount_requested: discountAdj ? discountAdj.requested_amount : 0,
+    discount_status: discountAdj ? discountAdj.approval_status : 'none',
+    discount: approvedDiscount,
+    extra_requested: extraAdj ? extraAdj.requested_amount : 0,
+    extra_status: extraAdj ? extraAdj.approval_status : 'none',
+    extra_payment: approvedExtra,
+    final_amount: finalAmount,
+    balance_after: fullPayableAmount - finalAmount,
+    created_by: currentRole || null
+  };
+  const { error } = await sb.from('payment_transactions').insert(row);
+  fullSubmitting = false;
+  document.getElementById('fullConfirmBtn').disabled = false;
+  if(error){ errEl.textContent = 'Could not save payment (has the "payment_transactions" table been created?): '+error.message; return; }
+  closeMakePaymentModal();
+  await loadPaymentTransactions();
+  renderSheet(); renderKpis(); renderDist();
+  setMsg('Full payment of '+inr(finalAmount)+' recorded.', 'ok');
+});
+
+/* ---------- Payment Summary modal ---------- */
+function openPaymentSummary(id){
+  const item = allItems.find(x=>String(x.id)===String(id));
+  if(!item) return;
+  const totalAmt = getTotalAmountForItem(item);
+  const txs = (paymentTxByItem[id]||[]);
+  const totalPaid = getActualPaid(id);
+  const balance = Math.max(0, totalAmt - totalPaid);
+
+  document.getElementById('psVendor').textContent = item.vendor || '—';
+  document.getElementById('psItem').textContent = item.item || '';
+  document.getElementById('psTotal').textContent = inr(totalAmt);
+  document.getElementById('psPaid').textContent = inr(totalPaid);
+  document.getElementById('psBalance').textContent = inr(balance);
+
+  const isClosed = item.is_closed === true;
+  const canReverse = BUDGET_PERM.can_approve && !isClosed;
+  const body = document.getElementById('psHistoryBody');
+  if(!txs.length){
+    body.innerHTML = '<tr><td colspan="6" class="empty">No payments recorded yet for this item.</td></tr>';
+  } else {
+    body.innerHTML = txs.map(t=>{
+      const amt = Number(t.final_amount!=null?t.final_amount:t.amount||0);
+      const dateStr = t.payment_date ? new Date(t.payment_date).toLocaleDateString('en-IN') : '—';
+      const typeLabel = t.payment_type==='advance' ? 'Advance' : 'Full Payment';
+      const isReversed = t.status==='reversed';
+      const statusPill = `<span class="tx-status-pill ${isReversed?'reversed':'active'}">${isReversed?'Reversed':'Active'}</span>`;
+      const actionCell = canReverse ? `
+        <div class="tx-action-wrap">
+          <button class="tx-action-btn" data-txid="${t.id}" ${isReversed?'disabled':''}>⋮</button>
+        </div>` : '';
+      return `<tr class="tx-row ${isReversed?'reversed':''}" data-tx='${esc(JSON.stringify({id:t.id,date:dateStr,type:typeLabel,amount:amt}))}'>
+        <td>${esc(dateStr)}</td><td>${esc(typeLabel)}</td><td class="n">${inr(amt)}</td><td class="n">${inr(t.balance_after||0)}</td><td>${statusPill}</td><td>${actionCell}</td>
+      </tr>`;
+    }).join('');
+  }
+  document.getElementById('paysummaryModal').classList.add('open');
+  document.getElementById('paysummaryModal').dataset.itemId = id;
+
+  body.querySelectorAll('.tx-action-btn').forEach(btn=>{
+    btn.addEventListener('click', (ev)=>{
+      ev.stopPropagation();
+      closeTxActionMenus();
+      const menu = document.createElement('div');
+      menu.className = 'tx-action-menu';
+      menu.innerHTML = '<button data-txid="'+btn.dataset.txid+'">Reverse / Undo Payment</button>';
+      btn.parentElement.appendChild(menu);
+      menu.querySelector('button').addEventListener('click', (ev2)=>{
+        ev2.stopPropagation();
+        const tr = btn.closest('tr');
+        const txData = JSON.parse(tr.dataset.tx);
+        closeTxActionMenus();
+        openReverseModal(txData);
+      });
+    });
+  });
+}
+function closeTxActionMenus(){
+  document.querySelectorAll('.tx-action-menu').forEach(m=>m.remove());
+}
+document.addEventListener('click', (ev)=>{
+  if(!ev.target.classList.contains('tx-action-btn')) closeTxActionMenus();
+});
+document.getElementById('psCloseBtn').addEventListener('click', ()=> document.getElementById('paysummaryModal').classList.remove('open'));
+document.getElementById('psCloseX').addEventListener('click', ()=> document.getElementById('paysummaryModal').classList.remove('open'));
+document.getElementById('paysummaryModal').addEventListener('click', (ev)=>{ if(ev.target.id==='paysummaryModal') document.getElementById('paysummaryModal').classList.remove('open'); });
+
+/* ---------- Reverse / Undo Payment ---------- */
+let reverseTargetTx = null;
+function openReverseModal(txData){
+  if(currentRole !== 'director' && currentRole !== 'accounts'){ setMsg('Only Director or Accounts can reverse a payment.', 'err'); return; }
+  reverseTargetTx = txData;
+  document.getElementById('revDate').textContent = txData.date;
+  document.getElementById('revType').textContent = txData.type;
+  document.getElementById('revAmount').textContent = inr(txData.amount);
+  document.getElementById('revReasonInput').value = '';
+  document.getElementById('revErrMsg').textContent = '';
+  document.getElementById('reverseModal').classList.add('open');
+}
+function closeReverseModal(){
+  document.getElementById('reverseModal').classList.remove('open');
+  reverseTargetTx = null;
+}
+document.getElementById('revCancelBtn').addEventListener('click', closeReverseModal);
+document.getElementById('reverseModal').addEventListener('click', (ev)=>{ if(ev.target.id==='reverseModal') closeReverseModal(); });
+
+let reverseSubmitting = false;
+document.getElementById('revConfirmBtn').addEventListener('click', async ()=>{
+  if(reverseSubmitting || !reverseTargetTx) return;
+  const errEl = document.getElementById('revErrMsg');
+  const reason = document.getElementById('revReasonInput').value.trim();
+  if(!reason){ errEl.textContent = 'Please enter a reason for reversal.'; return; }
+
+  reverseSubmitting = true;
+  document.getElementById('revConfirmBtn').disabled = true;
+  const { data, error } = await sb.from('payment_transactions').update({
+    status: 'reversed',
+    reversed_by: currentRole || null,
+    reversed_at: new Date().toISOString(),
+    reversal_reason: reason
+  }).eq('id', reverseTargetTx.id).eq('status', 'active').select();
+  reverseSubmitting = false;
+  document.getElementById('revConfirmBtn').disabled = false;
+  if(error){ errEl.textContent = 'Could not reverse payment: '+error.message; return; }
+  if(!data || data.length===0){ errEl.textContent = 'You do not have permission to reverse this payment.'; return; }
+
+  const itemId = document.getElementById('paysummaryModal').dataset.itemId;
+  closeReverseModal();
+  await loadPaymentTransactions();
+  renderSheet(); renderKpis(); renderDist();
+  if(itemId) openPaymentSummary(itemId);
+  if(eiSelectedId) renderEiPayments(eiSelectedId);
+  setMsg('Payment reversed. Balance recalculated.', 'ok');
+});
+
+/* ---------- Invoiced Amount modal ---------- */
+let invoicedTargetId = null;
+function closeInvoicedModal(){
+  document.getElementById('invoicedModal').classList.remove('open');
+}
+document.getElementById('invoicedCancelBtn').addEventListener('click', closeInvoicedModal);
+document.getElementById('invoicedModal').addEventListener('click', (ev)=>{ if(ev.target.id==='invoicedModal') closeInvoicedModal(); });
+
+let invoicedSubmitting = false;
+document.getElementById('invoicedSaveBtn').addEventListener('click', async ()=>{
+  if(invoicedSubmitting || !invoicedTargetId) return;
+  const errEl = document.getElementById('invoicedErrMsg');
+  const val = document.getElementById('invoicedAmountInput').value;
+  const num = parseFloat(val);
+  if(val===''||isNaN(num)||num<0){ errEl.textContent = 'Please enter a valid amount.'; return; }
+
+  invoicedSubmitting = true;
+  document.getElementById('invoicedSaveBtn').disabled = true;
+  const { data, error } = await sb.from('budget_items').update({ invoiced_amount: num }).eq('id', invoicedTargetId).select();
+  invoicedSubmitting = false;
+  document.getElementById('invoicedSaveBtn').disabled = false;
+  if(error){ errEl.textContent = 'Could not save (has the "invoiced_amount" column been added to budget_items?): '+error.message; return; }
+  if(!data || data.length===0){ errEl.textContent = 'You do not have permission to edit this budget item.'; return; }
+
+  const item = allItems.find(x=>String(x.id)===String(invoicedTargetId));
+  if(item) item.invoiced_amount = num;
+  closeInvoicedModal();
+  renderSheet();
+  setMsg('Invoiced amount saved.', 'ok');
+});
+
+/* ---------- milestone distribution ---------- */
+function renderDist(){
+  const box=document.getElementById('distBody');
+  if(!allItems.length){ box.innerHTML='<div class="empty">The distribution will appear once the budget is imported.</div>'; return; }
+  const groups=groupByMilestone(allItems);
+  const max=Math.max(...groups.map(g=>g.total),1);
+  const grand=groups.reduce((s,g)=>s+g.total,0)||1;
+  box.innerHTML = groups.map(g=>`
+    <div class="dist-row">
+      <div class="dist-label" title="${esc(g.milestone)}">${esc(g.milestone)}</div>
+      <div class="dist-track"><div class="dist-fill" style="width:${(g.total/max)*100}%"></div></div>
+      <div class="dist-val">${inr(g.total)} · ${Math.round((g.total/grand)*100)}%</div>
+    </div>`).join('');
+}
+
+/* ---------- change orders ---------- */
+function renderAll(){ renderKpis(); renderBudgetApproval(); renderSheet(); renderDist(); }
+
+/* Note: the old binary "Mark paid" toggle has been replaced by Advance/Full payment
+   transactions (see loadPaymentTransactions, openAdvanceModal, openFullModal). */
+
+/* ---------- project dropdown ---------- */
+async function fillProjects(){
+  const { data: projs } = await sb.from('projects').select('id,name').order('name');
+  const sel=document.getElementById('projSel2');
+  if(!projs || !projs.length){ sel.innerHTML='<option>No projects</option>'; return; }
+  sel.innerHTML = projs.map(p=>`<option value="${p.id}" ${p.id===currentProj.id?'selected':''}>${esc(p.name)}</option>`).join('');
+  sel.onchange = ()=> window.location.search = '?id=' + sel.value;
+}
+
+/* ---------- load ---------- */
+async function loadBudget(){
+  const pid=new URLSearchParams(window.location.search).get('id');
+  let q=sb.from('projects').select('*');
+  q = pid ? q.eq('id', pid) : q.eq('name','Sama Sports Complex');
+  let { data: proj } = await q.single();
+  if(!proj){ const { data: any } = await sb.from('projects').select('*').order('name').limit(1); proj = any && any[0]; }
+  if(!proj){ document.getElementById('sheetBody').innerHTML='<div class="empty">No project found.</div>'; return; }
+  currentProj=proj;
+  document.querySelectorAll('.app-nav-item[href]').forEach(a=>{
+    const href=a.getAttribute('href');
+    if(href && href.endsWith('.html') && href!=='dashboard.html'){ a.setAttribute('href', href.split('?')[0]+'?id='+proj.id); }
+  });
+  document.getElementById('crumbName').textContent=proj.name;
+  await fillProjects();
+  const { data: items } = await sb.from('budget_items').select('*').eq('project_id', proj.id).order('sort_order').order('id');
+  allItems = items || [];
+  // Every milestone starts collapsed on every fresh load — only a summary
+  // row shows until the user clicks to expand a particular milestone.
+  collapsedMilestones = new Set();
+  groupByMilestone(allItems).forEach((g, idx)=> collapsedMilestones.add('mile-'+(idx+1)));
+  await loadPaymentTransactions();
+  renderAll();
+}
+
+/* ---------- import ---------- */
+document.getElementById('importBtn').addEventListener('click', ()=> document.getElementById('budgetFileInput').click());
+
+/* ---------- Edit Panel — Milestones list + Add New ---------- */
+function openEditPanel(){
+  document.getElementById('editPanelModal').classList.add('open');
+  document.getElementById('epAddNewForm').style.display = 'none';
+  renderMilestoneListInEditPanel();
+}
+function closeEditPanel(){
+  document.getElementById('editPanelModal').classList.remove('open');
+}
+document.getElementById('editPanelBtn').addEventListener('click', openEditPanel);
+document.getElementById('editPanelCloseX').addEventListener('click', closeEditPanel);
+document.getElementById('editPanelModal').addEventListener('click', (ev)=>{ if(ev.target.id==='editPanelModal') closeEditPanel(); });
+
+document.getElementById('epAddNewBtn').addEventListener('click', ()=>{
+  resetAddMilestoneForm();
+  document.getElementById('epAddNewForm').style.display = 'block';
+});
+document.getElementById('amCancelBtn').addEventListener('click', ()=>{
+  document.getElementById('epAddNewForm').style.display = 'none';
+});
+
+function renderMilestoneListInEditPanel(){
+  const groups = groupByMilestone(allItems);
+  const box = document.getElementById('epMilestoneList');
+  if(!groups.length){ box.innerHTML = '<div class="empty">No milestones yet.</div>'; return; }
+  box.innerHTML = groups.map(g=>`
+    <div class="ei-result-row" style="cursor:default;display:flex;justify-content:space-between;align-items:center;">
+      <div><div class="r-item">${esc(g.milestone)}</div><div class="r-meta">${g.rows.length} item${g.rows.length===1?'':'s'}</div></div>
+    </div>`).join('');
+}
+
+/* Add Milestone / Particulars (ad-hoc expenses, no Excel re-import needed) —
+   supports adding multiple particulars at once, to either an existing milestone or a new one. */
+let amRowSeq = 0;
+
+function amRowTemplate(rid){
+  return `<div class="am-row" data-rowid="${rid}" style="border:1px solid var(--line);border-radius:8px;padding:10px;margin-bottom:10px;position:relative;">
+    <button type="button" class="am-row-remove" data-rowid="${rid}" title="Remove particular" style="position:absolute;top:8px;right:8px;background:none;border:none;color:var(--muted);cursor:pointer;font-size:13px;">✕</button>
+    <label class="modal-field-label" style="margin-top:0;">Item / Particulars</label>
+    <input type="text" class="modal-input am-item" placeholder="e.g. Travel, Stay & Food">
+    <label class="modal-field-label">Vendor (optional)</label>
+    <input type="text" class="modal-input am-vendor" placeholder="e.g. Site Engineer name">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+      <div><label class="modal-field-label">Qty</label><input type="number" class="modal-input am-qty" value="1"></div>
+      <div><label class="modal-field-label">Unit</label><input type="text" class="modal-input am-unit" placeholder="e.g. lump sum"></div>
+    </div>
+    <label class="modal-field-label">Rate / Amount (₹)</label>
+    <input type="number" class="modal-input am-rate" placeholder="₹ 0">
+  </div>`;
+}
+function amBindRowRemove(){
+  document.querySelectorAll('.am-row-remove').forEach(btn=>{
+    btn.onclick = ()=>{
+      const rows = document.querySelectorAll('.am-row');
+      if(rows.length<=1){
+        btn.closest('.am-row').querySelectorAll('input').forEach(inp=>{ inp.value = inp.classList.contains('am-qty') ? '1' : ''; });
+        return;
+      }
+      btn.closest('.am-row').remove();
+    };
+  });
+}
+function amAddRow(){
+  amRowSeq++;
+  document.getElementById('amRowsContainer').insertAdjacentHTML('beforeend', amRowTemplate(amRowSeq));
+  amBindRowRemove();
+}
+function amPopulateMilestoneSelect(){
+  const sel = document.getElementById('amMilestoneSelect');
+  const groups = groupByMilestone(allItems);
+  sel.innerHTML = groups.length ? groups.map(g=>`<option value="${esc(g.milestone)}">${esc(g.milestone)}</option>`).join('') : '<option value="">No existing milestones — use "New Milestone"</option>';
+}
+function amSetMode(mode){
+  const existingBtn = document.getElementById('amModeExistingBtn');
+  const newBtn = document.getElementById('amModeNewBtn');
+  document.getElementById('amExistingWrap').style.display = mode==='existing' ? 'block' : 'none';
+  document.getElementById('amNewWrap').style.display = mode==='new' ? 'block' : 'none';
+  existingBtn.classList.toggle('dark', mode==='existing');
+  newBtn.classList.toggle('dark', mode==='new');
+  document.getElementById('epAddNewForm').dataset.mode = mode;
+}
+document.getElementById('amModeExistingBtn').addEventListener('click', ()=> amSetMode('existing'));
+document.getElementById('amModeNewBtn').addEventListener('click', ()=> amSetMode('new'));
+document.getElementById('amAddRowBtn').addEventListener('click', amAddRow);
+
+function resetAddMilestoneForm(){
+  document.getElementById('amMilestoneInput').value = '';
+  document.getElementById('amErrMsg').textContent = '';
+  amPopulateMilestoneSelect();
+  amSetMode(groupByMilestone(allItems).length ? 'existing' : 'new');
+  document.getElementById('amRowsContainer').innerHTML = '';
+  amRowSeq = 0;
+  amAddRow();
+}
+
+let amSubmitting = false;
+document.getElementById('amSaveBtn').addEventListener('click', async ()=>{
+  if(amSubmitting) return;
+  const errEl = document.getElementById('amErrMsg');
+  errEl.textContent = '';
+  if(!currentProj){ errEl.textContent = 'Project not loaded.'; return; }
+
+  const mode = document.getElementById('epAddNewForm').dataset.mode || 'new';
+  let milestoneName = '';
+  if(mode === 'existing'){
+    milestoneName = document.getElementById('amMilestoneSelect').value.trim();
+    if(!milestoneName){ errEl.textContent = 'Choose an existing milestone, or switch to "New Milestone".'; return; }
+  } else {
+    milestoneName = document.getElementById('amMilestoneInput').value.trim();
+    if(!milestoneName){ errEl.textContent = 'Enter a name for the new milestone.'; return; }
+  }
+
+  const rowEls = Array.from(document.querySelectorAll('.am-row'));
+  const rowsToInsert = [];
+  for(let idx=0; idx<rowEls.length; idx++){
+    const rowEl = rowEls[idx];
+    const itemName = rowEl.querySelector('.am-item').value.trim();
+    const vendor = rowEl.querySelector('.am-vendor').value.trim();
+    const qty = parseFloat(rowEl.querySelector('.am-qty').value) || 1;
+    const unit = rowEl.querySelector('.am-unit').value.trim();
+    const rate = parseFloat(rowEl.querySelector('.am-rate').value);
+    if(!itemName && isNaN(rate)) continue; // skip a fully blank row
+    if(!itemName){ errEl.textContent = 'Every particular needs an Item / Particulars description.'; return; }
+    if(isNaN(rate) || rate<=0){ errEl.textContent = `Enter a valid rate/amount for "${itemName}".`; return; }
+    rowsToInsert.push({
+      project_id: currentProj.id,
+      milestone: milestoneName,
+      item: itemName,
+      qty: qty,
+      area_unit: unit || null,
+      rate: rate,
+      gross_amount: Math.round(qty*rate),
+      total_amount: Math.round(qty*rate),
+      vendor: vendor || null,
+      status: 'unpaid',
+      sort_order: allItems.length + 1000 + idx
+    });
+  }
+  if(!rowsToInsert.length){ errEl.textContent = 'Add at least one particular with an item name and a rate.'; return; }
+
+  amSubmitting = true;
+  document.getElementById('amSaveBtn').disabled = true;
+  const { error } = await sb.from('budget_items').insert(rowsToInsert);
+  amSubmitting = false;
+  document.getElementById('amSaveBtn').disabled = false;
+  if(error){ errEl.textContent = 'Could not save: '+error.message; return; }
+  document.getElementById('epAddNewForm').style.display = 'none';
+  const { data: items } = await sb.from('budget_items').select('*').eq('project_id', currentProj.id).order('sort_order').order('id');
+  allItems = items || [];
+  await loadPaymentTransactions();
+  renderAll();
+  renderMilestoneListInEditPanel();
+  setMsg(rowsToInsert.length+' particular(s) added to "'+milestoneName+'".', 'ok');
+});
+
+/* ---------- Per-milestone Edit — list of that milestone's items, Edit/Delete each ---------- */
+let meCurrentMilestone = null;
+function openMilestoneEditModal(milestoneName){
+  meCurrentMilestone = milestoneName;
+  document.getElementById('meMilestoneTitle').textContent = 'Edit: ' + milestoneName;
+  document.getElementById('eiEditForm').style.display = 'none';
+  renderMeItemList();
+  document.getElementById('milestoneEditModal').classList.add('open');
+}
+function closeMilestoneEditModal(){
+  document.getElementById('milestoneEditModal').classList.remove('open');
+  meCurrentMilestone = null;
+}
+document.getElementById('meCloseX').addEventListener('click', closeMilestoneEditModal);
+document.getElementById('milestoneEditModal').addEventListener('click', (ev)=>{ if(ev.target.id==='milestoneEditModal') closeMilestoneEditModal(); });
+
+/* Direct entry point (Option A): open the same milestone modal, but instead of
+   showing the full particulars list first, jump straight into that item's
+   edit form. A "Back to full milestone list" link lets the user see the rest
+   of the milestone's particulars if they need to. */
+function openItemEditDirect(id, milestoneName){
+  meCurrentMilestone = milestoneName;
+  document.getElementById('meMilestoneTitle').textContent = 'Edit: ' + milestoneName;
+  document.getElementById('meItemList').innerHTML =
+    `<button class="btn sm" id="meBackToListBtn" style="margin-bottom:10px;">← Back to full milestone list</button>`;
+  document.getElementById('milestoneEditModal').classList.add('open');
+  selectItemForEdit(id);
+  const backBtn = document.getElementById('meBackToListBtn');
+  if(backBtn){
+    backBtn.addEventListener('click', ()=>{
+      document.getElementById('eiEditForm').style.display = 'none';
+      eiSelectedId = null;
+      renderMeItemList();
+    });
+  }
+}
+
+function renderMeItemList(){
+  const box = document.getElementById('meItemList');
+  const rows = allItems.filter(i=>(i.milestone||'(No milestone)')===meCurrentMilestone);
+  if(!rows.length){ box.innerHTML = '<div class="empty">No items in this milestone.</div>'; return; }
+  box.innerHTML = rows.map(i=>`
+    <div class="ei-result-row" style="display:flex;justify-content:space-between;align-items:center;cursor:default;">
+      <div><div class="r-item">${esc(i.item||'')}</div><div class="r-meta">${esc(i.vendor||'—')} · Qty ${esc(i.qty!=null?i.qty:'—')} · Rate ${inr(i.rate||0)}</div></div>
+      <button class="btn sm" data-editid="${i.id}">✎ Edit</button>
+    </div>`).join('');
+  box.querySelectorAll('button[data-editid]').forEach(btn=>{
+    btn.addEventListener('click', ()=> selectItemForEdit(btn.dataset.editid));
+  });
+}
+document.getElementById('eiCancelEditBtn').addEventListener('click', ()=>{
+  document.getElementById('eiEditForm').style.display = 'none';
+});
+
+document.getElementById('budgetFileInput').addEventListener('change', async (e)=>{
+  const file=e.target.files[0];
+  if(!file) return;
+  if(typeof XLSX==='undefined'){ setMsg('XLSX library did not load. Please reload the page.','err'); e.target.value=''; return; }
+  if(typeof sb==='undefined' || !sb){ setMsg('Database (sb) not ready — auth-guard.js did not load.','err'); e.target.value=''; return; }
+  if(!currentProj){ setMsg('Project did not load. Reload the page, then import.','err'); e.target.value=''; return; }
+  try{
+    setMsg('Reading file…','');
+    const buf=await file.arrayBuffer();
+    const wb=XLSX.read(buf,{type:'array'});
+    const sheet=wb.Sheets[wb.SheetNames[0]];
+    const raw=XLSX.utils.sheet_to_json(sheet,{header:1,defval:''});
+
+    const norm=s=>String(s||'').toLowerCase().replace(/[^a-z]/g,'');
+    const toNum=v=>{ if(typeof v==='number')return v; if(v===''||v==null)return NaN; const c=String(v).replace(/[^0-9.\-]/g,''); return c===''?NaN:parseFloat(c); };
+
+    const headerRowIdx=raw.findIndex((r,i)=>{ if(i>40)return false; const c=r.map(norm); return c.includes('subtasks') && (c.includes('subtotal')||c.includes('rate')); });
+    if(headerRowIdx===-1){ setMsg('Could not recognise the sheet format. The header row must contain Milestones, Sub Tasks, Qty, Unit, Rate, Sub Total and Vendor.','err'); e.target.value=''; return; }
+
+    const header=raw[headerRowIdx].map(norm);
+    const col=(...ns)=>{ for(const n of ns){ const i=header.indexOf(n); if(i>=0)return i; } return -1; };
+    const cMile=col('milestones','milestone'), cTask=col('subtasks','subtask','task'), cQty=col('qty','quantity'),
+          cUnit=col('unit'), cRate=col('rate'), cSub=col('subtotal','amount'), cVend=col('vendor');
+    const cell=(r,i)=>(i>=0&&r[i]!==''&&r[i]!=null)?r[i]:null;
+
+    const items=[]; let curMile=''; let sortIdx=0;
+    for(let i=headerRowIdx+1;i<raw.length;i++){
+      const r=raw[i];
+      const mc=cMile>=0?String(r[cMile]||'').trim():''; if(mc)curMile=mc;
+      const task=cTask>=0?String(r[cTask]||'').trim():'';
+      const sub=cSub>=0?toNum(r[cSub]):NaN;
+      if(!task||isNaN(sub)) continue;
+      const rn=cRate>=0?toNum(r[cRate]):NaN;
+      const qv=cell(r,cQty);
+      const qtyIsNum = typeof qv==='number' || (typeof qv==='string' && /^\s*[\d.,]+\s*$/.test(qv));
+      items.push({
+        project_id: currentProj.id,
+        sr_no: ++sortIdx,
+        sort_order: sortIdx,
+        milestone: curMile||null,
+        item: task,
+        qty: qtyIsNum ? toNum(qv) : null,
+        area_unit: cell(r,cUnit)!=null?String(cell(r,cUnit)):null,
+        rate: isNaN(rn)?null:rn,
+        gross_amount: sub,
+        gst_amount: 0,
+        total_amount: sub,
+        vendor: cell(r,cVend)!=null?String(cell(r,cVend)):null,
+        remarks: (qv!=null && !qtyIsNum) ? String(qv) : null,
+        status: 'unpaid'
+      });
+    }
+    if(!items.length){ setMsg('No valid line items found (each needs a Sub Task and a Sub Total).','err'); e.target.value=''; return; }
+
+    const grand=items.reduce((s,i)=>s+i.total_amount,0);
+    const fmt=n=>'₹'+Math.round(n).toLocaleString('en-IN');
+    if(!(await sipsConfirm(items.length+' line items found', 'Total: '+fmt(grand)+'. This will replace the existing budget items for '+currentProj.name+' and set the budget back to "pending" for the Director\'s approval.', 'Replace budget'))){ e.target.value=''; setMsg('',''); return; }
+
+    const oldItems = await sb.from('budget_items').select('id').eq('project_id', currentProj.id);
+    const del=await sb.from('budget_items').delete().eq('project_id', currentProj.id).select();
+    if(del.error) throw del.error;
+    if((oldItems.data||[]).length > 0 && (!del.data || del.data.length===0)){
+      setMsg('You do not have permission to delete the existing budget items — import cancelled.','err'); e.target.value=''; return;
+    }
+    const ins=await sb.from('budget_items').insert(items);
+    if(ins.error) throw ins.error;
+    // budget change zalya var punha approval sathi pending kar
+    const upd=await sb.from('projects').update({ contract_value: grand, budget_status: 'pending' }).eq('id', currentProj.id).select();
+    if(upd.error) throw upd.error;
+    if(!upd.data || upd.data.length===0){ setMsg('Items imported, but you do not have permission to update the project budget status.','err'); await loadBudget(); return; }
+
+    await loadBudget();
+    setMsg('Budget imported — '+items.length+' items, total '+fmt(grand)+'. Status: pending approval.','ok');
+    e.target.value='';
+  }catch(err){
+    setMsg('Import error: '+(err.message||err),'err');
+    e.target.value='';
+  }
+});
+
+/* Approve / Reject / Reset actions now live on the Approvals page — this page shows read-only status only. */
+
+let BUDGET_PERM = { can_view:false, can_create:false, can_edit:false, can_delete:false, can_approve:false };
+
+(async function(){
+  const auth=await requireAuth();
+  if(!auth) return;
+  currentRole = auth.role;
+
+  /* ---- Topbar user chip (new, purely presentational — matches every other page) ---- */
+  const roleLabels = { director:'Director', pm:'Project Manager', engineer:'Site Engineer', vendor:'Vendor', client:'Client', accounts:'Accounts' };
+  const emailName = (auth.session.user.email || 'Signed in').split('@')[0];
+  document.getElementById('userName').textContent = emailName;
+  document.getElementById('userRole').textContent = roleLabels[currentRole] || currentRole || '—';
+  document.getElementById('userAvatar').textContent = emailName.charAt(0).toUpperCase();
+  document.getElementById('logoutBtn').addEventListener('click', async ()=>{ await sb.auth.signOut(); window.location.href = 'login.html'; });
+
+  // Module-Permissions gate (User Management → Module Permissions), not a
+  // hardcoded role check — mirrors whatever the Director set for this user.
+  const { data: perm } = await sb.from('user_module_permissions').select('*').eq('profile_id', auth.session.user.id).eq('module','budget').maybeSingle();
+  if(perm) BUDGET_PERM = perm;
+
+  if(!BUDGET_PERM.can_view){
+    document.querySelector('.app-main').innerHTML = '<div class="empty" style="padding:60px 20px;text-align:center;">You do not have access to Budget. Contact your Director.</div>';
+    return;
+  }
+
+  document.getElementById('importBtn').style.display = BUDGET_PERM.can_create ? '' : 'none';
+  document.getElementById('editPanelBtn').style.display = BUDGET_PERM.can_edit ? '' : 'none';
+  document.getElementById('budgetApprHeaderBtn').style.display = BUDGET_PERM.can_approve ? '' : 'none';
+
+  await loadBudget();
+})();
+
+/* ---------- Per-milestone Edit / Delete Item ---------- */
+let eiSelectedId = null;
+
+function selectItemForEdit(id){
+  const item = allItems.find(x=>String(x.id)===String(id));
+  if(!item) return;
+  eiSelectedId = id;
+  document.getElementById('eiEditingLabel').textContent = 'Editing: ' + (item.item||'') + ' (' + (item.milestone||'') + ')';
+  document.getElementById('eiItemInput').value = item.item || '';
+  document.getElementById('eiVendorInput').value = item.vendor || '';
+  document.getElementById('eiQtyInput').value = item.qty!=null ? item.qty : '';
+  document.getElementById('eiRateInput').value = item.rate!=null ? item.rate : '';
+  document.getElementById('eiInvoicedInput').value = item.invoiced_amount!=null ? item.invoiced_amount : '';
+  document.getElementById('eiErrMsg').textContent = '';
+  document.getElementById('eiEditForm').style.display = 'block';
+  renderEiPayments(id);
+}
+
+/* Payment history shown inline in the per-item Edit form, with Undo (reverse) for director/accounts */
+function renderEiPayments(id){
+  const box = document.getElementById('eiPaymentsList');
+  if(!box) return;
+  const txs = paymentTxByItem[id] || [];
+  const canReverse = BUDGET_PERM.can_approve;
+  if(!txs.length){ box.innerHTML = '<div class="empty" style="padding:10px 4px;">No payments recorded yet.</div>'; return; }
+  box.innerHTML = txs.map(t=>{
+    const amt = Number(t.final_amount!=null?t.final_amount:t.amount||0);
+    const dateStr = t.payment_date ? new Date(t.payment_date).toLocaleDateString('en-IN') : '—';
+    const typeLabel = t.payment_type==='advance' ? 'Advance' : 'Full Payment';
+    const isReversed = t.status==='reversed';
+    return `<div class="ei-result-row" style="display:flex;justify-content:space-between;align-items:center;cursor:default;">
+      <div>
+        <div class="r-item">${inr(amt)} <span class="tx-status-pill ${isReversed?'reversed':'active'}" style="margin-left:6px;">${isReversed?'Reversed':'Active'}</span></div>
+        <div class="r-meta">${esc(dateStr)} · ${esc(typeLabel)}</div>
+      </div>
+      ${(!isReversed && canReverse) ? `<button class="btn sm redline" data-undo-tx='${esc(JSON.stringify({id:t.id,date:dateStr,type:typeLabel,amount:amt}))}'>Undo</button>` : ''}
+    </div>`;
+  }).join('');
+  box.querySelectorAll('button[data-undo-tx]').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const txData = JSON.parse(btn.dataset.undoTx);
+      openReverseModal(txData);
+    });
+  });
+}
+
+document.getElementById('eiSaveBtn').addEventListener('click', ()=>{
+  const errEl = document.getElementById('eiErrMsg');
+  if(!eiSelectedId){ errEl.textContent='Select an item first.'; return; }
+  const itemName = document.getElementById('eiItemInput').value.trim();
+  const rate = parseFloat(document.getElementById('eiRateInput').value);
+  if(!itemName){ errEl.textContent='Item name cannot be empty.'; return; }
+  if(isNaN(rate) || rate<0){ errEl.textContent='Enter a valid rate.'; return; }
+  const invoicedRaw = document.getElementById('eiInvoicedInput').value;
+  if(invoicedRaw !== '' && (isNaN(parseFloat(invoicedRaw)) || parseFloat(invoicedRaw) < 0)){ errEl.textContent='Enter a valid invoiced amount, or leave it blank to clear it.'; return; }
+  openEiConfirm('save', 'Confirm Change', `You are about to change "${itemName}". This will update the amount on the live Budget Sheet immediately. Continue?`);
+});
+
+document.getElementById('eiDeleteBtn').addEventListener('click', ()=>{
+  if(!eiSelectedId) return;
+  const item = allItems.find(x=>String(x.id)===String(eiSelectedId));
+  openEiConfirm('delete', '⚠ Delete Item', `This will permanently delete "${item?item.item:'this item'}" from the Budget Sheet. This cannot be undone. Continue?`);
+});
+
+let eiConfirmAction = null;
+function openEiConfirm(action, title, desc){
+  eiConfirmAction = action;
+  document.getElementById('eiConfirmTitle').textContent = title;
+  document.getElementById('eiConfirmDesc').textContent = desc;
+  document.getElementById('eiConfirmModal').classList.add('open');
+}
+function closeEiConfirm(){
+  document.getElementById('eiConfirmModal').classList.remove('open');
+  eiConfirmAction = null;
+}
+document.getElementById('eiConfirmNoBtn').addEventListener('click', closeEiConfirm);
+document.getElementById('eiConfirmModal').addEventListener('click', (ev)=>{ if(ev.target.id==='eiConfirmModal') closeEiConfirm(); });
+
+document.getElementById('eiConfirmYesBtn').addEventListener('click', async ()=>{
+  const action = eiConfirmAction;
+  closeEiConfirm();
+  if(action === 'save') await performEiSave();
+  else if(action === 'delete') await performEiDelete();
+});
+
+async function performEiSave(){
+  const errEl = document.getElementById('eiErrMsg');
+  const itemName = document.getElementById('eiItemInput').value.trim();
+  const vendor = document.getElementById('eiVendorInput').value.trim();
+  const qty = parseFloat(document.getElementById('eiQtyInput').value);
+  const rate = parseFloat(document.getElementById('eiRateInput').value);
+
+  const amount = Math.round((isNaN(qty)?1:qty) * rate);
+  const invoicedRaw = document.getElementById('eiInvoicedInput').value;
+  const invoicedVal = invoicedRaw === '' ? null : parseFloat(invoicedRaw);
+  const btn = document.getElementById('eiSaveBtn');
+  btn.disabled = true;
+  const { data, error } = await sb.from('budget_items').update({
+    item: itemName,
+    vendor: vendor || null,
+    qty: isNaN(qty) ? null : qty,
+    rate: rate,
+    gross_amount: amount,
+    total_amount: amount,
+    invoiced_amount: invoicedVal
+  }).eq('id', eiSelectedId).select();
+  btn.disabled = false;
+  if(error){ errEl.textContent = 'Could not save: '+error.message; return; }
+  if(!data || data.length===0){ errEl.textContent = 'You do not have permission to edit this budget item.'; return; }
+
+  const { data: items } = await sb.from('budget_items').select('*').eq('project_id', currentProj.id).order('sort_order').order('id');
+  allItems = items || [];
+  await loadPaymentTransactions();
+  renderAll();
+  setMsg('Item "'+itemName+'" updated.', 'ok');
+  document.getElementById('eiEditForm').style.display='none';
+  eiSelectedId = null;
+  if(meCurrentMilestone) renderMeItemList();
+}
+
+async function performEiDelete(){
+  if(!eiSelectedId) return;
+  const errEl = document.getElementById('eiErrMsg');
+  const btn = document.getElementById('eiDeleteBtn');
+  btn.disabled = true;
+  const { data, error } = await sb.from('budget_items').delete().eq('id', eiSelectedId).select();
+  btn.disabled = false;
+  if(error){ errEl.textContent = 'Could not delete: '+error.message; return; }
+  if(!data || data.length===0){ errEl.textContent = 'You do not have permission to delete this budget item.'; return; }
+
+  const { data: items } = await sb.from('budget_items').select('*').eq('project_id', currentProj.id).order('sort_order').order('id');
+  allItems = items || [];
+  await loadPaymentTransactions();
+  renderAll();
+  setMsg('Item deleted.', 'ok');
+  document.getElementById('eiEditForm').style.display='none';
+  eiSelectedId = null;
+  if(meCurrentMilestone) renderMeItemList();
+}
+</script>
+<script>
+sipsRenderShell({ activeHref: "budget.html" });
+</script>
+</body>
+</html>
