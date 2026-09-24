@@ -171,7 +171,10 @@ tbody tr:hover{background:var(--paper-0);}
     <h3>Add user</h3>
     <p class="sub">Naveen team member la invite kara. Te email varun signup / login karteel.</p>
     <div class="field"><label>Full name *</label><input type="text" id="newName" placeholder="e.g. Rohit Sharma"></div>
-    <div class="field"><label>Work email *</label><input type="email" id="newEmail" placeholder="name@company.com"></div>
+    <div class="field-row">
+      <div class="field"><label>Work email *</label><input type="email" id="newEmail" placeholder="name@company.com"></div>
+      <div class="field"><label>Password *</label><input type="text" id="newPassword" placeholder="Set user password"></div>
+    </div>
     <div class="field-row">
       <div class="field"><label>Mobile number</label><input type="text" id="newMobile" placeholder="+91 ..."></div>
       <div class="field"><label>Employee ID</label><input type="text" id="newEmpId" placeholder="e.g. EMP-104"></div>
@@ -201,12 +204,10 @@ tbody tr:hover{background:var(--paper-0);}
         </select>
       </div>
     </div>
-    <div class="checkbox-row"><input type="checkbox" id="newSendCreds" checked><label for="newSendCreds">Send login credentials by email</label></div>
-    <div class="checkbox-row"><input type="checkbox" id="newForcePwd" checked><label for="newForcePwd">Force password change on first login</label></div>
     <div class="modal-msg" id="addMsg"></div>
     <div class="modal-actions">
       <button class="btn" id="cancelAddBtn">Cancel</button>
-      <button class="btn primary" id="confirmAddBtn">Send invite</button>
+      <button class="btn primary" id="confirmAddBtn">Add User</button>
     </div>
   </div>
 </div>
@@ -602,13 +603,12 @@ document.getElementById('saveEditBtn').addEventListener('click', async () => {
 
 /* ---------- Add user ---------- */
 document.getElementById('addUserBtn').addEventListener('click', () => {
-  ['newName','newEmail','newMobile','newEmpId','newDept','newDesig'].forEach(id => document.getElementById(id).value = '');
+  ['newName','newEmail','newPassword','newMobile','newEmpId','newDept','newDesig'].forEach(id => document.getElementById(id).value = '');
   document.getElementById('newPhoto').value = '';
   document.getElementById('newRole').value = 'pm';
   document.getElementById('newStatus').value = 'active';
-  document.getElementById('newSendCreds').checked = true;
-  document.getElementById('newForcePwd').checked = true;
   document.getElementById('addMsg').textContent = '';
+  document.getElementById('confirmAddBtn').disabled = false;
   document.getElementById('addModal').classList.add('open');
 });
 document.getElementById('cancelAddBtn').addEventListener('click', () => document.getElementById('addModal').classList.remove('open'));
@@ -616,43 +616,55 @@ document.getElementById('cancelAddBtn').addEventListener('click', () => document
 document.getElementById('confirmAddBtn').addEventListener('click', async () => {
   const name = document.getElementById('newName').value.trim();
   const email = document.getElementById('newEmail').value.trim();
+  const password = document.getElementById('newPassword').value.trim();
   const role = document.getElementById('newRole').value;
   const msg = document.getElementById('addMsg');
+  const btn = document.getElementById('confirmAddBtn');
 
-  if(!name || !email){
-    msg.textContent = 'Naav ani email dोन्ही bharaa.';
+  if(!name || !email || !password){
+    msg.textContent = 'Naav, email ani password bharaa.';
     return;
   }
 
   msg.style.color = 'var(--muted)';
-  msg.textContent = 'Invite pathvत aahe…';
+  msg.textContent = 'User create hot aahe…';
+  btn.disabled = true;
 
-  // NOTE: naveen auth user tयार karणे (invite email sह) admin-privilege
-  // operation aahe — anon/publishable key varun direct karता yet nahi.
-  // Ithe ek Supabase Edge Function ('invite-user') call kेली aahe jी
-  // service-role varun sb.auth.admin.inviteUserByEmail() vaparते ani
-  // profiles row banवते. The Edge Function needs updating separately (it
-  // lives outside this project's files) to accept/store the extra fields
-  // below and set force_password_change — not something this page can do
-  // on its own.
   const { data, error } = await sb.functions.invoke('invite-user', {
     body: {
-      name, email, role,
-      company_id: currentCompanyId,
-      mobile: document.getElementById('newMobile').value.trim() || null,
-      employee_id: document.getElementById('newEmpId').value.trim() || null,
-      department: document.getElementById('newDept').value.trim() || null,
-      designation: document.getElementById('newDesig').value.trim() || null,
-      is_active: document.getElementById('newStatus').value === 'active',
-      send_credentials: document.getElementById('newSendCreds').checked,
-      force_password_change: document.getElementById('newForcePwd').checked
+      name, email, password, role,
+      company_id: currentCompanyId
     }
   });
 
   if(error){
+    let exactError = error.message;
+    try {
+        if (error.context && typeof error.context.json === 'function') {
+            const errJson = await error.context.json();
+            exactError = errJson.error || JSON.stringify(errJson);
+        } else if (error.context && typeof error.context.text === 'function') {
+            exactError = await error.context.text();
+        }
+    } catch(e) {}
+
+    console.error("Supabase Edge Function Error:", exactError);
+    alert("एरर आला आहे: " + exactError);
     msg.style.color = 'var(--status-bad)';
-    msg.textContent = 'Invite pathवता ala nahi: ' + error.message + '. ("invite-user" Edge Function deploy zali aahe ka check kara.)';
+    msg.textContent = 'User create karta ala nahi: ' + exactError + '.';
+    btn.disabled = false;
     return;
+  }
+
+  if (data && data.user_id) {
+    const patch = {
+      mobile: document.getElementById('newMobile').value.trim() || null,
+      employee_id: document.getElementById('newEmpId').value.trim() || null,
+      department: document.getElementById('newDept').value.trim() || null,
+      designation: document.getElementById('newDesig').value.trim() || null,
+      is_active: document.getElementById('newStatus').value === 'active'
+    };
+    await sb.from('profiles').update(patch).eq('id', data.user_id);
   }
 
   document.getElementById('addModal').classList.remove('open');
