@@ -55,6 +55,7 @@ a{text-decoration:none;color:inherit;}
 }
 .kpi{background:var(--paper-1);border:1px solid var(--line);border-radius:var(--r-md);padding:16px;transition:box-shadow .15s ease, transform .15s ease, border-color .15s ease;}
 .kpi:hover{box-shadow:var(--shadow-md);transform:translateY(-2px);border-color:var(--muted-2);}
+.kpi > div { position: relative; z-index: 1; }
 .kpi .l{font-size:11px;color:var(--muted);font-weight:600;letter-spacing:.3px;text-transform:uppercase;}
 .kpi .v{font-family:var(--font-display);font-size:22px;font-weight:700;margin:6px 0;color:var(--ink-900);}
 .kpi .v.big{font-size:30px;color:var(--brand-green);}
@@ -313,7 +314,7 @@ function renderProjectStatus(proj, allTasks){
   const total = allTasks.length;
   const completed = allTasks.filter(t=>t.status==='completed').length;
   const allTasksDone = total>0 && completed===total;
-  const rawStatus = (proj.status||'').toLowerCase();
+  const rawStatus = (proj.schedule_status || proj.status || '').toLowerCase();
   const isManuallyCompleted = rawStatus==='completed' || rawStatus==='closed';
 
   let label, cls;
@@ -322,7 +323,7 @@ function renderProjectStatus(proj, allTasks){
   } else if(allTasksDone){
     label = 'Ready for Handover'; cls = 'ready';
   } else {
-    label = proj.status || 'In Progress'; cls = 'progress';
+    label = proj.schedule_status || proj.status || 'In Progress'; cls = 'progress';
   }
   pillEl.textContent = label;
   pillEl.className = 'status-pill ' + cls;
@@ -344,9 +345,9 @@ async function markProjectCompleted(){
     'Mark Completed'
   );
   if(!ok) return;
-  const { error } = await sb.from('projects').update({ status: 'completed' }).eq('id', currentProj.id);
+  const { error } = await sb.from('projects').update({ schedule_status: 'completed' }).eq('id', currentProj.id);
   if(error){ sipsToast('Status update fail: ' + error.message, 'error'); return; }
-  currentProj.status = 'completed';
+  currentProj.schedule_status = 'completed';
   renderProjectStatus(currentProj, reportData ? reportData.allTasks : []);
   sipsToast('Project marked as Completed.', null);
 }
@@ -1216,3 +1217,5 @@ sipsRenderShell({ activeHref: "project-overview.html" });
 </script>
 </body>
 </html>
+
+
