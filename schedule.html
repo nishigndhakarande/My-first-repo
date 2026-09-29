@@ -384,7 +384,7 @@ sipsRenderShell({ activeHref: 'schedule.html' });
 <script>
 let currentProj = null, allTasks = [], calRef = new Date(), editId = null;
 let currentView = 'gantt', ganttMilestoneFilter = null;
-let dragTid = null, resizeTid = null, resizeStartX = null, resizeOrigDue = null;
+let dragTid = null, dragElNode = null, resizeTid = null, resizeStartX = null, resizeOrigDue = null;
 // Pending (unsaved) drag/swap/resize changes. Map: taskId -> { planned_end } preview override.
 // Nothing here touches the DB until "Save Changes" is clicked.
 let pendingChanges = {};
@@ -878,6 +878,28 @@ document.getElementById('calView').addEventListener('click', e=>{
   else if(e.target.closest('#openApprovalPanelBtn')){ openApprovalPanel(); }
 });
 
+let dragScrollTimer = null;
+document.getElementById('calView').addEventListener('dragover', e => {
+  if(!dragTid) return;
+  let dir = 0;
+  const rect = document.getElementById('calView').getBoundingClientRect();
+  if(e.target.closest && e.target.closest('#cNext')) dir = 1;
+  else if(e.target.closest && e.target.closest('#cPrev')) dir = -1;
+  else if(e.clientX > rect.right - 80) dir = 1;
+  else if(e.clientX < rect.left + 80) dir = -1;
+  
+  if(dir !== 0){
+    if(!dragScrollTimer){
+      dragScrollTimer = setTimeout(()=>{
+        calRef.setMonth(calRef.getMonth() + dir);
+        renderCalendar();
+        dragScrollTimer = null;
+      }, 700);
+    }
+  } else {
+    if(dragScrollTimer){ clearTimeout(dragScrollTimer); dragScrollTimer = null; }
+  }
+});
 function renderCalendarInner(){
   const y = calRef.getFullYear(), m = calRef.getMonth();
   const first = new Date(y,m,1), start = new Date(first);
@@ -1059,6 +1081,8 @@ function renderCalendarInner(){
       e.preventDefault(); c.classList.remove('dragover');
       if(dragTid) openDragReasonPopup(dragTid, c.dataset.day);
       dragTid = null;
+        if(dragElNode && dragElNode.parentNode === document.body) document.body.removeChild(dragElNode);
+        dragElNode = null;
     });
   });
   document.querySelectorAll('[data-resize]').forEach(r=>{
@@ -1784,3 +1808,5 @@ function applyPermissions(role){
 </script>
 </body>
 </html>
+
+
