@@ -371,7 +371,15 @@ async function refreshKpisAndMilestones(proj, allTasks, ncrs, drawings, cos, liv
     <div class="kpi"><div class="l">Budget Spent</div><div class="v">₹${Math.round(liveUtilized||0).toLocaleString('en-IN')}</div><div class="sub">${liveContract ? 'of ₹'+Number(liveContract).toLocaleString('en-IN')+' approved' : 'approved budget not set'}</div></div>
     <div class="kpi"><div class="l">Drawings</div><div class="v">${drawingsOnly.length}</div><div class="sub">${drawPending ? drawPending+' pending approval' : 'all approved'}</div></div>`;
 
-  let milestoneNames = [...new Set(allTasks.map(t=> t.milestone || (t.task||'').split(' — ')[0]).filter(Boolean))].slice(0,6);
+  const mileMap = new Map();
+  allTasks.forEach(t => {
+    const m = t.milestone || (t.task||'').split(' - ')[0];
+    if(!m) return;
+    if(!mileMap.has(m) || (t.milestone_order != null && t.milestone_order < mileMap.get(m))) {
+      mileMap.set(m, t.milestone_order != null ? t.milestone_order : 9999);
+    }
+  });
+  let milestoneNames = Array.from(mileMap.keys()).sort((a,b) => mileMap.get(a) - mileMap.get(b)).slice(0,6);
   if(milestoneNames.length===0) milestoneNames = ['Foundation','Structure','Finishing','Handover'];
 
   // FIX: prati milestone cha status tyachya swataच्या tasks varun kadhto — overall %
