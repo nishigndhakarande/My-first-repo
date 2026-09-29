@@ -706,7 +706,7 @@ function renderSummary(projects){
     <div class="sum-card ${activeSummaryFilter==='active'?'active-filter':''}" data-filter="active"><div class="sum-top"><div><div class="sum-label">Active Projects</div><div class="sum-value">${active}</div></div><div class="sum-icon i-green">▲</div></div><div class="sum-note">In progress</div></div>
     <div class="sum-card ${activeSummaryFilter==='delayed'?'active-filter':''}" data-filter="delayed"><div class="sum-top"><div><div class="sum-label">Delayed Projects</div><div class="sum-value" style="color:var(--red)">${delayed}</div></div><div class="sum-icon i-orange">◔</div></div><div class="sum-note">Require attention</div></div>
     <div class="sum-card ${activeSummaryFilter==='completed'?'active-filter':''}" data-filter="completed"><div class="sum-top"><div><div class="sum-label">Completed Projects</div><div class="sum-value" style="color:var(--green)">${completed}</div></div><div class="sum-icon i-green">✓</div></div><div class="sum-note">This year</div></div>
-    <div class="sum-card" data-filter="none" data-perm="view_budget_panel"><div class="sum-top"><div class="sum-label" style="margin-bottom:4px;">Total Project Value</div></div><div class="sum-split"><div class="sp"><span>Selling Price</span><b>₹${totalSelling.toFixed(1)}</b></div><div class="cp"><span>Cost Price</span><b>₹${totalCost.toFixed(1)}</b></div></div></div>
+    <div class="sum-card" data-filter="none" data-perm="view_budget_panel"><div class="sum-top"><div class="sum-label" style="margin-bottom:4px;">Total Project Value</div></div><div class="sum-split"><div class="sp"><span>Selling Price</span><b>₹${fmtAmt(totalSelling)}</b></div><div class="cp"><span>Cost Price</span><b>₹${fmtAmt(totalCost)}</b></div></div></div>
   `;
   /* Re-apply permission gating since this innerHTML rewrite just recreated
      the [data-perm] element above — same currentRole set at load, no new
@@ -745,7 +745,7 @@ function renderCard(p){
       <div class="proj-meta">${p.client_name ? '👤 '+p.client_name : ''}${p.client_name && p.location ? ' · ' : ''}${p.location ? `<span class="loc-link" data-loc-id="${p.id}" title="View on map">📍 ${p.location}</span>` : ''}</div>
       <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;">
         <div style="flex:1;min-width:0;font-size:11.5px;color:var(--muted);line-height:1.4;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;">${p.description || ''}</div>
-        <div style="flex-shrink:0;font-family:var(--font-mono);font-size:12px;font-weight:700;color:var(--ink2);white-space:nowrap;">₹${p.budget_approved||0}</div>
+        <div style="flex-shrink:0;font-family:var(--font-mono);font-size:12px;font-weight:700;color:var(--ink2);white-space:nowrap;">₹${fmtAmt(p.budget_approved||0)}</div>
       </div>
       <div>
         <div class="progress-toprow"><span>Progress</span><span>${p.progress_pct||0}%</span></div>
@@ -1023,8 +1023,8 @@ async function openDetail(id){
   document.getElementById('d-pm').textContent = p.pm_name || '—';
   document.getElementById('d-budget-status').innerHTML = `<span class="pill ${statusPillClass(p.budget_status)}">${p.budget_status||'—'}</span>`;
   document.getElementById('d-schedule-status').innerHTML = `<span class="pill ${statusPillClass(p.schedule_status)}">${p.schedule_status||'—'}</span>`;
-  document.getElementById('d-budget-approved').textContent = p.budget_approved ? '₹' + p.budget_approved + ' Cr' : '—';
-  document.getElementById('d-budget-spent').textContent = (p.budget_spent || p.budget_spent===0) ? '₹' + p.budget_spent + ' Cr' : '—';
+  document.getElementById('d-budget-approved').textContent = p.budget_approved ? '₹' + fmtAmt(p.budget_approved) : '—';
+  document.getElementById('d-budget-spent').textContent = (p.budget_spent || p.budget_spent===0) ? '₹' + fmtAmt(p.budget_spent) : '—';
   document.getElementById('d-progress').textContent = (p.progress_pct||0) + '%';
   document.getElementById('d-quality').innerHTML = p.ncr_count ? `<span class="pill bad">${p.ncr_count} open NCR</span>` : `<span class="pill ${statusPillClass(p.quality_status)}">${p.quality_status||'clear'}</span>`;
   const dDates = correctedDates(p);
@@ -1166,6 +1166,10 @@ document.getElementById('submitAddProject').addEventListener('click', async ()=>
 /* ============== Import projects from Excel ============== */
 document.getElementById('openImportExcel').addEventListener('click', ()=> document.getElementById('excelFileInput').click());
 
+  function fmtAmt(num) {
+    if(num == null || isNaN(num)) return '0';
+    return Number(num).toLocaleString('en-IN', { maximumFractionDigits: 2 });
+  }
 function normBudgetStatus(v){
   v = (v||'').toString().trim().toLowerCase().replace(/\s+/g,'-');
   if(v.includes('over')) return 'over-budget';
@@ -1474,3 +1478,5 @@ document.getElementById('scheduleFileInput').addEventListener('change', async (e
 </script>
 </body>
 </html>
+
+
