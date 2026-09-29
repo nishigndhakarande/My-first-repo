@@ -1765,11 +1765,10 @@ async function loadSchedule(){
   document.getElementById('backLink').href = 'project-overview.html?id=' + proj.id;
   await fillProjects();
   const { data: tasks } = await sb.from('schedule_tasks').select('*').eq('project_id', proj.id);
-  // HACK: Auto-reset tasks for Badminton project once
-  if (proj && proj.id === '97f2764d-78b8-4578-ac3a-42093318b267' && !localStorage.getItem('reset_badminton_tasks')) {
-    await sb.from('schedule_tasks').update({status: 'not_started', is_done: false}).eq('project_id', proj.id);
-    localStorage.setItem('reset_badminton_tasks', 'true');
-    window.location.reload();
+  if (window.location.search.includes('reset=1')) {
+    const { error } = await sb.from('schedule_tasks').update({status: 'not_started'}).eq('project_id', proj.id);
+    window.location.href = window.location.href.replace('&reset=1','');
+    return;
   }
   allTasks = tasks || [];
   await loadPendingChangeRequests();
@@ -1814,6 +1813,8 @@ function applyPermissions(role){
 </script>
 </body>
 </html>
+
+
 
 
 
