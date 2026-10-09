@@ -387,7 +387,15 @@ function can(role, perm){
        change to any Supabase query, RLS policy, or business logic. */
     view_budget_panel: ['director','pm','accounts']
   };
-  return (grants[perm] || []).includes(role);
+  let allowed = (grants[perm] || []).includes(role);
+  if (window.userModulePerms) {
+     const pPerm = window.userModulePerms.find(x => x.module === 'projects');
+     if (pPerm) {
+       if (perm === 'create_project' && pPerm.can_create) allowed = true;
+       if (perm === 'import_project' && pPerm.can_create) allowed = true;
+     }
+  }
+  return allowed;
 }
 function applyPermissions(role) {
   document.querySelectorAll('[data-perm]').forEach(el => {
@@ -624,6 +632,9 @@ document.getElementById('navImportData').addEventListener('click', ()=> document
   document.getElementById('greetTitle').textContent = `${timeGreeting}, ${displayName}`;
   document.getElementById('greetSub').textContent = greetSubByRole[role] || "Here's your project overview.";
   document.getElementById('greetDate').textContent = new Date().toLocaleDateString('en-IN', { weekday:'long', day:'numeric', month:'long', year:'numeric' });
+
+  const { data: modPerms } = await sb.from('user_module_permissions').select('*').eq('profile_id', session.user.id);
+  window.userModulePerms = modPerms || [];
 
   applyPermissions(role);
 
