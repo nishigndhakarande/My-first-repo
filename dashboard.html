@@ -377,8 +377,8 @@ function can(role, perm){
     export_reports: ['director','pm'],
     view_vendors: ['director','pm'],
     manage_settings: ['director'],
-    import_project: ['director','pm'],
-    create_project: ['director','pm'],
+    import_project: ['director','pm','engineer'],
+    create_project: ['director','pm','engineer'],
     upload_site_photos: ['director','pm','engineer'],
     import_drawings: ['director','pm','engineer'],
     /* New in the redesign: gates the financial widgets (Total Project Value
@@ -586,6 +586,8 @@ let allProjects = [];
 let currentProjectId = null;
 let taskCounts = {};
 let currentRole = null;
+let currentUserId = null;
+let currentUserName = null;
 let activeSummaryFilter = 'all'; // all | active | delayed | completed
 
 /* ============== Sidebar nav (hamburger + sidebar toggle now handled by sips-shell.js) ============== */
@@ -609,6 +611,8 @@ document.getElementById('navImportData').addEventListener('click', ()=> document
   if(!auth) return;
   const { session, role, fullName } = auth;
   currentRole = role;
+  currentUserId = session.user.id;
+  currentUserName = fullName || session.user.email;
 
   const roleLabels = { director: 'Director', pm: 'Project Manager', engineer: 'Site Engineer', accounts: 'Accounts', vendor: 'Vendor', client: 'Client' };
   const emailName = (session.user.email || 'Signed in').split('@')[0];
@@ -688,7 +692,7 @@ document.getElementById('navImportData').addEventListener('click', ()=> document
 
   let allTasks = [];
   if(allProjects.length){
-    const { data: tasksData } = await sb.from('project_tasks').select('project_id,is_done,status,title,created_at');
+    const { data: tasksData } = await sb.from('project_tasks').select('project_id,is_done,title,created_at');
     allTasks = tasksData || [];
     allTasks.forEach(t=>{
       const c = taskCounts[t.project_id] || {total:0,done:0};
@@ -1172,8 +1176,24 @@ document.getElementById('submitAddProject').addEventListener('click', async ()=>
     image_url: document.getElementById('f-image').value.trim() || null,
     sport_type: document.getElementById('f-sport-type').value || null
   };
-  const { error } = await sb.from('projects').insert(payload);
+  if((currentRole === 'pm' || currentRole === 'engineer') && currentUserName){
+    payload.pm_name = currentUserName;
+  }
+  const { data: newProj, error } = await sb.from('projects').insert(payload).select().single();
   if(error){ msg.className = 'modal-msg show err'; msg.textContent = error.message; return; }
+
+  // Auto-assign newly created project to current user (PM, Site Engineer, etc.)
+  if(newProj && currentUserId){
+    try {
+      await sb.from('user_project_access').upsert({
+        profile_id: currentUserId,
+        project_id: newProj.id
+      }, { onConflict: 'profile_id,project_id' });
+    } catch(e) {
+      console.warn('Auto-assign to user_project_access failed:', e);
+    }
+  }
+
   msg.className = 'modal-msg show ok'; msg.textContent = 'Project added.';
   setTimeout(()=> location.reload(), 600);
 });
