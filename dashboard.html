@@ -841,7 +841,11 @@ function bindCardClicks(){
 
     const card = e.target.closest('.proj-card');
     if(card){
-      window.location.href = 'project-overview.html?id=' + encodeURIComponent(card.getAttribute('data-id'));
+      const pid = card.getAttribute('data-id');
+      if(pid){
+        try { localStorage.setItem('sips_active_project_id', pid); } catch(err){}
+        window.location.href = 'project-overview.html?id=' + encodeURIComponent(pid);
+      }
     }
   });
 }

@@ -290,7 +290,10 @@ function timeAgo(dateStr){
    sending the user to a link without ?id= and landing on the default project. */
 (function fixSidebarLinksNow(){
   const params = new URLSearchParams(window.location.search);
-  const projectId = params.get('id');
+  let projectId = params.get('id');
+  if(!projectId){
+    try { projectId = localStorage.getItem('sips_active_project_id'); } catch(e){}
+  }
   if(!projectId) return;
   document.querySelectorAll('.app-nav-item[href]').forEach(a=>{
     const href = a.getAttribute('href');
@@ -473,10 +476,21 @@ function renderScheduleList(allTasks){
 
 async function loadOverview(){
   const params = new URLSearchParams(window.location.search);
-  const projectId = params.get('id');
+  let projectId = params.get('id');
+  if(!projectId){
+    try { projectId = localStorage.getItem('sips_active_project_id'); } catch(e){}
+  }
   let query = sb.from('projects').select('*');
-  query = projectId ? query.eq('id', projectId) : query.eq('name','Sama Sports Complex');
-  const { data: proj } = await query.single();
+  if(projectId){
+    query = query.eq('id', projectId);
+  } else {
+    query = query.order('name').limit(1);
+  }
+  const { data: projData } = await (projectId ? query.single() : query);
+  const proj = Array.isArray(projData) ? projData[0] : projData;
+  if(proj && proj.id){
+    try { localStorage.setItem('sips_active_project_id', proj.id); } catch(e){}
+  }
   if(!proj){ document.getElementById('projCard').innerHTML = '<div class="empty">Project sapadla nahi.</div>'; return; }
   currentProj = proj;
 
