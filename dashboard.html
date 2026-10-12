@@ -1176,9 +1176,6 @@ document.getElementById('submitAddProject').addEventListener('click', async ()=>
     image_url: document.getElementById('f-image').value.trim() || null,
     sport_type: document.getElementById('f-sport-type').value || null
   };
-  if((currentRole === 'pm' || currentRole === 'engineer') && currentUserName){
-    payload.pm_name = currentUserName;
-  }
   const { data: newProj, error } = await sb.from('projects').insert(payload).select().single();
   if(error){ msg.className = 'modal-msg show err'; msg.textContent = error.message; return; }
 
