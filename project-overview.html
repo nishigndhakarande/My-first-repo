@@ -1040,40 +1040,93 @@ document.getElementById('scheduleFileInput').addEventListener('change', async (e
     }
 
     const isDate = v => Boolean(parseFlexDateToISO(v));
-    const projStartYear = currentProj.start_date ? new Date(currentProj.start_date).getFullYear() : 2026;
-    // Header chya varchya row madhun sarvat jast date-cells asleli row = date axis.
-    let dateRowIdx=-1, best=0;
-    for(let i=0;i<=hIdx;i++){ const cnt=(raw[i]||[]).filter(isDate).length; if(cnt>best){best=cnt;dateRowIdx=i;} }
-    const dates = dateRowIdx>=0 ? raw[dateRowIdx] : [];
+    const projStartYear = currentProj.start_date ? new Date(currentProj.start_date).getFullYear() : (new Date().getFullYear());
     const toISO = s => parseFlexDateToISO(s, projStartYear);
 
-    const header = raw[hIdx].map(norm);
-    const cMile = header.indexOf('milestone');
-    const firstTaskCol = header.indexOf('task');
-    const skip = v => { const t=String(v||'').trim().toLowerCase(); return !t || t.startsWith('no work'); };
-    const today = new Date().toISOString().slice(0,10);
+    // Search across ALL rows (before AND after hIdx) for the row with the most date cells
+    let dateRowIdx = -1, best = 0;
+    for(let i = 0; i < raw.length; i++){
+      if(i === hIdx) continue;
+      const cnt = (raw[i]||[]).filter(isDate).length;
+      if(cnt > best){ best = cnt; dateRowIdx = i; }
+    }
 
-    // Pratyek task cha SARVA date-column occurrences goळa kar (milestone+task key ne group kar),
-    // mag first valid date = baseline_start, last valid date = due_date/planned_end.
-    // Ek task chya multiple date-columns var ✓ asel tar ek ch row banel, multiple nahi.
-    // Milestone sequence: raw[] la top->bottom scan kartana curMile Excel madhlya order ne badalto,
-    // ani JS Map keys nehmi insertion-order madhech iterate hotात, mhanun groups/rows chi order
-    // Excel madhlya milestone/task cha first-seen order ne exact preserve hote (no sort anywhere).
-    const groups = new Map(); // key -> { milestone, task, dates: [] }
-    const milestoneOrder = new Map(); // milestone name -> 1-based first-seen position in Excel
-    let curMile='';
-    for(let i=hIdx+1;i<raw.length;i++){
-      const r=raw[i]; const m=String(r[cMile]||'').trim(); if(m)curMile=m; if(!curMile) continue;
-      if(!milestoneOrder.has(curMile)) milestoneOrder.set(curMile, milestoneOrder.size+1);
-      for(let c=firstTaskCol;c<r.length;c++){
-        const v=String(r[c]||'').trim(); if(skip(v)) continue;
-        const key=curMile+'||'+v.toLowerCase();
-        const due=toISO(dates[c]);
+    // Also check if any row has consecutive day numbers (1, 2, 3... 31)
+    let dayRowIdx = -1, bestDays = 0;
+    for(let i = 0; i < raw.length; i++){
+      if(i === hIdx || i === dateRowIdx) continue;
+      const numCnt = (raw[i]||[]).filter(x => { const n = parseInt(x); return !isNaN(n) && n >= 1 && n <= 31; }).length;
+      if(numCnt >= 5 && numCnt > bestDays){ bestDays = numCnt; dayRowIdx = i; }
+    }
+
+    const rawDates = dateRowIdx >= 0 ? (raw[dateRowIdx] || []) : [];
+    // Forward-fill merged date cells across columns
+    let lastValidDate = null;
+    const dates = [];
+    for(let c = 0; c < Math.max(rawDates.length, 100); c++){
+      const parsed = toISO(rawDates[c]);
+      if(parsed){ lastValidDate = parsed; dates[c] = parsed; }
+      else if(lastValidDate && dayRowIdx < 0){ dates[c] = lastValidDate; }
+      else { dates[c] = null; }
+    }
+
+    // If day numbers row exists (e.g. 1..31) and project has a start_date, generate dates from day numbers
+    if(dayRowIdx >= 0 && (!dates.some(Boolean) || best < 3)){
+      const baseDate = currentProj.start_date ? new Date(currentProj.start_date) : new Date();
+      const baseYear = baseDate.getFullYear();
+      const baseMonth = baseDate.getMonth() + 1;
+      (raw[dayRowIdx] || []).forEach((cell, c) => {
+        const dayNum = parseInt(cell);
+        if(!isNaN(dayNum) && dayNum >= 1 && dayNum <= 31){
+          dates[c] = `${baseYear}-${String(baseMonth).padStart(2,'0')}-${String(dayNum).padStart(2,'0')}`;
+        }
+      });
+    }
+
+    const header = raw[hIdx].map(norm);
+    let cMile = header.indexOf('milestone');
+    if(cMile === -1) cMile = header.findIndex(x => x.includes('milestone') || x.includes('phase') || x.includes('stage') || x.includes('category'));
+    let firstTaskCol = header.indexOf('task');
+    if(firstTaskCol === -1) firstTaskCol = header.findIndex(x => x.includes('task'));
+    if(firstTaskCol === -1) firstTaskCol = Math.max(cMile + 1, 1);
+
+    const skip = v => {
+      const t = String(v||'').trim().toLowerCase();
+      return !t || t.startsWith('no work') || t === 'holiday' || t === 'sunday';
+    };
+
+    const groups = new Map();
+    const milestoneOrder = new Map();
+    let curMile = '';
+
+    for(let i = hIdx + 1; i < raw.length; i++){
+      const r = raw[i];
+      if(!r) continue;
+      const m = (cMile >= 0 && r[cMile]) ? String(r[cMile]).trim() : '';
+      if(m) curMile = m;
+      if(!curMile) curMile = 'General';
+      if(!milestoneOrder.has(curMile)) milestoneOrder.set(curMile, milestoneOrder.size + 1);
+
+      for(let c = firstTaskCol; c < r.length; c++){
+        const v = String(r[c]||'').trim();
+        if(skip(v)) continue;
+
+        // If cell has a checkmark / symbol, look for task description in an earlier column
+        let taskLabel = v;
+        if(['✓','✔','x','1','y','yes','p','done'].includes(v.toLowerCase())){
+          const rowDescCol = (firstTaskCol > 1) ? r[firstTaskCol - 1] : r[1];
+          if(rowDescCol && String(rowDescCol).trim()) taskLabel = String(rowDescCol).trim();
+        }
+
+        const key = curMile + '||' + taskLabel.toLowerCase();
+        const due = dates[c] || toISO(dates[c]) || toISO(v) || toISO(rawDates[c]);
         if(!due) continue;
-        if(!groups.has(key)) groups.set(key, { milestone: curMile, task: v, dates: [] });
+
+        if(!groups.has(key)) groups.set(key, { milestone: curMile, task: taskLabel, dates: [] });
         groups.get(key).dates.push(due);
       }
     }
+
     const rows = [];
     for(const { milestone, task, dates: ds } of groups.values()){
       if(!ds.length) continue;
@@ -1092,7 +1145,23 @@ document.getElementById('scheduleFileInput').addEventListener('change', async (e
       });
     }
 
-    if(!rows.length){ sipsToast('Ekhi valid task sapadla nahi.', 'error'); e.target.value=''; return; }
+    console.log('[Schedule Import Debug]', {
+      hIdx,
+      dateRowIdx,
+      dayRowIdx,
+      cMile,
+      firstTaskCol,
+      validDatesCount: dates.filter(Boolean).length,
+      groupsCount: groups.size,
+      rowsCount: rows.length,
+      sampleDates: dates.filter(Boolean).slice(0, 5)
+    });
+
+    if(!rows.length){
+      sipsToast('Ekhi valid task sapadla nahi (dateRow: ' + dateRowIdx + ', dates: ' + dates.filter(Boolean).length + '). F12 Console madhe bagha.', 'error');
+      e.target.value='';
+      return;
+    }
 
     const byM={}; rows.forEach(r=> byM[r.milestone]=(byM[r.milestone]||0)+1);
     const summary = Object.entries(byM).map(([m,n])=> '• '+m+': '+n).join('\n');
