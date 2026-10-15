@@ -281,18 +281,32 @@
   </div>
 </div>
 
-<!-- Edit Project Dates Modal -->
+<!-- Edit Project Details Modal -->
 <div class="modal-overlay" id="editDatesModal">
   <div class="modal-box">
     <div class="modal-head"><h3>Edit project details</h3><button class="modal-close" id="closeEditDates">&times;</button></div>
     <div class="modal-body">
       <div class="modal-msg" id="editDatesMsg"></div>
+      <div class="field"><label>Project name</label><input type="text" id="ed-name" placeholder="e.g. XYZ School Turf, Pune"></div>
+      <div class="field"><label>Location</label><input type="text" id="ed-location" placeholder="e.g. Baner, Pune"></div>
+      <div class="field"><label>Description</label><textarea id="ed-description" rows="3" placeholder="Short description of the project scope…"></textarea></div>
+      <div class="field-row">
+        <div class="field"><label>Selling price (₹ Cr)</label><input type="number" step="0.01" id="ed-budget" placeholder="1.50"></div>
+        <div class="field"><label>Cost price (₹ Cr)</label><input type="number" step="0.01" id="ed-cost" placeholder="1.10"></div>
+      </div>
+      <div class="field-row">
+        <div class="field"><label>Budget status</label><select id="ed-budget-status"><option value="on-budget">On budget</option><option value="watch">Watch</option><option value="over-budget">Over budget</option></select></div>
+        <div class="field"><label>Schedule status</label><select id="ed-schedule-status"><option value="on-track">On track</option><option value="at risk">At risk</option><option value="delayed">Delayed</option></select></div>
+      </div>
+      <div class="field-row">
+        <div class="field"><label>Progress (%)</label><input type="number" min="0" max="100" id="ed-progress" placeholder="0"></div>
+        <div class="field"><label>Next milestone</label><input type="text" id="ed-milestone" placeholder="e.g. Turf install — Aug 2"></div>
+      </div>
       <div class="field-row">
         <div class="field"><label>Start date</label><input type="date" id="ed-start"></div>
         <div class="field"><label>End date</label><input type="date" id="ed-end"></div>
       </div>
-      <div class="field">
-        <label>Sport type</label>
+      <div class="field"><label>Sport type</label>
         <select id="ed-sport-type">
           <option value="">Auto / Not specified</option>
           <option value="football">Football / Turf</option>
@@ -308,8 +322,9 @@
           <option value="other">Other / Non-sports</option>
         </select>
       </div>
+      <div class="field"><label>Image URL (optional)</label><input type="text" id="ed-image" placeholder="https://…"></div>
     </div>
-    <div class="modal-foot"><button class="btn" id="cancelEditDates">Cancel</button><button class="btn-add primary wide" id="submitEditDates">Save changes</button></div>
+    <div class="modal-foot"><button class="btn" id="cancelEditDates">Cancel</button><button class="btn-add primary wide" id="submitEditDates"><span class="plus">✓</span> Save changes</button></div>
   </div>
 </div>
 
@@ -834,11 +849,25 @@ function bindCardClicks(){
       e.preventDefault();
       e.stopPropagation();
       editDatesProjectId = editBtn.getAttribute('data-edit-id');
-      document.getElementById('ed-start').value = editBtn.getAttribute('data-edit-start') || '';
-      document.getElementById('ed-end').value = editBtn.getAttribute('data-edit-end') || '';
       const editingProj = allProjects.find(p => String(p.id) === String(editDatesProjectId));
-      document.getElementById('ed-sport-type').value = (editingProj && editingProj.sport_type) || '';
+      if(!editingProj) return;
+
+      document.getElementById('ed-name').value = editingProj.name || '';
+      document.getElementById('ed-location').value = editingProj.location || '';
+      document.getElementById('ed-description').value = editingProj.description || '';
+      document.getElementById('ed-budget').value = editingProj.budget_approved ?? '';
+      document.getElementById('ed-cost').value = editingProj.cost_price ?? '';
+      document.getElementById('ed-budget-status').value = editingProj.budget_status || 'on-budget';
+      document.getElementById('ed-schedule-status').value = editingProj.schedule_status || 'on-track';
+      document.getElementById('ed-progress').value = editingProj.progress_pct ?? 0;
+      document.getElementById('ed-milestone').value = editingProj.next_milestone || '';
+      document.getElementById('ed-start').value = editingProj.start_date || '';
+      document.getElementById('ed-end').value = editingProj.end_date || '';
+      document.getElementById('ed-sport-type').value = editingProj.sport_type || '';
+      document.getElementById('ed-image').value = editingProj.image_url || '';
+
       document.getElementById('editDatesMsg').className = 'modal-msg';
+      document.getElementById('editDatesMsg').textContent = '';
       document.getElementById('editDatesModal').classList.add('open');
       return;
     }
@@ -1134,19 +1163,44 @@ document.getElementById('submitEditDates').addEventListener('click', async ()=>{
   const msg = document.getElementById('editDatesMsg');
   msg.className = 'modal-msg'; msg.textContent = '';
   if(!editDatesProjectId) return;
+
+  const name = document.getElementById('ed-name').value.trim();
+  if(!name){ msg.className = 'modal-msg show err'; msg.textContent = 'Project name is required.'; return; }
+
   const start_date = document.getElementById('ed-start').value || null;
   const end_date = document.getElementById('ed-end').value || null;
-  const sport_type = document.getElementById('ed-sport-type').value || null;
   if(start_date && end_date && new Date(start_date) > new Date(end_date)){
-    msg.className = 'modal-msg show err'; msg.textContent = 'Start date end date nantar asu shakat nahi.'; return;
+    msg.className = 'modal-msg show err'; msg.textContent = 'Start date cannot be after end date.'; return;
   }
-  const { error } = await sb.from('projects').update({ start_date, end_date, sport_type }).eq('id', editDatesProjectId);
+
+  const payload = {
+    name,
+    location: document.getElementById('ed-location').value.trim(),
+    description: document.getElementById('ed-description').value.trim(),
+    budget_approved: parseFloat(document.getElementById('ed-budget').value) || 0,
+    cost_price: parseFloat(document.getElementById('ed-cost').value) || 0,
+    budget_status: document.getElementById('ed-budget-status').value,
+    schedule_status: document.getElementById('ed-schedule-status').value,
+    progress_pct: parseInt(document.getElementById('ed-progress').value) || 0,
+    next_milestone: document.getElementById('ed-milestone').value.trim(),
+    start_date,
+    end_date,
+    sport_type: document.getElementById('ed-sport-type').value || null,
+    image_url: document.getElementById('ed-image').value.trim() || null
+  };
+
+  const { error } = await sb.from('projects').update(payload).eq('id', editDatesProjectId);
   if(error){ msg.className = 'modal-msg show err'; msg.textContent = error.message; return; }
-  msg.className = 'modal-msg show ok'; msg.textContent = 'Details updated.';
+
+  msg.className = 'modal-msg show ok'; msg.textContent = 'Project details updated.';
   const proj = allProjects.find(p => String(p.id) === String(editDatesProjectId));
-  if(proj){ proj.start_date = start_date; proj.end_date = end_date; proj.sport_type = sport_type; }
+  if(proj){ Object.assign(proj, payload); }
+  renderSummary(allProjects);
   applyAllFilters();
-  setTimeout(()=> editDatesModal.classList.remove('open'), 500);
+  setTimeout(()=> {
+    editDatesModal.classList.remove('open');
+    location.reload();
+  }, 500);
 });
 
 /* ============== Add Project modal ============== */
