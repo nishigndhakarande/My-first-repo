@@ -21,7 +21,7 @@
 .btn-add.primary{background:var(--ink-900);color:#fff;border-color:var(--ink-900);}
 .btn-add.primary:hover{background:var(--brand-orange);border-color:var(--brand-orange);color:#fff;}
 .btn-add.wide{width:auto;height:auto;padding:9px 16px;display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:700;font-family:var(--font-display);}
-.v.v-bad{color:var(--status-bad);} .v.v-watch{color:var(--status-watch);}
+.v.v-bad{color:var(--status-bad);} .v.v-watch{color:var(--status-watch);} .v.v-good{color:var(--status-good);}
 
 .summary-row{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin-bottom:22px;}
 .sum-card{background:var(--paper-1);border:1px solid var(--line-2);border-radius:var(--r-lg);padding:17px 18px;display:flex;flex-direction:column;gap:10px;cursor:pointer;transition:border-color .15s ease, box-shadow .15s ease, transform .15s ease;box-shadow:var(--shadow-card);}
@@ -313,6 +313,7 @@
         <div class="field"><label>Start date</label><input type="date" id="ed-start"></div>
         <div class="field"><label>End date</label><input type="date" id="ed-end"></div>
       </div>
+      <div class="field"><label>Actual completion date (if completed)</label><input type="date" id="ed-actual-end"></div>
       <div class="field"><label>Sport type</label>
         <select id="ed-sport-type">
           <option value="">Auto / Not specified</option>
@@ -471,8 +472,26 @@ function isPastEndDate(p){
   return end < today;
 }
 function delayInfo(p){
-  if((p.progress_pct||0) >= 100) return { text:'Completed', days:0, cls:'' };
+  const isCompleted = (p.progress_pct||0) >= 100;
   const { end_date } = correctedDates(p);
+
+  if(isCompleted){
+    if(!end_date) return { text:'Completed', days:0, cls:'v-good' };
+    let compDateStr = p.actual_completion_date;
+    if(!compDateStr && typeof localStorage !== 'undefined'){
+      try { compDateStr = localStorage.getItem('sips_actual_end_' + p.id); } catch(e){}
+    }
+    if(!compDateStr) return { text:'Completed', days:0, cls:'' };
+    const end = new Date(end_date); end.setHours(0,0,0,0);
+    const comp = new Date(compDateStr); comp.setHours(0,0,0,0);
+    if(isNaN(end.getTime()) || isNaN(comp.getTime())) return { text:'Completed', days:0, cls:'' };
+    const diffDays = Math.round((comp - end)/86400000);
+    if(diffDays > 0){
+      return { text: diffDays + ' days delay', days: diffDays, cls:'v-bad', wasDelayed:true };
+    }
+    return { text:'On time', days:0, cls:'v-good', wasDelayed:false };
+  }
+
   if(!end_date) return { text:'—', days:0, cls:'' };
   const end = new Date(end_date); end.setHours(0,0,0,0);
   const today = new Date(); today.setHours(0,0,0,0);
@@ -597,13 +616,22 @@ function bannerStyle(p){
 function applyLiveProgress(projects, scheduleTasks){
   const byProject = {};
   (scheduleTasks||[]).forEach(t=>{
-    const c = byProject[t.project_id] || {total:0, done:0};
-    c.total++; if(t.status==='completed') c.done++;
+    const c = byProject[t.project_id] || {total:0, done:0, maxTaskDate:null};
+    c.total++;
+    if(t.status==='completed'){
+      c.done++;
+      const d = t.actual_end || t.due_date;
+      if(d){
+        const s = String(d).slice(0,10);
+        if(!c.maxTaskDate || s > c.maxTaskDate) c.maxTaskDate = s;
+      }
+    }
     byProject[t.project_id] = c;
   });
   projects.forEach(p=>{
     const c = byProject[p.id];
     if(c && c.total>0) p.progress_pct = Math.round((c.done/c.total)*100);
+    if(c && c.maxTaskDate) p.actual_completion_date = c.maxTaskDate;
   });
 }
 
@@ -691,7 +719,7 @@ document.getElementById('navImportData').addEventListener('click', ()=> document
     sb.from('drawings').select('id,status'),
     sb.from('change_orders').select('id,status'),
     sb.from('vendors').select('id,sla_status'),
-    sb.from('schedule_tasks').select('project_id,status')
+    sb.from('schedule_tasks').select('project_id,status,due_date,actual_end')
   ]);
   if(error){ document.getElementById('content').innerHTML = emptyState('Could not load projects', error.message); return; }
 
@@ -781,6 +809,7 @@ function renderCard(p){
       <div class="status-badge-col">
         <span class="status-badge ${os.cls}">${os.label}</span>
         ${(os.cls === 'bad' && di.days > 0) ? `<span class="status-badge-sub">${di.days} days</span>` : ''}
+        ${(os.cls === 'done' && di.days > 0) ? `<span class="status-badge-sub">${di.days}d delayed</span>` : ''}
       </div>
       <div class="banner-name">${p.name}</div>
     </div>
@@ -876,6 +905,7 @@ function bindCardClicks(){
       document.getElementById('ed-milestone').value = editingProj.next_milestone || '';
       document.getElementById('ed-start').value = editingProj.start_date || '';
       document.getElementById('ed-end').value = editingProj.end_date || '';
+      document.getElementById('ed-actual-end').value = editingProj.actual_completion_date || (typeof localStorage !== 'undefined' ? localStorage.getItem('sips_actual_end_' + editingProj.id) : '') || '';
       document.getElementById('ed-sport-type').value = editingProj.sport_type || '';
       document.getElementById('ed-image').value = editingProj.image_url || '';
 
@@ -1204,6 +1234,13 @@ document.getElementById('submitEditDates').addEventListener('click', async ()=>{
 
   const { error } = await sb.from('projects').update(payload).eq('id', editDatesProjectId);
   if(error){ msg.className = 'modal-msg show err'; msg.textContent = error.message; return; }
+
+  const actualEndVal = document.getElementById('ed-actual-end').value;
+  if(actualEndVal){
+    try { localStorage.setItem('sips_actual_end_' + editDatesProjectId, actualEndVal); } catch(e){}
+  } else {
+    try { localStorage.removeItem('sips_actual_end_' + editDatesProjectId); } catch(e){}
+  }
 
   msg.className = 'modal-msg show ok'; msg.textContent = 'Project details updated.';
   const proj = allProjects.find(p => String(p.id) === String(editDatesProjectId));
