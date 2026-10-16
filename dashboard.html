@@ -21,7 +21,7 @@
 .btn-add.primary{background:var(--ink-900);color:#fff;border-color:var(--ink-900);}
 .btn-add.primary:hover{background:var(--brand-orange);border-color:var(--brand-orange);color:#fff;}
 .btn-add.wide{width:auto;height:auto;padding:9px 16px;display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:700;font-family:var(--font-display);}
-.v.v-bad{color:var(--status-bad);} .v.v-watch{color:var(--status-watch);} .v.v-good{color:var(--status-good);}
+.v.v-bad{color:var(--status-bad);} .v.v-watch{color:var(--status-watch);}
 
 .summary-row{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin-bottom:22px;}
 .sum-card{background:var(--paper-1);border:1px solid var(--line-2);border-radius:var(--r-lg);padding:17px 18px;display:flex;flex-direction:column;gap:10px;cursor:pointer;transition:border-color .15s ease, box-shadow .15s ease, transform .15s ease;box-shadow:var(--shadow-card);}
@@ -471,33 +471,18 @@ function isPastEndDate(p){
   return end < today;
 }
 function delayInfo(p){
+  if((p.progress_pct||0) >= 100) return { text:'Completed', days:0, cls:'' };
   const { end_date } = correctedDates(p);
-  const isCompleted = (p.progress_pct||0) >= 100 || (p.schedule_status === 'completed');
-
-  if(isCompleted){
-    if(!end_date) return { text:'Completed', days:0, cls:'v-good', completed:true };
-    const compDateStr = p.actual_completion_date || p.actual_end_date || (p.updated_at ? String(p.updated_at).split('T')[0] : null);
-    if(!compDateStr) return { text:'Completed', days:0, cls:'v-good', completed:true };
-    const end = new Date(end_date); end.setHours(0,0,0,0);
-    const comp = new Date(compDateStr); comp.setHours(0,0,0,0);
-    if(isNaN(end.getTime()) || isNaN(comp.getTime())) return { text:'Completed', days:0, cls:'v-good', completed:true };
-    const diffDays = Math.round((comp - end)/86400000);
-    if(diffDays > 0){
-      return { text: diffDays + ' days delay', days: diffDays, cls:'v-bad', wasDelayed:true, completed:true };
-    }
-    return { text:'On time', days:0, cls:'v-good', wasDelayed:false, completed:true };
-  }
-
   if(!end_date) return { text:'—', days:0, cls:'' };
   const end = new Date(end_date); end.setHours(0,0,0,0);
   const today = new Date(); today.setHours(0,0,0,0);
   const diffDays = Math.round((end - today)/86400000);
   if(diffDays < 0){
     const d = Math.abs(diffDays);
-    return { text: d + ' days', days: d, cls:'v-bad', wasDelayed:false, completed:false };
+    return { text: d + ' days', days: d, cls:'v-bad' };
   }
-  if(diffDays === 0) return { text:'Due today', days:0, cls:'v-watch', wasDelayed:false, completed:false };
-  return { text: diffDays + 'd left', days:0, cls:'', wasDelayed:false, completed:false };
+  if(diffDays === 0) return { text:'Due today', days:0, cls:'v-watch' };
+  return { text: diffDays + 'd left', days:0, cls:'' };
 }
 function overallStatus(p){
   if((p.progress_pct||0) >= 100) return {label:'Completed', cls:'done'};
@@ -612,28 +597,13 @@ function bannerStyle(p){
 function applyLiveProgress(projects, scheduleTasks){
   const byProject = {};
   (scheduleTasks||[]).forEach(t=>{
-    const c = byProject[t.project_id] || {total:0, done:0, maxCompletedDate:null, maxDueDate:null};
-    c.total++;
-    const tDue = t.actual_end || t.due_date || t.planned_end;
-    if(tDue){
-      const dStr = String(tDue).split('T')[0];
-      if(!c.maxDueDate || dStr > c.maxDueDate) c.maxDueDate = dStr;
-    }
-    if(t.status==='completed'){
-      c.done++;
-      const compDate = t.actual_end || t.due_date || (t.updated_at ? String(t.updated_at).split('T')[0] : null);
-      if(compDate){
-        const dStr = String(compDate).split('T')[0];
-        if(!c.maxCompletedDate || dStr > c.maxCompletedDate) c.maxCompletedDate = dStr;
-      }
-    }
+    const c = byProject[t.project_id] || {total:0, done:0};
+    c.total++; if(t.status==='completed') c.done++;
     byProject[t.project_id] = c;
   });
   projects.forEach(p=>{
     const c = byProject[p.id];
     if(c && c.total>0) p.progress_pct = Math.round((c.done/c.total)*100);
-    if(c && c.maxCompletedDate) p.actual_completion_date = c.maxCompletedDate;
-    else if(c && c.maxDueDate) p.actual_completion_date = c.maxDueDate;
   });
 }
 
@@ -721,7 +691,7 @@ document.getElementById('navImportData').addEventListener('click', ()=> document
     sb.from('drawings').select('id,status'),
     sb.from('change_orders').select('id,status'),
     sb.from('vendors').select('id,sla_status'),
-    sb.from('schedule_tasks').select('project_id,status,due_date,planned_end,actual_end,updated_at')
+    sb.from('schedule_tasks').select('project_id,status')
   ]);
   if(error){ document.getElementById('content').innerHTML = emptyState('Could not load projects', error.message); return; }
 
@@ -811,7 +781,6 @@ function renderCard(p){
       <div class="status-badge-col">
         <span class="status-badge ${os.cls}">${os.label}</span>
         ${(os.cls === 'bad' && di.days > 0) ? `<span class="status-badge-sub">${di.days} days</span>` : ''}
-        ${(os.cls === 'done' && di.days > 0) ? `<span class="status-badge-sub">${di.days}d delayed</span>` : ''}
       </div>
       <div class="banner-name">${p.name}</div>
     </div>
