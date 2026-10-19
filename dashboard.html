@@ -706,7 +706,7 @@ document.getElementById('navImportData').addEventListener('click', ()=> document
     renderSummary([]);
     document.getElementById('content').innerHTML = emptyState('No projects assigned', 'Contact your Director or PM to get assigned to a project.');
     document.getElementById('projectsCount').textContent = 'Projects (0)';
-    renderBottomPanels([], [], []);
+    renderBottomPanels([], [], [], []);
     return;
   }
 
@@ -719,7 +719,7 @@ document.getElementById('navImportData').addEventListener('click', ()=> document
     sb.from('drawings').select('id,status'),
     sb.from('change_orders').select('id,status'),
     sb.from('vendors').select('id,sla_status'),
-    sb.from('schedule_tasks').select('project_id,status,due_date,actual_end')
+    sb.from('schedule_tasks').select('id,project_id,task,status,due_date,actual_end,date_status,resched_reason,milestone,created_at')
   ]);
   if(error){ document.getElementById('content').innerHTML = emptyState('Could not load projects', error.message); return; }
 
@@ -757,7 +757,7 @@ document.getElementById('navImportData').addEventListener('click', ()=> document
 
   renderSummary(allProjects);
   renderList(allProjects);
-  renderBottomPanels(allProjects, ncrs||[], allTasks);
+  renderBottomPanels(allProjects, ncrs||[], allTasks, schedTasks||[]);
 })();
 
 /* ============== Summary cards ============== */
@@ -1039,7 +1039,7 @@ document.getElementById('viewListBtn').addEventListener('click', ()=>{
 });
 
 /* ============== Bottom panels ============== */
-function renderBottomPanels(projects, ncrs, allTasks){
+function renderBottomPanels(projects, ncrs, allTasks, schedTasks){
   const buckets = {good:0, watch:0, bad:0, done:0};
   projects.forEach(p=> buckets[overallStatus(p).cls]++);
   const total = projects.length || 1;
@@ -1083,15 +1083,93 @@ function renderBottomPanels(projects, ncrs, allTasks){
     ? withMilestone.map(p=>`<div class="mini-row"><span class="mini-dot" style="background:var(--orange)"></span><div><div class="t">${p.next_milestone}</div><div class="s">${p.name} · ${fmtDate(p.end_date)}</div></div></div>`).join('')
     : `<div style="font-size:12px;color:var(--muted)">No upcoming milestones set.</div>`;
 
-  // Today's tasks: not-done tasks, most recently created first
-  const todaysTasks = (allTasks||[]).filter(t => !(t.is_done || t.status === 'done'))
-    .sort((a,b)=> new Date(b.created_at||0) - new Date(a.created_at||0)).slice(0,6);
-  document.getElementById('activityPanel').innerHTML = todaysTasks.length
-    ? todaysTasks.map(t=>{
-        const proj = projects.find(p=>p.id === t.project_id);
-        const st = t.status || 'not_started';
-        const tag = st === 'in_progress' ? {c:'#FEF3E2',t:'#B45309',l:'In progress'} : {c:'#F1F2F4',t:'#6B7280',l:'Not started'};
-        return `<div class="mini-row"><span class="mini-dot" style="background:var(--orange)"></span><div style="flex:1"><div class="t">${t.title}</div><div class="s">${proj ? proj.name : ''}</div></div><span class="task-status-tag" style="background:${tag.c};color:${tag.t}">${tag.l}</span></div>`;
+  // Today's tasks & live site updates (with engineer reasons)
+  function escHtml(str){
+    if(!str) return '';
+    return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  const updates = [];
+
+  // 1. Check schedule_tasks for date_status updates made by site engineers
+  (schedTasks || []).forEach(t => {
+    const proj = projects.find(p => String(p.id) === String(t.project_id));
+    const projName = proj ? proj.name : '';
+
+    if (t.date_status && typeof t.date_status === 'object') {
+      Object.entries(t.date_status).forEach(([day, info]) => {
+        if (info && (info.status || info.reason)) {
+          updates.push({
+            id: t.id + '_' + day,
+            title: t.task || 'Untitled Task',
+            projectName: projName,
+            status: info.status || t.status || 'in_progress',
+            reason: info.reason || '',
+            date: day,
+            sortTime: new Date(info.updated_at || day).getTime() || 0
+          });
+        }
+      });
+    }
+
+    if (t.resched_reason && !updates.some(u => u.id.startsWith(String(t.id)))) {
+      updates.push({
+        id: t.id + '_resched',
+        title: t.task || 'Untitled Task',
+        projectName: projName,
+        status: t.status || 'in_progress',
+        reason: t.resched_reason,
+        date: t.due_date || '',
+        sortTime: new Date(t.due_date || t.created_at || 0).getTime() || 0
+      });
+    }
+  });
+
+  // 2. If no daily updates found yet, fall back to any active project_tasks
+  if (updates.length === 0) {
+    (allTasks || []).filter(t => !(t.is_done || t.status === 'done')).forEach(t => {
+      const proj = projects.find(p => String(p.id) === String(t.project_id));
+      updates.push({
+        id: 'pt_' + (t.id || Math.random()),
+        title: t.title || 'Untitled Task',
+        projectName: proj ? proj.name : '',
+        status: t.status || 'not_started',
+        reason: '',
+        date: '',
+        sortTime: new Date(t.created_at || 0).getTime() || 0
+      });
+    });
+  }
+
+  updates.sort((a, b) => b.sortTime - a.sortTime);
+  const displayUpdates = updates.slice(0, 6);
+
+  const statusMeta = {
+    completed: { c: '#DCFCE7', t: '#16A34A', l: 'Completed', dot: 'var(--green)' },
+    in_progress: { c: '#FEF3E2', t: '#B45309', l: 'In progress', dot: '#EAB308' },
+    not_completed: { c: '#FEE2E2', t: '#DC2626', l: 'Incomplete', dot: 'var(--red)' },
+    not_started: { c: '#F1F2F4', t: '#6B7280', l: 'Not started', dot: 'var(--blue)' }
+  };
+
+  document.getElementById('activityPanel').innerHTML = displayUpdates.length
+    ? displayUpdates.map(u => {
+        const meta = statusMeta[u.status] || statusMeta.not_started;
+        const dateStr = u.date ? `<span style="font-size:9.5px;color:var(--muted);font-family:var(--font-mono);">${escHtml(u.date)}</span>` : '';
+        return `
+        <div class="mini-row" style="padding-bottom:7px;margin-bottom:7px;border-bottom:1px solid var(--line-2);">
+          <span class="mini-dot" style="background:${meta.dot};margin-top:4px;"></span>
+          <div style="flex:1;min-width:0;">
+            <div style="display:flex;justify-content:space-between;align-items:center;gap:6px;">
+              <div class="t" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:180px;" title="${escHtml(u.title)}">${escHtml(u.title)}</div>
+              <span class="task-status-tag" style="background:${meta.c};color:${meta.t};">${meta.l}</span>
+            </div>
+            <div class="s" style="display:flex;justify-content:space-between;align-items:center;margin-top:2px;">
+              <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:160px;">${escHtml(u.projectName)}</span>
+              ${dateStr}
+            </div>
+            ${u.reason ? `<div style="font-size:11px;color:var(--ink-800);background:var(--paper-0);border-left:2.5px solid ${meta.dot};padding:4px 8px;border-radius:4px;margin-top:4px;line-height:1.35;word-break:break-word;">💬 <i>${escHtml(u.reason)}</i></div>` : ''}
+          </div>
+        </div>`;
       }).join('')
     : `<div style="font-size:12px;color:var(--muted)">No pending tasks.</div>`;
 }
