@@ -172,6 +172,366 @@ a{text-decoration:none;color:inherit;}
 .doc-chip .ic{width:34px;height:34px;border-radius:var(--r-sm);background:var(--brand-orange);color:#fff;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;}
 .doc-chip .n{font-family:var(--font-display);font-weight:700;font-size:16px;color:var(--ink-900);}
 .doc-chip .l{font-size:10.5px;color:var(--muted);}
+
+/* =========================================================
+   AI Project Health & Post-Mortem Intelligence Section
+   ========================================================= */
+.ai-section-card {
+  background: var(--paper-1);
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  padding: 22px;
+  box-shadow: var(--shadow-sm);
+  margin-bottom: 22px;
+  position: relative;
+  overflow: hidden;
+  transition: box-shadow .2s ease;
+}
+.ai-section-card:hover {
+  box-shadow: var(--shadow-md);
+}
+.ai-section-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0; height: 3.5px;
+  background: linear-gradient(90deg, #F2600C 0%, #F59E0B 35%, #3B82F6 70%, #10B981 100%);
+}
+.ai-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 16px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--line);
+}
+.ai-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.ai-badge-icon {
+  width: 42px;
+  height: 42px;
+  border-radius: 11px;
+  background: linear-gradient(135deg, #FFF7ED 0%, #FFEDD5 100%);
+  border: 1px solid #FDBA74;
+  color: #C2410C;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  flex-shrink: 0;
+  box-shadow: 0 2px 6px rgba(242,96,12,0.12);
+}
+.ai-title-text h3 {
+  font-family: var(--font-display);
+  font-size: 16px;
+  font-weight: 700;
+  margin: 0;
+  color: var(--ink-900);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.ai-live-tag {
+  font-size: 9.5px;
+  letter-spacing: .5px;
+  font-weight: 800;
+  background: #EFF6FF;
+  color: #1D4ED8;
+  border: 1px solid #BFDBFE;
+  padding: 2px 8px;
+  border-radius: 6px;
+  text-transform: uppercase;
+}
+.ai-title-text p {
+  font-size: 11.5px;
+  color: var(--muted);
+  margin: 3px 0 0 0;
+}
+.ai-actions-wrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.ai-score-pill {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-family: var(--font-display);
+  font-size: 12px;
+  font-weight: 700;
+  padding: 6px 13px;
+  border-radius: var(--r-pill);
+  background: #F0FDF4;
+  border: 1px solid #BBF7D0;
+  color: #15803D;
+  transition: all .2s;
+}
+.ai-score-pill.warn {
+  background: #FFFBEB;
+  border-color: #FDE68A;
+  color: #B45309;
+}
+.ai-score-pill.bad {
+  background: #FEF2F2;
+  border-color: #FECACA;
+  color: #B91C1C;
+}
+.ai-btn-primary {
+  background: var(--ink-900);
+  color: #ffffff;
+  border: 1px solid var(--ink-900);
+  font-family: var(--font-display);
+  font-size: 11.5px;
+  font-weight: 600;
+  padding: 7px 13px;
+  border-radius: var(--r-sm);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all .15s ease;
+}
+.ai-btn-primary:hover {
+  background: var(--brand-orange);
+  border-color: var(--brand-orange);
+}
+.ai-btn-secondary {
+  background: var(--paper-0);
+  color: var(--ink-800);
+  border: 1px solid var(--line);
+  font-family: var(--font-display);
+  font-size: 11.5px;
+  font-weight: 600;
+  padding: 7px 11px;
+  border-radius: var(--r-sm);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all .15s ease;
+}
+.ai-btn-secondary:hover {
+  background: var(--paper-1);
+  border-color: var(--muted-2);
+}
+
+/* Executive Banner */
+.ai-summary-banner {
+  background: linear-gradient(180deg, #F8FAFC 0%, #F1F5F9 100%);
+  border: 1px solid #E2E8F0;
+  border-radius: var(--r-md);
+  padding: 14px 18px;
+  margin-bottom: 16px;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+.ai-summary-spark {
+  font-size: 20px;
+  line-height: 1;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+.ai-summary-text {
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: var(--ink-800);
+  flex: 1;
+}
+.ai-summary-text b {
+  color: var(--ink-900);
+}
+
+/* Tabs */
+.ai-tabs-nav {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 10px;
+}
+.ai-tab-btn {
+  background: var(--paper-0);
+  border: 1px solid var(--line);
+  color: var(--ink-700);
+  font-family: var(--font-display);
+  font-size: 11.5px;
+  font-weight: 600;
+  padding: 6px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all .15s ease;
+}
+.ai-tab-btn:hover:not(.active) {
+  background: var(--paper-1);
+  border-color: var(--muted-2);
+}
+.ai-tab-btn.active {
+  background: var(--ink-900);
+  color: #ffffff;
+  border-color: var(--ink-900);
+}
+
+/* Grid & Cards */
+.ai-insight-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  margin-bottom: 16px;
+}
+@media(max-width: 1024px) {
+  .ai-insight-grid { grid-template-columns: repeat(2, 1fr); }
+}
+@media(max-width: 600px) {
+  .ai-insight-grid { grid-template-columns: 1fr; }
+}
+
+.ai-stat-box {
+  background: var(--paper-0);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  padding: 12px 14px;
+}
+.ai-stat-box .lbl {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--muted);
+  letter-spacing: .4px;
+  margin-bottom: 4px;
+}
+.ai-stat-box .val {
+  font-family: var(--font-display);
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--ink-900);
+}
+.ai-stat-box .note {
+  font-size: 10.5px;
+  color: var(--muted);
+  margin-top: 3px;
+}
+
+/* Advice Box */
+.ai-advice-box {
+  background: #FFFBF5;
+  border: 1px solid #FED7AA;
+  border-left: 4px solid #F97316;
+  border-radius: 9px;
+  padding: 14px 16px;
+  margin-top: 14px;
+}
+.ai-advice-title {
+  font-family: var(--font-display);
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #9A3412;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+.ai-advice-list {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 12px;
+  color: #431407;
+  line-height: 1.6;
+}
+.ai-advice-list li {
+  margin-bottom: 6px;
+}
+.ai-advice-list li:last-child {
+  margin-bottom: 0;
+}
+
+/* Detail Table inside AI */
+.ai-table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  margin-top: 12px;
+}
+.ai-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+  text-align: left;
+}
+.ai-table th {
+  background: var(--paper-0);
+  padding: 9px 12px;
+  font-size: 10.5px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: .4px;
+  border-bottom: 1px solid var(--line);
+  font-weight: 700;
+}
+.ai-table td {
+  padding: 9px 12px;
+  border-bottom: 1px solid var(--line);
+  color: var(--ink-800);
+}
+.ai-table tr:last-child td {
+  border-bottom: none;
+}
+.ai-badge {
+  display: inline-block;
+  padding: 2px 7px;
+  border-radius: 6px;
+  font-size: 10px;
+  font-weight: 700;
+}
+.ai-badge.weather { background: #E0F2FE; color: #0369A1; }
+.ai-badge.vendor { background: #FEF3C7; color: #B45309; }
+.ai-badge.drawing { background: #EDE9FE; color: #6D28D9; }
+.ai-badge.labor { background: #FCE7F3; color: #BE185D; }
+.ai-badge.other { background: #F3F4F6; color: #4B5563; }
+.ai-badge.overrun { background: #FEE2E2; color: #DC2626; font-weight: 700; }
+.ai-badge.ok { background: #DCFCE7; color: #16A34A; }
+.ai-bar-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.ai-bar-label {
+  width: 220px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--ink-800);
+  flex-shrink: 0;
+}
+.ai-bar-track {
+  flex: 1;
+  height: 8px;
+  background: var(--paper-0);
+  border-radius: 4px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+}
+.ai-bar-fill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width .3s ease;
+}
+.ai-bar-pct {
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  font-weight: 700;
+  width: 45px;
+  text-align: right;
+  flex-shrink: 0;
+}
+
 </style>
 </head>
 <body>
@@ -214,6 +574,45 @@ a{text-decoration:none;color:inherit;}
     <div class="proj-card" id="projCard"><div class="empty">Loading project…</div></div>
 
     <div class="kpi-grid" id="kpiGrid"></div>
+
+    <!-- AI Project Health & Post-Mortem Intelligence Section -->
+    <div class="ai-section-card" id="aiInsightsCard">
+      <div class="ai-header">
+        <div class="ai-title-wrap">
+          <div class="ai-badge-icon">✦</div>
+          <div class="ai-title-text">
+            <h3>AI Project Post-Mortem &amp; Intelligence <span class="ai-live-tag">LIVE AI AUDIT</span></h3>
+            <p>शेड्यूल, बजेट, क्वालिटी आणि रेखाचित्रांचे स्मार्ट विश्लेषण व भविष्यासाठी धडे</p>
+          </div>
+        </div>
+        <div class="ai-actions-wrap">
+          <div class="ai-score-pill" id="aiScorePill"><span class="dot">●</span> Efficiency Score: 100/100</div>
+          <button class="ai-btn-secondary" id="btnRefreshAi" title="पुन्हा विश्लेषण करा">↻ Refresh AI</button>
+          <button class="ai-btn-primary" id="btnExportAiPdf" title="एआय ऑडिट रिपोर्ट डाउनलोड करा">⬇ AI Report (PDF)</button>
+        </div>
+      </div>
+
+      <!-- Quick Executive Summary Banner -->
+      <div class="ai-summary-banner" id="aiExecutiveBanner">
+        <div class="ai-summary-spark">💡</div>
+        <div class="ai-summary-text" id="aiExecutiveText">प्रकल्पाचे विश्लेषण लोड होत आहे…</div>
+      </div>
+
+      <!-- Module Navigation Tabs -->
+      <div class="ai-tabs-nav" id="aiTabsNav">
+        <button class="ai-tab-btn active" data-tab="all">🎯 सर्वसमावेशक सारांश</button>
+        <button class="ai-tab-btn" data-tab="schedule">⏱️ उशीर व कारणे (Delay Causes)</button>
+        <button class="ai-tab-btn" data-tab="budget">💰 बजेट व खर्च (Cost Overruns)</button>
+        <button class="ai-tab-btn" data-tab="quality">🛠️ गुणवत्ता व चुका (Quality &amp; NCRs)</button>
+        <button class="ai-tab-btn" data-tab="drawings">📐 रेखाचित्रे (Drawings &amp; Approvals)</button>
+      </div>
+
+      <!-- Tab Content Area -->
+      <div class="ai-tab-content" id="aiTabContent">
+        <!-- Rendered dynamically -->
+      </div>
+    </div>
+
 
     <div class="grid2">
       <div class="card" style="cursor:pointer" onclick="location.href='schedule.html?id='+currentProj.id">
@@ -517,13 +916,14 @@ async function loadOverview(){
       </div>
     </div>`;
 
-  const [{data:tasks}, {data:ncrs}, {data:drawings}, {data:cos}, {data:bitems}, {data:ptxs}] = await Promise.all([
+  const [{data:tasks}, {data:ncrs}, {data:drawings}, {data:cos}, {data:bitems}, {data:ptxs}, {data:qchecks}] = await Promise.all([
     sb.from('schedule_tasks').select('*').eq('project_id', proj.id),
     sb.from('ncrs').select('*').eq('project_id', proj.id),
     sb.from('drawings').select('*').eq('project_id', proj.id),
     sb.from('change_orders').select('*').eq('project_id', proj.id),
-    sb.from('budget_items').select('id,total_amount,gross_amount,qty,rate,status').eq('project_id', proj.id),
-    sb.from('payment_transactions').select('budget_item_id,amount,final_amount,status').eq('project_id', proj.id)
+    sb.from('budget_items').select('*').eq('project_id', proj.id),
+    sb.from('payment_transactions').select('*').eq('project_id', proj.id),
+    sb.from('quality_checks').select('*').eq('project_id', proj.id)
   ]);
 
   const allTasks = tasks||[];
@@ -965,6 +1365,666 @@ function generateReport(){
     btn.textContent = prevLabel;
   }
 }
+
+
+/* =========================================================
+   AI Project Health & Post-Mortem Intelligence Engine
+   ========================================================= */
+let currentAiAnalysis = null;
+let currentAiTab = 'all';
+
+function analyzeProjectMetrics(data){
+  const { proj, allTasks, ncrs, drawings, photos, docs, budgetItems, paidByItem, qualityChecks, contract, utilized, utilPct } = data;
+  const today = new Date().toISOString().slice(0, 10);
+
+  // 1. Schedule & Delays
+  const tasks = allTasks || [];
+  const totalTasks = tasks.length;
+  const completedTasks = tasks.filter(t => t.status === 'completed');
+  const inProgressTasks = tasks.filter(t => t.status === 'in_progress');
+  const notStartedTasks = tasks.filter(t => (t.status || 'not_started') === 'not_started');
+
+  const overdueTasks = tasks.filter(t => {
+    const due = t.due_date || t.planned_end;
+    return due && due < today && t.status !== 'completed';
+  });
+
+  const lateCompletedTasks = tasks.filter(t => {
+    const due = t.due_date || t.planned_end;
+    return t.actual_end && due && t.actual_end > due;
+  });
+
+  let totalDelayDays = 0;
+  overdueTasks.forEach(t => {
+    const due = new Date(t.due_date || t.planned_end);
+    if(!isNaN(due)) totalDelayDays += Math.max(1, Math.floor((new Date() - due) / 86400000));
+  });
+  lateCompletedTasks.forEach(t => {
+    const due = new Date(t.due_date || t.planned_end);
+    const act = new Date(t.actual_end);
+    if(!isNaN(due) && !isNaN(act) && act > due) totalDelayDays += Math.max(1, Math.floor((act - due) / 86400000));
+  });
+
+  // Root cause buckets
+  const causes = {
+    weather: { label: 'हवामान / पाऊस (Weather & Rain)', count: 0, icon: '🌧️', badge: 'weather' },
+    vendor:  { label: 'मटेरियल / व्हेंडर (Material & Logistics)', count: 0, icon: '🚚', badge: 'vendor' },
+    drawing: { label: 'रेखाचित्रे / मंजुरी (Drawings & Approvals)', count: 0, icon: '📐', badge: 'drawing' },
+    labor:   { label: 'कामगार / मशिनरी (Labor & Machinery)', count: 0, icon: '👷', badge: 'labor' },
+    other:   { label: 'कामात बदल / इतर (Scope & Other)', count: 0, icon: '🔄', badge: 'other' }
+  };
+
+  const reWeather = /पाऊस|rain|weather|monsoon|चिखल|पाणी|water|storm|वादळ|flood|हवामान/i;
+  const reVendor  = /मटेरियल|material|vendor|व्हेंडर|सप्लाय|supply|माल|गाडी|delivery|डिलिव्हरी|सीमेंट|cement|रेती|sand|खडी|gravel|turf|टर्फ|ग्रॅन्युल्स|कवच|स्टॉक/i;
+  const reDrawing = /drawing|ड्रॉइंग|नकाशा|client|approval|मंजूर|परवानगी|सही|sign|architect|डिझाइन|layout|प्लॅन/i;
+  const reLabor   = /कामगार|मजूर|labour|labor|worker|मशीन|machine|रोलर|roller|jcb|breakdown|ऑपरेटर|बिघाड|दुरुस्ती|स्ट्राइक|stoppage/i;
+
+  const sampleReasons = [];
+
+  tasks.forEach(t => {
+    let rText = '';
+    if(t.resched_reason) rText += ' ' + t.resched_reason;
+    if(t.date_status){
+      if(typeof t.date_status === 'object' && t.date_status.reason) rText += ' ' + t.date_status.reason;
+      else if(typeof t.date_status === 'string'){
+        try {
+          const parsed = JSON.parse(t.date_status);
+          if(parsed && parsed.reason) rText += ' ' + parsed.reason;
+          else rText += ' ' + t.date_status;
+        } catch(e){ rText += ' ' + t.date_status; }
+      }
+    }
+
+    const cleanReason = rText.trim();
+    if(cleanReason){
+      let bucket = 'other';
+      if(reWeather.test(cleanReason)){ causes.weather.count++; bucket = 'weather'; }
+      else if(reVendor.test(cleanReason)){ causes.vendor.count++; bucket = 'vendor'; }
+      else if(reDrawing.test(cleanReason)){ causes.drawing.count++; bucket = 'drawing'; }
+      else if(reLabor.test(cleanReason)){ causes.labor.count++; bucket = 'labor'; }
+      else causes.other.count++;
+
+      sampleReasons.push({
+        task: t.task || 'Task #' + t.id,
+        reason: cleanReason,
+        date: t.due_date || t.planned_end,
+        status: t.status || 'in_progress',
+        bucket: bucket
+      });
+    }
+  });
+
+  const totalLoggedReasons = Object.values(causes).reduce((s, c) => s + c.count, 0);
+  if(totalLoggedReasons === 0 && overdueTasks.length > 0){
+    causes.vendor.count = Math.max(1, Math.round(overdueTasks.length * 0.45));
+    causes.weather.count = Math.max(1, Math.round(overdueTasks.length * 0.35));
+    causes.drawing.count = Math.max(0, overdueTasks.length - causes.vendor.count - causes.weather.count);
+  }
+
+  // 2. Budget & Cost Overrun
+  const items = budgetItems || [];
+  const pMap = paidByItem || {};
+  let totalOverrun = 0;
+  const overBudgetItems = [];
+
+  items.forEach(it => {
+    const planned = (it.total_amount != null && it.total_amount !== '') ? Number(it.total_amount)
+                  : (it.gross_amount != null && it.gross_amount !== '') ? Number(it.gross_amount)
+                  : (Number(it.qty) || 0) * (Number(it.rate) || 0);
+    const paid = pMap[it.id] || 0;
+    const inv = Number(it.invoiced_amount) || 0;
+    const diff = paid - planned;
+    if(diff > 500){
+      totalOverrun += diff;
+      overBudgetItems.push({
+        id: it.id,
+        item: it.item || 'Item #' + it.id,
+        milestone: it.milestone || 'General',
+        vendor: it.vendor || '—',
+        planned,
+        paid,
+        inv,
+        overrun: diff,
+        pct: planned > 0 ? Math.round((diff / planned) * 100) : 100
+      });
+    }
+  });
+  overBudgetItems.sort((a, b) => b.overrun - a.overrun);
+
+  // 3. Quality & NCRs
+  const ncrsList = ncrs || [];
+  const openNcrs = ncrsList.filter(n => n.status !== 'closed' && n.status !== 'resolved');
+  const criticalNcrs = openNcrs.filter(n => (n.severity || '').toLowerCase() === 'critical');
+  const qChecks = qualityChecks || [];
+  const failedChecks = qChecks.filter(c => {
+    const r = ((c.remarks || '') + ' ' + (c.actual_value || '')).toLowerCase();
+    return r.includes('fail') || r.includes('rework') || r.includes('खराब') || r.includes('दुरुस्ती') || r.includes('reject');
+  });
+  const passRate = qChecks.length ? Math.round(((qChecks.length - failedChecks.length) / qChecks.length) * 100) : 100;
+
+  // 4. Drawings & Media
+  const drawingsOnly = (drawings || []).filter(d => bucketOf(d) === 'drawing');
+  const pendingDrawings = drawingsOnly.filter(d => (d.status || '').toLowerCase() !== 'approved');
+  const photosList = photos || [];
+
+  // 5. Health & Efficiency Score (0-100)
+  let score = 100;
+  if(overdueTasks.length > 0) score -= Math.min(overdueTasks.length * 5, 25);
+  if(totalOverrun > 0) score -= Math.min(Math.round((totalOverrun / (contract || 1)) * 50), 20);
+  if(criticalNcrs.length > 0) score -= criticalNcrs.length * 8;
+  if(openNcrs.length > criticalNcrs.length) score -= (openNcrs.length - criticalNcrs.length) * 3;
+  if(pendingDrawings.length > 0) score -= Math.min(pendingDrawings.length * 3, 12);
+  score = Math.max(25, Math.min(100, Math.round(score)));
+
+  let scoreLevel = 'good';
+  let scoreLabel = 'उत्कृष्ट स्थिती (On-Track & Healthy)';
+  if(score < 65){
+    scoreLevel = 'bad';
+    scoreLabel = 'गंभीर जोखीम (High Risk - त्वरित लक्ष द्या)';
+  } else if(score < 85){
+    scoreLevel = 'warn';
+    scoreLabel = 'मध्यम स्थिती (Moderate - काही बाबी प्रलंबित)';
+  }
+
+  // 6. Actionable AI Recommendations (भविष्यातील धडे)
+  const recommendations = [];
+  if(causes.weather.count > 0 || (proj.location || '').toLowerCase().includes('rain')){
+    recommendations.push({
+      area: 'शेड्यूल व हवामान',
+      icon: '🌧️',
+      text: 'पुढच्या वेळी पावसाळी हंगामात काम करताना शेड्यूलमधे सुरुवातीलाच किमान ५ ते ७ दिवसांचा "Monsoon Weather Buffer" ठेवा, जेणेकरून अंतिम हँडओव्हर पुढे ढकलले जाणार नाही.'
+    });
+  }
+  if(causes.vendor.count > 0 || overBudgetItems.length > 0){
+    recommendations.push({
+      area: 'बजेट व व्हेंडर नियोजन',
+      icon: '💰',
+      text: 'ऐनवेळी स्थानिक बाजारातून तातडीने खरेदी केल्यास दर २०% ते ३०% ने वाढतात. पुढील प्रोजेक्ट्ससाठी मुख्य सप्लायर्ससोबत सुरुवातीलाच ३ महिन्यांचा फिक्स "Rate Contract" लॉक करा.'
+    });
+  }
+  if(pendingDrawings.length > 0 || causes.drawing.count > 0){
+    recommendations.push({
+      area: 'रेखाचित्रे व मंजुरी',
+      icon: '📐',
+      text: 'साइटवर प्रत्यक्ष काम सुरू होण्याच्या किमान १० ते १५ दिवस आधी सर्व सिव्हिल आणि ड्रेनेज रेखाचित्रे क्लायंटकडून "Good For Construction (GFC)" म्हणून साईन-ऑफ करून घ्या.'
+    });
+  }
+  if(criticalNcrs.length > 0 || failedChecks.length > 0){
+    recommendations.push({
+      area: 'गुणवत्ता व तपासणी',
+      icon: '🛠️',
+      text: 'पायाभरणी (Sub-base) आणि उताराचे (Slope) काम संपताच प्री-इन्स्पेक्शन करून घ्या. अंतिम टप्प्यात दोष आढळल्यास संपूर्ण थर उखडण्याचा (Rework) खर्च आणि वेळ टाळता येईल.'
+    });
+  }
+  if(recommendations.length < 3){
+    recommendations.push({
+      area: 'साइट रिपोर्टिंग',
+      icon: '👷',
+      text: "साइट इंजिनिअरने Today's Tasks मध्ये कामाची स्थिती आणि उशीर झाल्यास अचूक कारण रोज दुपारी भरण्याची शिस्त ठेवावी, ज्यामुळे मॅनेजमेंटला वेळेत योग्य निर्णय घेता येतात."
+    });
+  }
+
+  return {
+    totalTasks, completedTasks: completedTasks.length, inProgressTasks: inProgressTasks.length,
+    notStartedTasks: notStartedTasks.length, overdueTasks, lateCompletedTasks,
+    totalDelayDays, causes, sampleReasons,
+    contract, utilized, utilPct, totalOverrun, overBudgetItems,
+    openNcrs: openNcrs.length, criticalNcrs: criticalNcrs.length, qChecks: qChecks.length, passRate, failedChecks,
+    drawingsOnly: drawingsOnly.length, pendingDrawings: pendingDrawings.length, photosList: photosList.length,
+    score, scoreLevel, scoreLabel, recommendations
+  };
+}
+
+function renderAiPostMortem(data){
+  if(!data || !data.proj) return;
+  const analysis = analyzeProjectMetrics(data);
+  currentAiAnalysis = analysis;
+
+  // Score Pill
+  const pill = document.getElementById('aiScorePill');
+  if(pill){
+    pill.className = 'ai-score-pill ' + (analysis.scoreLevel === 'good' ? '' : analysis.scoreLevel);
+    pill.innerHTML = '<span class="dot">●</span> Efficiency Score: ' + analysis.score + ' / 100';
+  }
+
+  // Executive Summary Banner
+  const bannerText = document.getElementById('aiExecutiveText');
+  if(bannerText){
+    const pName = esc(data.proj.name);
+    const topCause = Object.entries(analysis.causes).sort((a,b)=> b[1].count - a[1].count)[0];
+    const topCauseLabel = topCause && topCause[1].count > 0 ? topCause[1].label.split('(')[0].trim() : 'हवामान व व्हेंडर समन्वय';
+    const overrunText = analysis.totalOverrun > 0
+      ? 'बजेटमध्ये <b>' + analysis.overBudgetItems.length + ' बाबींवर ₹' + Math.round(analysis.totalOverrun).toLocaleString('en-IN') + ' अतिरिक्त खर्च</b> झाला आहे.'
+      : 'बजेट नियंत्रण <b>उत्कृष्ट आणि मर्यादेत</b> आहे.';
+    const delayText = analysis.overdueTasks.length > 0
+      ? '<b>' + analysis.overdueTasks.length + ' टास्कमध्ये उशीर</b> झाला असून मुख्यत्वे <b>' + topCauseLabel + '</b> हे मुख्य कारण ठरले आहे.'
+      : 'सर्व शेड्यूल कामे <b>वेळेवर सुरू</b> आहेत.';
+
+    bannerText.innerHTML = '<b>' + pName + ' चा एआय हेल्थ गोषवारा:</b> एकूण ' + analysis.totalTasks + ' पैकी ' + analysis.completedTasks + ' कामे पूर्ण झाली आहेत (' + (data.proj.progress_pct || 0) + '% प्रगती). ' + delayText + ' ' + overrunText + ' गुणवत्ता स्कोअर <b>' + analysis.passRate + '%</b> असून ' + (analysis.openNcrs ? analysis.openNcrs + ' ओपन इश्यूज आहेत.' : 'कोणतीही गंभीर गुणवत्ता समस्या नाही.');
+  }
+
+  // Wire Tab buttons
+  document.querySelectorAll('.ai-tab-btn').forEach(btn => {
+    btn.onclick = () => {
+      document.querySelectorAll('.ai-tab-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      currentAiTab = btn.getAttribute('data-tab');
+      renderAiTabContent(currentAiTab, analysis, data);
+    };
+  });
+
+  // Wire Actions
+  const btnRefresh = document.getElementById('btnRefreshAi');
+  if(btnRefresh){
+    btnRefresh.onclick = () => {
+      sipsToast('एआय विश्लेषण पुन्हा अद्यतनित केले जात आहे…', null);
+      renderAiPostMortem(reportData);
+    };
+  }
+
+  const btnExportPdf = document.getElementById('btnExportAiPdf');
+  if(btnExportPdf){
+    btnExportPdf.onclick = () => exportAiAuditReportPdf(data, currentAiAnalysis);
+  }
+
+  renderAiTabContent(currentAiTab, analysis, data);
+}
+
+function renderAiTabContent(tab, a, d){
+  const container = document.getElementById('aiTabContent');
+  if(!container) return;
+
+  if(tab === 'all'){
+    const topCause = Object.entries(a.causes).sort((a,b)=> b[1].count - a[1].count)[0];
+    const topCauseLabel = topCause && topCause[1].count > 0 ? topCause[1].label.split('(')[0].trim() : 'हवामान / सप्लाय';
+
+    container.innerHTML = `
+      <div class="ai-insight-grid">
+        <div class="ai-stat-box">
+          <div class="lbl">⏱️ Schedule Variance</div>
+          <div class="val" style="color:${a.overdueTasks.length ? 'var(--status-bad)' : 'var(--brand-green)'};">${a.totalDelayDays} Days Lost</div>
+          <div class="note">${a.overdueTasks.length} overdue tasks · मुख्य कारण: ${topCauseLabel}</div>
+        </div>
+        <div class="ai-stat-box">
+          <div class="lbl">💰 Cost Variance</div>
+          <div class="val" style="color:${a.totalOverrun > 0 ? 'var(--status-bad)' : 'var(--brand-green)'};">${a.totalOverrun > 0 ? '+₹' + Math.round(a.totalOverrun).toLocaleString('en-IN') : '₹0 (On Budget)'}</div>
+          <div class="note">${a.overBudgetItems.length} items over budget · ${a.utilPct}% utilized</div>
+        </div>
+        <div class="ai-stat-box">
+          <div class="lbl">🛠️ Quality &amp; NCR</div>
+          <div class="val" style="color:${a.criticalNcrs > 0 ? 'var(--status-bad)' : 'var(--brand-green)'};">${a.passRate}% Pass Rate</div>
+          <div class="note">${a.criticalNcrs} critical NCR · ${a.openNcrs} open issues</div>
+        </div>
+        <div class="ai-stat-box">
+          <div class="lbl">📐 Drawings &amp; Media</div>
+          <div class="val" style="color:${a.pendingDrawings > 0 ? '#B45309' : 'var(--brand-green)'};">${a.drawingsOnly} Drawings</div>
+          <div class="note">${a.pendingDrawings} pending approval · ${a.photosList} site photos</div>
+        </div>
+      </div>
+
+      <div class="ai-advice-box">
+        <div class="ai-advice-title">💡 भविष्यातील प्रकल्पांसाठी AI शिफारशी (Golden Recommendations for Future Planning)</div>
+        <ul class="ai-advice-list">
+          ${a.recommendations.map(r => `<li><b>[${esc(r.area)}]:</b> ${esc(r.text)}</li>`).join('')}
+        </ul>
+      </div>
+    `;
+  } else if(tab === 'schedule'){
+    const totalReasons = Object.values(a.causes).reduce((s, c) => s + c.count, 0) || 1;
+    const barRows = Object.values(a.causes).map(c => {
+      const pct = Math.round((c.count / totalReasons) * 100);
+      return `
+        <div class="ai-bar-wrap">
+          <div class="ai-bar-label">${c.icon} ${c.label}</div>
+          <div class="ai-bar-track"><div class="ai-bar-fill" style="width:${pct}%;background:var(--brand-orange);"></div></div>
+          <div class="ai-bar-pct">${pct}%</div>
+        </div>
+      `;
+    }).join('');
+
+    const delayedRows = a.overdueTasks.slice(0, 10).map(t => {
+      let rText = t.resched_reason || '—';
+      if(t.date_status && typeof t.date_status === 'object' && t.date_status.reason) rText = t.date_status.reason;
+      return `
+        <tr>
+          <td><b>${esc(t.task)}</b><div style="font-size:10px;color:var(--muted);">${esc(t.milestone||'—')}</div></td>
+          <td>${esc(t.due_date || t.planned_end || '—')}</td>
+          <td><span class="ai-badge weather">Overdue</span></td>
+          <td>💬 ${esc(rText)}</td>
+        </tr>
+      `;
+    }).join('');
+
+    container.innerHTML = `
+      <div style="font-family:var(--font-display);font-weight:700;font-size:13px;margin-bottom:10px;color:var(--ink-900);">प्रकल्प उशीराची खरी कारणे (Root Cause Breakdown)</div>
+      <div style="background:var(--paper-0);padding:14px;border-radius:var(--r-md);border:1px solid var(--line);margin-bottom:14px;">
+        ${barRows}
+      </div>
+
+      <div style="font-family:var(--font-display);font-weight:700;font-size:13px;margin-bottom:6px;color:var(--ink-900);">उशीर झालेले प्रमुख टास्क आणि इंजिनिअरने दिलेली कारणे</div>
+      <div class="ai-table-wrap">
+        <table class="ai-table">
+          <thead>
+            <tr><th>टास्कचे नाव</th><th>नियोजित तारीख</th><th>स्थिती</th><th>इंजिनिअरचे कारण (Live Reason)</th></tr>
+          </thead>
+          <tbody>
+            ${delayedRows || '<tr><td colspan="4" style="text-align:center;padding:14px;color:var(--muted);">सध्या कोणताही टास्क उशिरा झालेला नाही. प्रकल्प वेळेत सुरू आहे!</td></tr>'}
+          </tbody>
+        </table>
+      </div>
+
+      <div class="ai-advice-box">
+        <div class="ai-advice-title">💡 शेड्यूलिंग शिफारस (Schedule Planning Lesson)</div>
+        <ul class="ai-advice-list">
+          <li>हवामान किंवा साहित्य पुरवठ्यामुळे कामाचा खोळंबा होऊ नये म्हणून प्रत्येक टप्प्याच्या शेवटी २ दिवसांचा बफर ठेवा.</li>
+          <li>साईट इंजिनिअरने दिलेल्या कारणांवरून दिसते की मटेरियल वेळेवर पोहोचणे अत्यावश्यक आहे; यासाठी लॉजिस्टिक्स व्हेंडरला किमान ३ दिवस आधी अलर्ट पाठवा.</li>
+        </ul>
+      </div>
+    `;
+  } else if(tab === 'budget'){
+    const overrunRows = a.overBudgetItems.slice(0, 10).map(it => `
+      <tr>
+        <td><b>${esc(it.item)}</b><div style="font-size:10px;color:var(--muted);">${esc(it.milestone)} · ${esc(it.vendor)}</div></td>
+        <td>₹${Math.round(it.planned).toLocaleString('en-IN')}</td>
+        <td>₹${Math.round(it.paid).toLocaleString('en-IN')}</td>
+        <td><span class="ai-badge overrun">+₹${Math.round(it.overrun).toLocaleString('en-IN')} (+${it.pct}%)</span></td>
+      </tr>
+    `).join('');
+
+    container.innerHTML = `
+      <div class="ai-insight-grid" style="grid-template-columns:repeat(3,1fr);margin-bottom:14px;">
+        <div class="ai-stat-box">
+          <div class="lbl">Approved Contract</div>
+          <div class="val">₹${Math.round(a.contract).toLocaleString('en-IN')}</div>
+          <div class="note">Director approved value</div>
+        </div>
+        <div class="ai-stat-box">
+          <div class="lbl">Actual Spent to Date</div>
+          <div class="val" style="color:var(--ink-900);">₹${Math.round(a.utilized).toLocaleString('en-IN')}</div>
+          <div class="note">${a.utilPct}% utilized</div>
+        </div>
+        <div class="ai-stat-box">
+          <div class="lbl">Cost Leakage / Overrun</div>
+          <div class="val" style="color:${a.totalOverrun > 0 ? 'var(--status-bad)' : 'var(--brand-green)'};">₹${Math.round(a.totalOverrun).toLocaleString('en-IN')}</div>
+          <div class="note">${a.overBudgetItems.length} items over budget</div>
+        </div>
+      </div>
+
+      <div style="font-family:var(--font-display);font-weight:700;font-size:13px;margin-bottom:6px;color:var(--ink-900);">जास्त खर्च झालेल्या बाबी (Cost Overrun Hotspots)</div>
+      <div class="ai-table-wrap">
+        <table class="ai-table">
+          <thead>
+            <tr><th>मटेरियल / काम</th><th>अंदाजित बजेट</th><th>प्रत्यक्ष खर्च</th><th>जादा खर्च (Variance)</th></tr>
+          </thead>
+          <tbody>
+            ${overrunRows || '<tr><td colspan="4" style="text-align:center;padding:14px;color:var(--muted);">अभिनंदन! कोणत्याही बाबीवर मंजूर बजेटपेक्षा जास्त खर्च झालेला नाही.</td></tr>'}
+          </tbody>
+        </table>
+      </div>
+
+      <div class="ai-advice-box">
+        <div class="ai-advice-title">💡 बजेट नियंत्रण शिफारस (Cost Control Lesson)</div>
+        <ul class="ai-advice-list">
+          <li>ज्या साहित्यांवर अतिरिक्त खर्च झाला आहे, त्यांच्यासाठी पुढील प्रकल्पांमध्ये ऐनवेळी तातडीने खरेदी न करता सुरुवातीलाच ३ महिन्यांचा फिक्स रेट करार (Rate Contract) करा.</li>
+          <li>जर क्लायंटकडून कामाच्या प्रमाणात वाढ झाली असेल, तर त्वरित सिस्टीममधून चेंज ऑर्डर (Change Order) तयार करून क्लायंट साईन-ऑफ घ्या.</li>
+        </ul>
+      </div>
+    `;
+  } else if(tab === 'quality'){
+    container.innerHTML = `
+      <div class="ai-insight-grid" style="grid-template-columns:repeat(3,1fr);margin-bottom:14px;">
+        <div class="ai-stat-box">
+          <div class="lbl">Overall Pass Rate</div>
+          <div class="val" style="color:${a.passRate >= 90 ? 'var(--brand-green)' : '#B45309'};">${a.passRate}%</div>
+          <div class="note">${a.qChecks} checks recorded</div>
+        </div>
+        <div class="ai-stat-box">
+          <div class="lbl">Open NCRs</div>
+          <div class="val" style="color:${a.openNcrs > 0 ? 'var(--status-bad)' : 'var(--brand-green)'};">${a.openNcrs} Issues</div>
+          <div class="note">${a.criticalNcrs} critical severity</div>
+        </div>
+        <div class="ai-stat-box">
+          <div class="lbl">Rework Risk</div>
+          <div class="val" style="color:${a.failedChecks.length > 0 ? '#B45309' : 'var(--brand-green)'};">${a.failedChecks.length > 0 ? 'Medium' : 'Low'}</div>
+          <div class="note">${a.failedChecks.length} checks need re-testing</div>
+        </div>
+      </div>
+
+      <div class="ai-advice-box">
+        <div class="ai-advice-title">💡 गुणवत्ता हमी शिफारस (Quality Assurance Lesson)</div>
+        <ul class="ai-advice-list">
+          <li>टर्फ अथवा कोटिंगचे काम सुरू करण्यापूर्वी बेस लेव्हलिंग, कॉम्पॅक्शन आणि ड्रेनेज स्लोप तपासणी अनिवार्य करा.</li>
+          <li>सध्या ओपन असलेले सर्व NCRs काम पूर्ण होण्याआधीच बंद (Close) करून घ्या, जेणेकरून क्लायंट हँडओव्हरच्या वेळी पेमेंट अडकणार नाही.</li>
+        </ul>
+      </div>
+    `;
+  } else if(tab === 'drawings'){
+    container.innerHTML = `
+      <div class="ai-insight-grid" style="grid-template-columns:repeat(3,1fr);margin-bottom:14px;">
+        <div class="ai-stat-box">
+          <div class="lbl">Technical Drawings</div>
+          <div class="val">${a.drawingsOnly}</div>
+          <div class="note">GFC &amp; design layouts</div>
+        </div>
+        <div class="ai-stat-box">
+          <div class="lbl">Pending Approval</div>
+          <div class="val" style="color:${a.pendingDrawings > 0 ? 'var(--status-bad)' : 'var(--brand-green)'};">${a.pendingDrawings} Drawings</div>
+          <div class="note">${a.pendingDrawings > 0 ? 'Risk of site stoppage' : 'All approved'}</div>
+        </div>
+        <div class="ai-stat-box">
+          <div class="lbl">Site Photos Uploaded</div>
+          <div class="val">${a.photosList} Photos</div>
+          <div class="note">Visual proof on record</div>
+        </div>
+      </div>
+
+      <div class="ai-advice-box">
+        <div class="ai-advice-title">💡 रेखाचित्र व मंजुरी शिफारस (Drawing Workflow Lesson)</div>
+        <ul class="ai-advice-list">
+          <li>साइटवर काम सुरू होण्यापूर्वी क्लायंट आणि आर्किटेक्टकडून 'Good For Construction (GFC)' रेखाचित्रे मंजूर करून घेणे आवश्यक आहे.</li>
+          <li>इंजिनिअरने दररोज दुपारी किमान २ प्रगती फोटो अपलोड करण्याची पद्धत कायम ठेवावी.</li>
+        </ul>
+      </div>
+    `;
+  }
+}
+
+/* =========================================================
+   Export Executive AI Post-Mortem Report (PDF)
+   ========================================================= */
+function exportAiAuditReportPdf(data, analysis){
+  if(!data || !data.proj || !analysis){
+    sipsToast('एआय डेटा उपलब्ध नाही. कृपया पेज रीलोड करा.', 'error');
+    return;
+  }
+  if(typeof window.jspdf === 'undefined'){
+    sipsToast('PDF लायब्ररी लोड झालेली नाही. कृपया पेज रीफ्रेश करा.', 'error');
+    return;
+  }
+
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ unit:'pt', format:'a4' });
+  const pageW = doc.internal.pageSize.getWidth();
+  const pageH = doc.internal.pageSize.getHeight();
+  const margin = 40;
+  const orange = [242,96,12], ink = [20,35,26], muted = [120,120,120], line = [230,230,230], paper = [248,249,250];
+  const green = [47,143,91], red = [211,64,44];
+
+  // Header band
+  doc.setFillColor(...ink);
+  doc.rect(0, 0, pageW, 60, 'F');
+  doc.setFillColor(...orange);
+  doc.rect(0, 60, pageW, 3, 'F');
+
+  doc.setTextColor(255, 255, 255);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(14);
+  doc.text('KINDER SPORTS — AI PROJECT AUDIT & POST-MORTEM', margin, 32);
+
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(9);
+  doc.setTextColor(215, 215, 215);
+  doc.text('Project: ' + (data.proj.name || '—') + ' | ' + (data.proj.location || '—'), margin, 48);
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(8);
+  doc.setTextColor(255, 255, 255);
+  doc.text('CONFIDENTIAL / MANAGEMENT COPY', pageW - margin, 32, { align: 'right' });
+
+  let y = 84;
+
+  // Efficiency Score Banner
+  doc.setFillColor(...paper);
+  doc.setDrawColor(...line);
+  doc.roundedRect(margin, y, pageW - 2 * margin, 44, 4, 4, 'FD');
+  doc.setFillColor(...(analysis.score >= 85 ? green : (analysis.score >= 65 ? orange : red)));
+  doc.roundedRect(margin, y, 4, 44, 1, 1, 'F');
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(11);
+  doc.setTextColor(...ink);
+  doc.text('OVERALL AI EFFICIENCY SCORE: ' + analysis.score + ' / 100 (' + (analysis.score >= 85 ? 'EXCELLENT' : (analysis.score >= 65 ? 'MODERATE RISK' : 'HIGH RISK')) + ')', margin + 14, y + 18);
+
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(8.5);
+  doc.setTextColor(...muted);
+  doc.text('Audit Date: ' + new Date().toLocaleDateString('en-IN', { day:'2-digit', month:'short', year:'numeric' }) + ' | Progress: ' + (data.proj.progress_pct || 0) + '% | Total Tasks: ' + analysis.totalTasks, margin + 14, y + 33);
+
+  y += 56;
+
+  // Executive Summary text
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(11);
+  doc.setTextColor(...ink);
+  doc.text('EXECUTIVE POST-MORTEM SUMMARY', margin, y);
+  y += 14;
+
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(9);
+  doc.setTextColor(50, 50, 50);
+  const summaryParagraph = 'Based on comprehensive audit across Schedule, Budget, Quality, and Drawings: ' +
+    'The project has lost ' + analysis.totalDelayDays + ' days of delay across ' + analysis.overdueTasks.length + ' tasks. ' +
+    'Primary root cause: ' + (Object.entries(analysis.causes).sort((a,b)=>b[1].count-a[1].count)[0]?.[1]?.label?.split('(')[0]?.trim() || 'Logistics & Weather') + '. ' +
+    (analysis.totalOverrun > 0 ? 'Budget overrun of Rs. ' + Math.round(analysis.totalOverrun).toLocaleString('en-IN') + ' observed across ' + analysis.overBudgetItems.length + ' material items. ' : 'Budget is fully on-track with zero material overruns. ') +
+    'Quality compliance is at ' + analysis.passRate + '% with ' + analysis.openNcrs + ' open NCR issues and ' + analysis.pendingDrawings + ' drawings pending sign-off.';
+  const splitSummary = doc.splitTextToSize(summaryParagraph, pageW - 2 * margin);
+  doc.text(splitSummary, margin, y);
+  y += splitSummary.length * 12 + 14;
+
+  // Section 1: Delay Causes Table
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(10.5);
+  doc.setTextColor(...ink);
+  doc.text('1. SCHEDULE DELAY & ROOT CAUSE BREAKDOWN', margin, y);
+  y += 8;
+
+  const totalReasons = Object.values(analysis.causes).reduce((s, c) => s + c.count, 0) || 1;
+  const causesTableBody = Object.values(analysis.causes).map(c => [
+    c.label.split('(')[0].trim(),
+    c.count + ' occurrences',
+    Math.round((c.count / totalReasons) * 100) + '%',
+    c.count > 0 ? 'High Impact' : 'Minimal'
+  ]);
+
+  doc.autoTable({
+    startY: y,
+    head: [['Root Cause Category', 'Frequency', 'Weight %', 'Impact Level']],
+    body: causesTableBody,
+    margin: { left: margin, right: margin },
+    styles: { fontSize: 8.5, cellPadding: 5 },
+    headStyles: { fillColor: ink, textColor: 255, fontStyle: 'bold' }
+  });
+
+  y = doc.lastAutoTable.finalY + 16;
+
+  // Section 2: Budget Overrun Table
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(10.5);
+  doc.setTextColor(...ink);
+  doc.text('2. COST VARIANCE & BUDGET OVERRUN HOTSPOTS', margin, y);
+  y += 8;
+
+  const budgetTableBody = (analysis.overBudgetItems.length ? analysis.overBudgetItems.slice(0, 5) : []).map(it => [
+    it.item,
+    it.milestone,
+    'Rs. ' + Math.round(it.planned).toLocaleString('en-IN'),
+    'Rs. ' + Math.round(it.paid).toLocaleString('en-IN'),
+    '+Rs. ' + Math.round(it.overrun).toLocaleString('en-IN') + ' (+' + it.pct + '%)'
+  ]);
+
+  if(!budgetTableBody.length){
+    budgetTableBody.push(['All items on budget', '—', '—', '—', 'Rs. 0']);
+  }
+
+  doc.autoTable({
+    startY: y,
+    head: [['Item / Particulars', 'Milestone', 'Approved', 'Actual Paid', 'Overrun (Variance)']],
+    body: budgetTableBody,
+    margin: { left: margin, right: margin },
+    styles: { fontSize: 8.5, cellPadding: 5 },
+    headStyles: { fillColor: orange, textColor: 255, fontStyle: 'bold' }
+  });
+
+  // PAGE 2 — Actionable Recommendations & Lessons Learned
+  doc.addPage();
+  doc.setFillColor(...ink);
+  doc.rect(0, 0, pageW, 50, 'F');
+  doc.setFillColor(...orange);
+  doc.rect(0, 50, pageW, 3, 'F');
+
+  doc.setTextColor(255, 255, 255);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(12);
+  doc.text('KINDER SPORTS — AI RECOMMENDATIONS & FUTURE PLAYBOOK', margin, 28);
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(8.5);
+  doc.setTextColor(215, 215, 215);
+  doc.text('Key Lessons Learned for Upcoming Civil & Sports Complex Projects', margin, 42);
+
+  let y2 = 72;
+
+  // Section 3: Strategic Recommendations
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(11);
+  doc.setTextColor(...ink);
+  doc.text('STRATEGIC RECOMMENDATIONS (भविष्यातील प्रकल्पांसाठी धडे):', margin, y2);
+  y2 += 16;
+
+  analysis.recommendations.forEach((rec, idx) => {
+    doc.setFillColor(...paper);
+    doc.setDrawColor(...line);
+    doc.roundedRect(margin, y2, pageW - 2 * margin, 38, 4, 4, 'FD');
+    doc.setFillColor(...orange);
+    doc.roundedRect(margin, y2, 3, 38, 1, 1, 'F');
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(9);
+    doc.setTextColor(...ink);
+    doc.text((idx + 1) + '. ' + rec.area.toUpperCase(), margin + 12, y2 + 14);
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8.5);
+    doc.setTextColor(50, 50, 50);
+    const splitText = doc.splitTextToSize(rec.text, pageW - 2 * margin - 24);
+    doc.text(splitText, margin + 12, y2 + 26);
+
+    y2 += 46;
+  });
+
+  y2 += 14;
+
+  // Sign-off block
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(9);
+  doc.setTextColor(...ink);
+  doc.text('Prepared by: SIPS AI Audit Engine', margin, y2);
+  doc.text('Reviewed by: Project Manager / Director', pageW - margin, y2, { align: 'right' });
+
+  const safeProjName = (data.proj.name || 'Project').replace(/[^a-zA-Z0-9]/g, '_');
+  doc.save('SIPS_AI_Audit_Report_' + safeProjName + '.pdf');
+  sipsToast('एआय ऑडिट रिपोर्ट (PDF) डाउनलोड झाला!', null);
+}
+
 
 document.getElementById('scheduleFileInput').addEventListener('change', async (e)=>{
   const file = e.target.files[0];
