@@ -1,0 +1,26 @@
+diff --git a/dashboard.html b/dashboard.html
+index 1c1c038..abcdef1 100644
+--- a/dashboard.html
++++ b/dashboard.html
+@@ -677,9 +677,15 @@
+       view_budget_panel: ['director','pm','accounts']
+     };
+-    return (grants[perm] || []).includes(role);
++    let allowed = (grants[perm] || []).includes(role);
++    if (window.userModulePerms) {
++       const pPerm = window.userModulePerms.find(x => x.module === 'projects');
++       if (pPerm) {
++         if (perm === 'create_project' && pPerm.can_create) allowed = true;
++         if (perm === 'import_project' && pPerm.can_create) allowed = true;
++       }
++    }
++    return allowed;
+   }
+   function applyPermissions(role) {
+@@ -717,3 +723,6 @@
+     document.getElementById('greetDate').textContent = new Date().toLocaleDateString('en-IN', { weekday:'long', day:'numeric', month:'long', year:'numeric' });
+ 
++    const { data: modPerms } = await sb.from('user_module_permissions').select('*').eq('profile_id', session.user.id);
++    window.userModulePerms = modPerms || [];
++
+     applyPermissions(role);
