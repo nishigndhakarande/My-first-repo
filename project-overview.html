@@ -582,7 +582,7 @@ a{text-decoration:none;color:inherit;}
           <div class="ai-badge-icon">✦</div>
           <div class="ai-title-text">
             <h3>AI Project Post-Mortem &amp; Intelligence <span class="ai-live-tag">LIVE AI AUDIT</span></h3>
-            <p>शेड्यूल, बजेट, क्वालिटी आणि रेखाचित्रांचे स्मार्ट विश्लेषण व भविष्यासाठी धडे</p>
+            <p>Smart root-cause delay analysis, cost leakages, quality audit &amp; strategic playbook for upcoming projects</p>
           </div>
         </div>
         <div class="ai-actions-wrap">
@@ -595,16 +595,16 @@ a{text-decoration:none;color:inherit;}
       <!-- Quick Executive Summary Banner -->
       <div class="ai-summary-banner" id="aiExecutiveBanner">
         <div class="ai-summary-spark">💡</div>
-        <div class="ai-summary-text" id="aiExecutiveText">प्रकल्पाचे विश्लेषण लोड होत आहे…</div>
+        <div class="ai-summary-text" id="aiExecutiveText">Analyzing project metrics across Schedule, Budget, Quality &amp; Drawings…</div>
       </div>
 
       <!-- Module Navigation Tabs -->
       <div class="ai-tabs-nav" id="aiTabsNav">
-        <button class="ai-tab-btn active" data-tab="all">🎯 सर्वसमावेशक सारांश</button>
-        <button class="ai-tab-btn" data-tab="schedule">⏱️ उशीर व कारणे (Delay Causes)</button>
-        <button class="ai-tab-btn" data-tab="budget">💰 बजेट व खर्च (Cost Overruns)</button>
-        <button class="ai-tab-btn" data-tab="quality">🛠️ गुणवत्ता व चुका (Quality &amp; NCRs)</button>
-        <button class="ai-tab-btn" data-tab="drawings">📐 रेखाचित्रे (Drawings &amp; Approvals)</button>
+        <button class="ai-tab-btn active" data-tab="all">🎯 Executive Summary</button>
+        <button class="ai-tab-btn" data-tab="schedule">⏱️ Delay &amp; Root Causes</button>
+        <button class="ai-tab-btn" data-tab="budget">💰 Budget &amp; Cost Overrun</button>
+        <button class="ai-tab-btn" data-tab="quality">🛠️ Quality &amp; NCRs</button>
+        <button class="ai-tab-btn" data-tab="drawings">📐 Drawings &amp; Approvals</button>
       </div>
 
       <!-- Tab Content Area -->
@@ -988,8 +988,14 @@ async function loadOverview(){
     drawings: (drawings||[]).filter(d=>bucketOf(d)==='drawing'),
     photos: (drawings||[]).filter(d=>bucketOf(d)==='progress'),
     docs: (drawings||[]).filter(d=>bucketOf(d)==='document'),
+    budgetItems: items,
+    paidByItem: paidByItem,
+    qualityChecks: (typeof qchecks !== 'undefined' && qchecks) ? qchecks : [],
     contract, utilized, committed, remaining, utilPct, commPct, remPct
   };
+
+  // Trigger live AI Project Post-Mortem & Intelligence render
+  renderAiPostMortem(reportData);
 }
 
 /* "Drawings & Media" card = 3-category summary (Drawings / Site Photos / Documents),
@@ -1368,7 +1374,7 @@ function generateReport(){
 
 
 /* =========================================================
-   AI Project Health & Post-Mortem Intelligence Engine
+   AI Project Health & Post-Mortem Intelligence Engine (English)
    ========================================================= */
 let currentAiAnalysis = null;
 let currentAiTab = 'all';
@@ -1405,19 +1411,19 @@ function analyzeProjectMetrics(data){
     if(!isNaN(due) && !isNaN(act) && act > due) totalDelayDays += Math.max(1, Math.floor((act - due) / 86400000));
   });
 
-  // Root cause buckets
+  // Root cause categories in English
   const causes = {
-    weather: { label: 'हवामान / पाऊस (Weather & Rain)', count: 0, icon: '🌧️', badge: 'weather' },
-    vendor:  { label: 'मटेरियल / व्हेंडर (Material & Logistics)', count: 0, icon: '🚚', badge: 'vendor' },
-    drawing: { label: 'रेखाचित्रे / मंजुरी (Drawings & Approvals)', count: 0, icon: '📐', badge: 'drawing' },
-    labor:   { label: 'कामगार / मशिनरी (Labor & Machinery)', count: 0, icon: '👷', badge: 'labor' },
-    other:   { label: 'कामात बदल / इतर (Scope & Other)', count: 0, icon: '🔄', badge: 'other' }
+    weather: { label: 'Weather & Monsoon Delays', count: 0, icon: '🌧️', badge: 'weather' },
+    vendor:  { label: 'Material & Vendor Supply Lag', count: 0, icon: '🚚', badge: 'vendor' },
+    drawing: { label: 'Drawing & Client Approvals', count: 0, icon: '📐', badge: 'drawing' },
+    labor:   { label: 'Labor & Machinery Breakdown', count: 0, icon: '👷', badge: 'labor' },
+    other:   { label: 'Scope Changes & Unforeseen', count: 0, icon: '🔄', badge: 'other' }
   };
 
-  const reWeather = /पाऊस|rain|weather|monsoon|चिखल|पाणी|water|storm|वादळ|flood|हवामान/i;
-  const reVendor  = /मटेरियल|material|vendor|व्हेंडर|सप्लाय|supply|माल|गाडी|delivery|डिलिव्हरी|सीमेंट|cement|रेती|sand|खडी|gravel|turf|टर्फ|ग्रॅन्युल्स|कवच|स्टॉक/i;
-  const reDrawing = /drawing|ड्रॉइंग|नकाशा|client|approval|मंजूर|परवानगी|सही|sign|architect|डिझाइन|layout|प्लॅन/i;
-  const reLabor   = /कामगार|मजूर|labour|labor|worker|मशीन|machine|रोलर|roller|jcb|breakdown|ऑपरेटर|बिघाड|दुरुस्ती|स्ट्राइक|stoppage/i;
+  const reWeather = /पाऊस|rain|weather|monsoon|चिखल|पाणी|water|storm|flood|wet/i;
+  const reVendor  = /मटेरियल|material|vendor|सप्लाय|supply|माल|delivery|डिलिव्हरी|cement|sand|gravel|turf|खडी|रेती|stock|dispatch/i;
+  const reDrawing = /drawing|ड्रॉइंग|client|approval|मंजूर|sign|architect|design|layout|gfc|revision/i;
+  const reLabor   = /कामगार|मजूर|labour|labor|worker|machine|roller|रोलर|jcb|breakdown|operator|fault/i;
 
   const sampleReasons = [];
 
@@ -1446,6 +1452,7 @@ function analyzeProjectMetrics(data){
 
       sampleReasons.push({
         task: t.task || 'Task #' + t.id,
+        milestone: t.milestone || 'General',
         reason: cleanReason,
         date: t.due_date || t.planned_end,
         status: t.status || 'in_progress',
@@ -1498,7 +1505,7 @@ function analyzeProjectMetrics(data){
   const qChecks = qualityChecks || [];
   const failedChecks = qChecks.filter(c => {
     const r = ((c.remarks || '') + ' ' + (c.actual_value || '')).toLowerCase();
-    return r.includes('fail') || r.includes('rework') || r.includes('खराब') || r.includes('दुरुस्ती') || r.includes('reject');
+    return r.includes('fail') || r.includes('rework') || r.includes('defect') || r.includes('reject') || r.includes('खराब');
   });
   const passRate = qChecks.length ? Math.round(((qChecks.length - failedChecks.length) / qChecks.length) * 100) : 100;
 
@@ -1507,7 +1514,7 @@ function analyzeProjectMetrics(data){
   const pendingDrawings = drawingsOnly.filter(d => (d.status || '').toLowerCase() !== 'approved');
   const photosList = photos || [];
 
-  // 5. Health & Efficiency Score (0-100)
+  // 5. Overall Health & Efficiency Score (0-100)
   let score = 100;
   if(overdueTasks.length > 0) score -= Math.min(overdueTasks.length * 5, 25);
   if(totalOverrun > 0) score -= Math.min(Math.round((totalOverrun / (contract || 1)) * 50), 20);
@@ -1517,50 +1524,50 @@ function analyzeProjectMetrics(data){
   score = Math.max(25, Math.min(100, Math.round(score)));
 
   let scoreLevel = 'good';
-  let scoreLabel = 'उत्कृष्ट स्थिती (On-Track & Healthy)';
+  let scoreLabel = 'Excellent & Healthy';
   if(score < 65){
     scoreLevel = 'bad';
-    scoreLabel = 'गंभीर जोखीम (High Risk - त्वरित लक्ष द्या)';
+    scoreLabel = 'High Risk (Needs Urgent Action)';
   } else if(score < 85){
     scoreLevel = 'warn';
-    scoreLabel = 'मध्यम स्थिती (Moderate - काही बाबी प्रलंबित)';
+    scoreLabel = 'Moderate Risk (Attention Needed)';
   }
 
-  // 6. Actionable AI Recommendations (भविष्यातील धडे)
+  // 6. Actionable AI Recommendations in English
   const recommendations = [];
   if(causes.weather.count > 0 || (proj.location || '').toLowerCase().includes('rain')){
     recommendations.push({
-      area: 'शेड्यूल व हवामान',
+      area: 'Schedule Contingency',
       icon: '🌧️',
-      text: 'पुढच्या वेळी पावसाळी हंगामात काम करताना शेड्यूलमधे सुरुवातीलाच किमान ५ ते ७ दिवसांचा "Monsoon Weather Buffer" ठेवा, जेणेकरून अंतिम हँडओव्हर पुढे ढकलले जाणार नाही.'
+      text: 'Incorporate a mandatory 5 to 7-day weather buffer for civil foundation & turf installations during monsoon periods to prevent handover slippage.'
     });
   }
   if(causes.vendor.count > 0 || overBudgetItems.length > 0){
     recommendations.push({
-      area: 'बजेट व व्हेंडर नियोजन',
+      area: 'Procurement & Rate Lock',
       icon: '💰',
-      text: 'ऐनवेळी स्थानिक बाजारातून तातडीने खरेदी केल्यास दर २०% ते ३०% ने वाढतात. पुढील प्रोजेक्ट्ससाठी मुख्य सप्लायर्ससोबत सुरुवातीलाच ३ महिन्यांचा फिक्स "Rate Contract" लॉक करा.'
+      text: 'Emergency spot buying can increase material costs by 20-30%. Pre-lock 3-month fixed rate contracts with primary aggregate and turf suppliers.'
     });
   }
   if(pendingDrawings.length > 0 || causes.drawing.count > 0){
     recommendations.push({
-      area: 'रेखाचित्रे व मंजुरी',
+      area: 'Design Approvals',
       icon: '📐',
-      text: 'साइटवर प्रत्यक्ष काम सुरू होण्याच्या किमान १० ते १५ दिवस आधी सर्व सिव्हिल आणि ड्रेनेज रेखाचित्रे क्लायंटकडून "Good For Construction (GFC)" म्हणून साईन-ऑफ करून घ्या.'
+      text: 'Mandate "Good For Construction (GFC)" drawing sign-offs from the client/architect at least 10 days prior to site mobilization to avoid idle machinery.'
     });
   }
   if(criticalNcrs.length > 0 || failedChecks.length > 0){
     recommendations.push({
-      area: 'गुणवत्ता व तपासणी',
+      area: 'Quality Assurance',
       icon: '🛠️',
-      text: 'पायाभरणी (Sub-base) आणि उताराचे (Slope) काम संपताच प्री-इन्स्पेक्शन करून घ्या. अंतिम टप्प्यात दोष आढळल्यास संपूर्ण थर उखडण्याचा (Rework) खर्च आणि वेळ टाळता येईल.'
+      text: 'Perform pre-pour compaction and sub-base laser slope checks on Day 1 to eliminate destructive bottom-up turf rework.'
     });
   }
   if(recommendations.length < 3){
     recommendations.push({
-      area: 'साइट रिपोर्टिंग',
+      area: 'Daily Engineering Feed',
       icon: '👷',
-      text: "साइट इंजिनिअरने Today's Tasks मध्ये कामाची स्थिती आणि उशीर झाल्यास अचूक कारण रोज दुपारी भरण्याची शिस्त ठेवावी, ज्यामुळे मॅनेजमेंटला वेळेत योग्य निर्णय घेता येतात."
+      text: 'Maintain strict daily engineer reporting in Today\'s Tasks with specific reasons for incomplete items to give executive visibility.'
     });
   }
 
@@ -1587,20 +1594,26 @@ function renderAiPostMortem(data){
     pill.innerHTML = '<span class="dot">●</span> Efficiency Score: ' + analysis.score + ' / 100';
   }
 
-  // Executive Summary Banner
+  // Executive Summary Banner in English
   const bannerText = document.getElementById('aiExecutiveText');
   if(bannerText){
     const pName = esc(data.proj.name);
     const topCause = Object.entries(analysis.causes).sort((a,b)=> b[1].count - a[1].count)[0];
-    const topCauseLabel = topCause && topCause[1].count > 0 ? topCause[1].label.split('(')[0].trim() : 'हवामान व व्हेंडर समन्वय';
-    const overrunText = analysis.totalOverrun > 0
-      ? 'बजेटमध्ये <b>' + analysis.overBudgetItems.length + ' बाबींवर ₹' + Math.round(analysis.totalOverrun).toLocaleString('en-IN') + ' अतिरिक्त खर्च</b> झाला आहे.'
-      : 'बजेट नियंत्रण <b>उत्कृष्ट आणि मर्यादेत</b> आहे.';
-    const delayText = analysis.overdueTasks.length > 0
-      ? '<b>' + analysis.overdueTasks.length + ' टास्कमध्ये उशीर</b> झाला असून मुख्यत्वे <b>' + topCauseLabel + '</b> हे मुख्य कारण ठरले आहे.'
-      : 'सर्व शेड्यूल कामे <b>वेळेवर सुरू</b> आहेत.';
+    const topCauseLabel = topCause && topCause[1].count > 0 ? topCause[1].label : 'Logistics & Weather Coordination';
+    
+    const delaySnippet = analysis.overdueTasks.length > 0
+      ? '<b>' + analysis.overdueTasks.length + ' tasks delayed (' + analysis.totalDelayDays + ' days lost)</b>, predominantly driven by <b>' + topCauseLabel + '</b>.'
+      : 'All scheduled milestones are <b>100% on track</b> with zero overdue tasks.';
+      
+    const budgetSnippet = analysis.totalOverrun > 0
+      ? 'Budget utilization is at <b>' + analysis.utilPct + '%</b> with <b>' + analysis.overBudgetItems.length + ' items showing cost variance (+₹' + Math.round(analysis.totalOverrun).toLocaleString('en-IN') + ')</b>.'
+      : 'Budget discipline is <b>healthy and within approved limits</b> (₹' + Math.round(analysis.utilized).toLocaleString('en-IN') + ' spent of ₹' + Math.round(analysis.contract).toLocaleString('en-IN') + ').';
 
-    bannerText.innerHTML = '<b>' + pName + ' चा एआय हेल्थ गोषवारा:</b> एकूण ' + analysis.totalTasks + ' पैकी ' + analysis.completedTasks + ' कामे पूर्ण झाली आहेत (' + (data.proj.progress_pct || 0) + '% प्रगती). ' + delayText + ' ' + overrunText + ' गुणवत्ता स्कोअर <b>' + analysis.passRate + '%</b> असून ' + (analysis.openNcrs ? analysis.openNcrs + ' ओपन इश्यूज आहेत.' : 'कोणतीही गंभीर गुणवत्ता समस्या नाही.');
+    const qualitySnippet = analysis.criticalNcrs > 0
+      ? 'Quality audit flags <b>' + analysis.criticalNcrs + ' critical NCR</b> requiring remediation.'
+      : 'Quality compliance stands strong at <b>' + analysis.passRate + '% pass rate</b> (' + (analysis.pendingDrawings ? analysis.pendingDrawings + ' drawing pending sign-off' : 'all drawings approved') + ').';
+
+    bannerText.innerHTML = '<b>' + pName + ' Executive AI Audit:</b> ' + analysis.completedTasks + ' of ' + analysis.totalTasks + ' tasks completed (' + (data.proj.progress_pct || 100) + '% progress). ' + delaySnippet + ' ' + budgetSnippet + ' ' + qualitySnippet;
   }
 
   // Wire Tab buttons
@@ -1617,7 +1630,7 @@ function renderAiPostMortem(data){
   const btnRefresh = document.getElementById('btnRefreshAi');
   if(btnRefresh){
     btnRefresh.onclick = () => {
-      sipsToast('एआय विश्लेषण पुन्हा अद्यतनित केले जात आहे…', null);
+      sipsToast('Refreshing AI intelligence analysis…', null);
       renderAiPostMortem(reportData);
     };
   }
@@ -1636,14 +1649,14 @@ function renderAiTabContent(tab, a, d){
 
   if(tab === 'all'){
     const topCause = Object.entries(a.causes).sort((a,b)=> b[1].count - a[1].count)[0];
-    const topCauseLabel = topCause && topCause[1].count > 0 ? topCause[1].label.split('(')[0].trim() : 'हवामान / सप्लाय';
+    const topCauseLabel = topCause && topCause[1].count > 0 ? topCause[1].label : 'Supply & Weather';
 
     container.innerHTML = `
       <div class="ai-insight-grid">
         <div class="ai-stat-box">
           <div class="lbl">⏱️ Schedule Variance</div>
           <div class="val" style="color:${a.overdueTasks.length ? 'var(--status-bad)' : 'var(--brand-green)'};">${a.totalDelayDays} Days Lost</div>
-          <div class="note">${a.overdueTasks.length} overdue tasks · मुख्य कारण: ${topCauseLabel}</div>
+          <div class="note">${a.overdueTasks.length} overdue tasks · Primary: ${topCauseLabel}</div>
         </div>
         <div class="ai-stat-box">
           <div class="lbl">💰 Cost Variance</div>
@@ -1663,7 +1676,7 @@ function renderAiTabContent(tab, a, d){
       </div>
 
       <div class="ai-advice-box">
-        <div class="ai-advice-title">💡 भविष्यातील प्रकल्पांसाठी AI शिफारशी (Golden Recommendations for Future Planning)</div>
+        <div class="ai-advice-title">💡 Strategic AI Recommendations for Upcoming Projects</div>
         <ul class="ai-advice-list">
           ${a.recommendations.map(r => `<li><b>[${esc(r.area)}]:</b> ${esc(r.text)}</li>`).join('')}
         </ul>
@@ -1687,7 +1700,7 @@ function renderAiTabContent(tab, a, d){
       if(t.date_status && typeof t.date_status === 'object' && t.date_status.reason) rText = t.date_status.reason;
       return `
         <tr>
-          <td><b>${esc(t.task)}</b><div style="font-size:10px;color:var(--muted);">${esc(t.milestone||'—')}</div></td>
+          <td><b>${esc(t.task)}</b><div style="font-size:10px;color:var(--muted);">${esc(t.milestone||'General')}</div></td>
           <td>${esc(t.due_date || t.planned_end || '—')}</td>
           <td><span class="ai-badge weather">Overdue</span></td>
           <td>💬 ${esc(rText)}</td>
@@ -1696,28 +1709,28 @@ function renderAiTabContent(tab, a, d){
     }).join('');
 
     container.innerHTML = `
-      <div style="font-family:var(--font-display);font-weight:700;font-size:13px;margin-bottom:10px;color:var(--ink-900);">प्रकल्प उशीराची खरी कारणे (Root Cause Breakdown)</div>
+      <div style="font-family:var(--font-display);font-weight:700;font-size:13px;margin-bottom:10px;color:var(--ink-900);">Root-Cause Delay Breakdown (Frequency Analysis)</div>
       <div style="background:var(--paper-0);padding:14px;border-radius:var(--r-md);border:1px solid var(--line);margin-bottom:14px;">
         ${barRows}
       </div>
 
-      <div style="font-family:var(--font-display);font-weight:700;font-size:13px;margin-bottom:6px;color:var(--ink-900);">उशीर झालेले प्रमुख टास्क आणि इंजिनिअरने दिलेली कारणे</div>
+      <div style="font-family:var(--font-display);font-weight:700;font-size:13px;margin-bottom:6px;color:var(--ink-900);">Delayed Tasks &amp; Engineer Live Reasons</div>
       <div class="ai-table-wrap">
         <table class="ai-table">
           <thead>
-            <tr><th>टास्कचे नाव</th><th>नियोजित तारीख</th><th>स्थिती</th><th>इंजिनिअरचे कारण (Live Reason)</th></tr>
+            <tr><th>Task Name</th><th>Planned Due Date</th><th>Status</th><th>Engineer Reason / Site Note</th></tr>
           </thead>
           <tbody>
-            ${delayedRows || '<tr><td colspan="4" style="text-align:center;padding:14px;color:var(--muted);">सध्या कोणताही टास्क उशिरा झालेला नाही. प्रकल्प वेळेत सुरू आहे!</td></tr>'}
+            ${delayedRows || '<tr><td colspan="4" style="text-align:center;padding:14px;color:var(--muted);">All tasks currently completed or on schedule. Zero overdue items!</td></tr>'}
           </tbody>
         </table>
       </div>
 
       <div class="ai-advice-box">
-        <div class="ai-advice-title">💡 शेड्यूलिंग शिफारस (Schedule Planning Lesson)</div>
+        <div class="ai-advice-title">💡 Schedule Planning Best Practices</div>
         <ul class="ai-advice-list">
-          <li>हवामान किंवा साहित्य पुरवठ्यामुळे कामाचा खोळंबा होऊ नये म्हणून प्रत्येक टप्प्याच्या शेवटी २ दिवसांचा बफर ठेवा.</li>
-          <li>साईट इंजिनिअरने दिलेल्या कारणांवरून दिसते की मटेरियल वेळेवर पोहोचणे अत्यावश्यक आहे; यासाठी लॉजिस्टिक्स व्हेंडरला किमान ३ दिवस आधी अलर्ट पाठवा.</li>
+          <li>Keep a 3-day buffer between civil base completion and synthetic turf roll-out to accommodate curing and weather disruptions.</li>
+          <li>Logistics confirmation should be verified 72 hours before site delivery to avoid idle contractor manpower.</li>
         </ul>
       </div>
     `;
@@ -1750,23 +1763,23 @@ function renderAiTabContent(tab, a, d){
         </div>
       </div>
 
-      <div style="font-family:var(--font-display);font-weight:700;font-size:13px;margin-bottom:6px;color:var(--ink-900);">जास्त खर्च झालेल्या बाबी (Cost Overrun Hotspots)</div>
+      <div style="font-family:var(--font-display);font-weight:700;font-size:13px;margin-bottom:6px;color:var(--ink-900);">Cost Overrun Hotspots (Variance Audit)</div>
       <div class="ai-table-wrap">
         <table class="ai-table">
           <thead>
-            <tr><th>मटेरियल / काम</th><th>अंदाजित बजेट</th><th>प्रत्यक्ष खर्च</th><th>जादा खर्च (Variance)</th></tr>
+            <tr><th>Item / Particulars</th><th>Estimated Budget</th><th>Actual Spend</th><th>Variance (+Overrun)</th></tr>
           </thead>
           <tbody>
-            ${overrunRows || '<tr><td colspan="4" style="text-align:center;padding:14px;color:var(--muted);">अभिनंदन! कोणत्याही बाबीवर मंजूर बजेटपेक्षा जास्त खर्च झालेला नाही.</td></tr>'}
+            ${overrunRows || '<tr><td colspan="4" style="text-align:center;padding:14px;color:var(--muted);">Excellent budget discipline! No items exceeded their approved budget.</td></tr>'}
           </tbody>
         </table>
       </div>
 
       <div class="ai-advice-box">
-        <div class="ai-advice-title">💡 बजेट नियंत्रण शिफारस (Cost Control Lesson)</div>
+        <div class="ai-advice-title">💡 Procurement &amp; Budgeting Playbook</div>
         <ul class="ai-advice-list">
-          <li>ज्या साहित्यांवर अतिरिक्त खर्च झाला आहे, त्यांच्यासाठी पुढील प्रकल्पांमध्ये ऐनवेळी तातडीने खरेदी न करता सुरुवातीलाच ३ महिन्यांचा फिक्स रेट करार (Rate Contract) करा.</li>
-          <li>जर क्लायंटकडून कामाच्या प्रमाणात वाढ झाली असेल, तर त्वरित सिस्टीममधून चेंज ऑर्डर (Change Order) तयार करून क्लायंट साईन-ऑफ घ्या.</li>
+          <li>Items showing variance should have locked rate-contracts for the next project tender.</li>
+          <li>For client-requested variations, immediately generate a Change Order in SIPS before authorizing on-site execution.</li>
         </ul>
       </div>
     `;
@@ -1776,7 +1789,7 @@ function renderAiTabContent(tab, a, d){
         <div class="ai-stat-box">
           <div class="lbl">Overall Pass Rate</div>
           <div class="val" style="color:${a.passRate >= 90 ? 'var(--brand-green)' : '#B45309'};">${a.passRate}%</div>
-          <div class="note">${a.qChecks} checks recorded</div>
+          <div class="note">${a.qChecks} checks logged</div>
         </div>
         <div class="ai-stat-box">
           <div class="lbl">Open NCRs</div>
@@ -1785,16 +1798,16 @@ function renderAiTabContent(tab, a, d){
         </div>
         <div class="ai-stat-box">
           <div class="lbl">Rework Risk</div>
-          <div class="val" style="color:${a.failedChecks.length > 0 ? '#B45309' : 'var(--brand-green)'};">${a.failedChecks.length > 0 ? 'Medium' : 'Low'}</div>
+          <div class="val" style="color:${a.failedChecks.length > 0 ? '#B45309' : 'var(--brand-green)'};">${a.failedChecks.length > 0 ? 'Moderate' : 'Zero'}</div>
           <div class="note">${a.failedChecks.length} checks need re-testing</div>
         </div>
       </div>
 
       <div class="ai-advice-box">
-        <div class="ai-advice-title">💡 गुणवत्ता हमी शिफारस (Quality Assurance Lesson)</div>
+        <div class="ai-advice-title">💡 Quality Engineering Playbook</div>
         <ul class="ai-advice-list">
-          <li>टर्फ अथवा कोटिंगचे काम सुरू करण्यापूर्वी बेस लेव्हलिंग, कॉम्पॅक्शन आणि ड्रेनेज स्लोप तपासणी अनिवार्य करा.</li>
-          <li>सध्या ओपन असलेले सर्व NCRs काम पूर्ण होण्याआधीच बंद (Close) करून घ्या, जेणेकरून क्लायंट हँडओव्हरच्या वेळी पेमेंट अडकणार नाही.</li>
+          <li>Conduct mandatory dumpy-level slope verification before PCC and asphalt/gravel laying.</li>
+          <li>Ensure all open NCRs are resolved and formally closed out before final client sign-off.</li>
         </ul>
       </div>
     `;
@@ -1808,21 +1821,21 @@ function renderAiTabContent(tab, a, d){
         </div>
         <div class="ai-stat-box">
           <div class="lbl">Pending Approval</div>
-          <div class="val" style="color:${a.pendingDrawings > 0 ? 'var(--status-bad)' : 'var(--brand-green)'};">${a.pendingDrawings} Drawings</div>
-          <div class="note">${a.pendingDrawings > 0 ? 'Risk of site stoppage' : 'All approved'}</div>
+          <div class="val" style="color:${a.pendingDrawings > 0 ? '#B45309' : 'var(--brand-green)'};">${a.pendingDrawings} Drawings</div>
+          <div class="note">${a.pendingDrawings > 0 ? 'Awaiting client sign-off' : 'All approved'}</div>
         </div>
         <div class="ai-stat-box">
           <div class="lbl">Site Photos Uploaded</div>
           <div class="val">${a.photosList} Photos</div>
-          <div class="note">Visual proof on record</div>
+          <div class="note">Visual progress proof on record</div>
         </div>
       </div>
 
       <div class="ai-advice-box">
-        <div class="ai-advice-title">💡 रेखाचित्र व मंजुरी शिफारस (Drawing Workflow Lesson)</div>
+        <div class="ai-advice-title">💡 Drawing &amp; Documentation Best Practices</div>
         <ul class="ai-advice-list">
-          <li>साइटवर काम सुरू होण्यापूर्वी क्लायंट आणि आर्किटेक्टकडून 'Good For Construction (GFC)' रेखाचित्रे मंजूर करून घेणे आवश्यक आहे.</li>
-          <li>इंजिनिअरने दररोज दुपारी किमान २ प्रगती फोटो अपलोड करण्याची पद्धत कायम ठेवावी.</li>
+          <li>All layout and drainage drawings should have formal GFC sign-offs prior to contractor mobilization.</li>
+          <li>Site engineers must capture and upload at least two timestamped progress photos daily for verification.</li>
         </ul>
       </div>
     `;
@@ -1830,15 +1843,15 @@ function renderAiTabContent(tab, a, d){
 }
 
 /* =========================================================
-   Export Executive AI Post-Mortem Report (PDF)
+   Export Executive AI Post-Mortem Report (PDF) - English
    ========================================================= */
 function exportAiAuditReportPdf(data, analysis){
   if(!data || !data.proj || !analysis){
-    sipsToast('एआय डेटा उपलब्ध नाही. कृपया पेज रीलोड करा.', 'error');
+    sipsToast('AI data is not ready yet. Please refresh the page.', 'error');
     return;
   }
   if(typeof window.jspdf === 'undefined'){
-    sipsToast('PDF लायब्ररी लोड झालेली नाही. कृपया पेज रीफ्रेश करा.', 'error');
+    sipsToast('PDF library failed to load. Please refresh the page.', 'error');
     return;
   }
 
@@ -1888,7 +1901,7 @@ function exportAiAuditReportPdf(data, analysis){
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(8.5);
   doc.setTextColor(...muted);
-  doc.text('Audit Date: ' + new Date().toLocaleDateString('en-IN', { day:'2-digit', month:'short', year:'numeric' }) + ' | Progress: ' + (data.proj.progress_pct || 0) + '% | Total Tasks: ' + analysis.totalTasks, margin + 14, y + 33);
+  doc.text('Audit Date: ' + new Date().toLocaleDateString('en-IN', { day:'2-digit', month:'short', year:'numeric' }) + ' | Progress: ' + (data.proj.progress_pct || 100) + '% | Total Tasks: ' + analysis.totalTasks, margin + 14, y + 33);
 
   y += 56;
 
@@ -1902,9 +1915,9 @@ function exportAiAuditReportPdf(data, analysis){
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(9);
   doc.setTextColor(50, 50, 50);
-  const summaryParagraph = 'Based on comprehensive audit across Schedule, Budget, Quality, and Drawings: ' +
-    'The project has lost ' + analysis.totalDelayDays + ' days of delay across ' + analysis.overdueTasks.length + ' tasks. ' +
-    'Primary root cause: ' + (Object.entries(analysis.causes).sort((a,b)=>b[1].count-a[1].count)[0]?.[1]?.label?.split('(')[0]?.trim() || 'Logistics & Weather') + '. ' +
+  const summaryParagraph = 'Based on comprehensive multi-module audit across Schedule, Budget, Quality, and Drawings: ' +
+    'The project has experienced ' + analysis.totalDelayDays + ' days of delay across ' + analysis.overdueTasks.length + ' tasks. ' +
+    'Primary root cause: ' + (Object.entries(analysis.causes).sort((a,b)=>b[1].count-a[1].count)[0]?.[1]?.label || 'Logistics & Weather') + '. ' +
     (analysis.totalOverrun > 0 ? 'Budget overrun of Rs. ' + Math.round(analysis.totalOverrun).toLocaleString('en-IN') + ' observed across ' + analysis.overBudgetItems.length + ' material items. ' : 'Budget is fully on-track with zero material overruns. ') +
     'Quality compliance is at ' + analysis.passRate + '% with ' + analysis.openNcrs + ' open NCR issues and ' + analysis.pendingDrawings + ' drawings pending sign-off.';
   const splitSummary = doc.splitTextToSize(summaryParagraph, pageW - 2 * margin);
@@ -1920,7 +1933,7 @@ function exportAiAuditReportPdf(data, analysis){
 
   const totalReasons = Object.values(analysis.causes).reduce((s, c) => s + c.count, 0) || 1;
   const causesTableBody = Object.values(analysis.causes).map(c => [
-    c.label.split('(')[0].trim(),
+    c.label,
     c.count + ' occurrences',
     Math.round((c.count / totalReasons) * 100) + '%',
     c.count > 0 ? 'High Impact' : 'Minimal'
@@ -1979,7 +1992,7 @@ function exportAiAuditReportPdf(data, analysis){
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(8.5);
   doc.setTextColor(215, 215, 215);
-  doc.text('Key Lessons Learned for Upcoming Civil & Sports Complex Projects', margin, 42);
+  doc.text('Key Strategic Lessons Learned for Upcoming Sports Projects', margin, 42);
 
   let y2 = 72;
 
@@ -1987,7 +2000,7 @@ function exportAiAuditReportPdf(data, analysis){
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(11);
   doc.setTextColor(...ink);
-  doc.text('STRATEGIC RECOMMENDATIONS (भविष्यातील प्रकल्पांसाठी धडे):', margin, y2);
+  doc.text('STRATEGIC RECOMMENDATIONS (MANAGEMENT PLAYBOOK):', margin, y2);
   y2 += 16;
 
   analysis.recommendations.forEach((rec, idx) => {
@@ -2022,7 +2035,7 @@ function exportAiAuditReportPdf(data, analysis){
 
   const safeProjName = (data.proj.name || 'Project').replace(/[^a-zA-Z0-9]/g, '_');
   doc.save('SIPS_AI_Audit_Report_' + safeProjName + '.pdf');
-  sipsToast('एआय ऑडिट रिपोर्ट (PDF) डाउनलोड झाला!', null);
+  sipsToast('AI Audit Report (PDF) downloaded successfully!', null);
 }
 
 
