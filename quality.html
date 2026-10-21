@@ -82,6 +82,7 @@ table.qtable td.actions{white-space:nowrap;text-align:right;}
     </div>
     <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;">
       <div class="app-topbar-actions">
+        <select id="projSel" style="font-family:var(--font-display);font-weight:600;font-size:12px;padding:8px 12px;border-radius:var(--r-sm);border:1px solid var(--line);background:var(--paper-1);color:var(--ink-800);max-width:240px;"><option>Loading…</option></select>
         <a class="btn" href="project-overview.html" id="backLink">← Overview</a>
         <button class="btn orange" id="newBtn">+ Add Quality Check</button>
       </div>
@@ -167,28 +168,54 @@ table.qtable td.actions{white-space:nowrap;text-align:right;}
 let currentProj = null, allChecks = [], editingEvidenceUrl = null, canDelete = false;
 
 function esc(s){ return (s==null?'':String(s)).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
-function isImageUrl(u){ return !!u && /\.(png|jpe?g|gif|webp)$/i.test(u.split('?')[0]); }
+function isImageUrl(u){ return !!u && (/\.(png|jpe?g|gif|webp)$/i.test(u.split('?')[0]) || u.startsWith('data:image/')); }
 function evidenceFileName(u){ if(!u) return ''; try{ return decodeURIComponent(u.split('/').pop().split('?')[0]).replace(/^\d+_/,''); }catch(e){ return 'Evidence'; } }
+
+async function fillProjects(){
+  const { data: projs } = await sb.from('projects').select('id,name').order('name');
+  const sel = document.getElementById('projSel');
+  if(!sel) return;
+  if(!projs || !projs.length){ sel.innerHTML='<option>No projects</option>'; return; }
+  sel.innerHTML = projs.map(p=>`<option value="${p.id}" ${currentProj && String(p.id)===String(currentProj.id)?'selected':''}>${esc(p.name)}</option>`).join('');
+  sel.onchange = ()=>{
+    try { localStorage.setItem('sips_active_project_id', sel.value); } catch(e){}
+    window.location.search = '?id=' + sel.value;
+  };
+}
 
 async function loadProject(){
   const params = new URLSearchParams(window.location.search);
-  const projectId = params.get('id');
+  let projectId = params.get('id');
+  if(!projectId){
+    try { projectId = localStorage.getItem('sips_active_project_id'); } catch(e){}
+  }
   let q = sb.from('projects').select('*');
-  q = projectId ? q.eq('id', projectId) : q.eq('name','Sama Sports Complex');
-  const { data: proj } = await q.single();
+  if(projectId){
+    q = q.eq('id', projectId);
+  } else {
+    q = q.order('created_at').limit(1);
+  }
+  const { data, error } = await q;
+  const proj = (data && data[0]) || null;
   if(!proj){ document.getElementById('qBody').innerHTML='<tr><td colspan="7" class="empty">Project sapadla nahi.</td></tr>'; return; }
   currentProj = proj;
+  try { localStorage.setItem('sips_active_project_id', proj.id); } catch(e){}
   document.getElementById('crumbName').textContent = proj.name;
   document.getElementById('backLink').href = 'project-overview.html?id=' + proj.id;
+  document.querySelectorAll('.app-nav-item[href]').forEach(a=>{
+    const href = a.getAttribute('href');
+    if(href && href.endsWith('.html') && href!=='dashboard.html'){ a.setAttribute('href', href.split('?')[0]+'?id='+proj.id); }
+  });
+  await fillProjects();
   await loadChecks();
 }
 
 async function loadChecks(){
   const body = document.getElementById('qBody');
   const { data, error } = await sb.from('quality_checks').select('*')
-    .eq('project_id', currentProj.id).order('created_at',{ascending:false});
+    .eq('project_id', currentProj.id).order('id',{ascending:false});
   if(error){
-    body.innerHTML = `<tr><td colspan="7" class="empty">quality_checks table load zala nahi — ${esc(error.message)}<br><br>Supabase madhe <b>quality_checks</b> table banva: id, project_id, particular, unit, expected_value, actual_value, remarks, evidence_url, created_at, updated_at</td></tr>`;
+    body.innerHTML = `<tr><td colspan="7" class="empty">quality_checks table load zala nahi — ${esc(error.message)}</td></tr>`;
     return;
   }
   allChecks = data || [];
@@ -288,7 +315,20 @@ document.getElementById('saveBtn').onclick = async ()=>{
       const { data: pub } = sb.storage.from('project-media').getPublicUrl(path);
       evidenceUrl = pub ? pub.publicUrl : null;
     }catch(err){
-      btn.disabled=false; msg.className='msg err'; msg.textContent='Evidence upload fail: ' + err.message; return;
+      if(ef.type && ef.type.startsWith('image/') && ef.size < 1500000){
+        try{
+          evidenceUrl = await new Promise((resolve, reject)=>{
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result);
+            reader.onerror = reject;
+            reader.readAsDataURL(ef);
+          });
+        }catch(e2){
+          console.warn('Base64 fallback failed:', e2);
+        }
+      } else {
+        console.warn('Evidence storage failed, continuing without evidence file:', err);
+      }
     }
   }
 
@@ -345,7 +385,10 @@ document.addEventListener('keydown', e=>{
 })();
 </script>
 <script>
-sipsRenderShell({ activeHref: "quality.html" });
+sipsRenderShell({
+  activeHref: "quality.html",
+  qs: location.search || (localStorage.getItem('sips_active_project_id') ? ('?id=' + localStorage.getItem('sips_active_project_id')) : '')
+});
 </script>
 </body>
 </html>
