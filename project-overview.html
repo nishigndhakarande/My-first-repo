@@ -1517,6 +1517,7 @@ function analyzeProjectMetrics(data){
   // 5. Overall Health & Efficiency Score (0-100)
   let score = 100;
   if(overdueTasks.length > 0) score -= Math.min(overdueTasks.length * 5, 25);
+  else if(lateCompletedTasks.length > 0 || totalDelayDays > 0) score -= Math.min(Math.round(totalDelayDays / 6) || 5, 20);
   if(totalOverrun > 0) score -= Math.min(Math.round((totalOverrun / (contract || 1)) * 50), 20);
   if(criticalNcrs.length > 0) score -= criticalNcrs.length * 8;
   if(openNcrs.length > criticalNcrs.length) score -= (openNcrs.length - criticalNcrs.length) * 3;
@@ -1601,9 +1602,14 @@ function renderAiPostMortem(data){
     const topCause = Object.entries(analysis.causes).sort((a,b)=> b[1].count - a[1].count)[0];
     const topCauseLabel = topCause && topCause[1].count > 0 ? topCause[1].label : 'Logistics & Weather Coordination';
     
-    const delaySnippet = analysis.overdueTasks.length > 0
-      ? '<b>' + analysis.overdueTasks.length + ' tasks delayed (' + analysis.totalDelayDays + ' days lost)</b>, predominantly driven by <b>' + topCauseLabel + '</b>.'
-      : 'All scheduled milestones are <b>100% on track</b> with zero overdue tasks.';
+    let delaySnippet = '';
+    if(analysis.overdueTasks.length > 0){
+      delaySnippet = '<b>' + analysis.overdueTasks.length + ' tasks currently delayed (' + analysis.totalDelayDays + ' days lost)</b>, predominantly driven by <b>' + topCauseLabel + '</b>.';
+    } else if(analysis.totalDelayDays > 0){
+      delaySnippet = 'Project milestones completed with a <b>cumulative delay of ' + analysis.totalDelayDays + ' days lost</b>, predominantly driven by <b>' + topCauseLabel + '</b>.';
+    } else {
+      delaySnippet = 'All scheduled milestones delivered <b>100% on track</b> with zero delays recorded.';
+    }
       
     const budgetSnippet = analysis.totalOverrun > 0
       ? 'Budget utilization is at <b>' + analysis.utilPct + '%</b> with <b>' + analysis.overBudgetItems.length + ' items showing cost variance (+₹' + Math.round(analysis.totalOverrun).toLocaleString('en-IN') + ')</b>.'
@@ -1655,8 +1661,8 @@ function renderAiTabContent(tab, a, d){
       <div class="ai-insight-grid">
         <div class="ai-stat-box">
           <div class="lbl">⏱️ Schedule Variance</div>
-          <div class="val" style="color:${a.overdueTasks.length ? 'var(--status-bad)' : 'var(--brand-green)'};">${a.totalDelayDays} Days Lost</div>
-          <div class="note">${a.overdueTasks.length} overdue tasks · Primary: ${topCauseLabel}</div>
+          <div class="val" style="color:${a.totalDelayDays > 0 ? 'var(--status-bad)' : 'var(--brand-green)'};">${a.totalDelayDays} Days Lost</div>
+          <div class="note">${a.overdueTasks.length ? a.overdueTasks.length + ' overdue tasks' : (a.totalDelayDays > 0 ? (a.lateCompletedTasks.length || a.totalTasks) + ' delayed tasks completed' : '0 overdue tasks')} · Primary: ${topCauseLabel}</div>
         </div>
         <div class="ai-stat-box">
           <div class="lbl">💰 Cost Variance</div>
@@ -1695,15 +1701,20 @@ function renderAiTabContent(tab, a, d){
       `;
     }).join('');
 
-    const delayedRows = a.overdueTasks.slice(0, 10).map(t => {
-      let rText = t.resched_reason || '—';
+    const allDelayedList = [...a.overdueTasks, ...a.lateCompletedTasks];
+    const delayedRows = allDelayedList.slice(0, 15).map(t => {
+      let rText = t.resched_reason || '';
       if(t.date_status && typeof t.date_status === 'object' && t.date_status.reason) rText = t.date_status.reason;
+      else if(!rText && t.status === 'completed' && t.actual_end && t.due_date && t.actual_end > t.due_date){
+        rText = 'Finished after planned due date (' + t.due_date + ' → ' + t.actual_end + ')';
+      }
+      const isDone = t.status === 'completed';
       return `
         <tr>
           <td><b>${esc(t.task)}</b><div style="font-size:10px;color:var(--muted);">${esc(t.milestone||'General')}</div></td>
           <td>${esc(t.due_date || t.planned_end || '—')}</td>
-          <td><span class="ai-badge weather">Overdue</span></td>
-          <td>💬 ${esc(rText)}</td>
+          <td><span class="ai-badge ${isDone ? 'other' : 'weather'}">${isDone ? 'Completed Late' : 'Overdue'}</span></td>
+          <td>💬 ${esc(rText || 'Reason logged during daily site update')}</td>
         </tr>
       `;
     }).join('');
@@ -1915,8 +1926,14 @@ function exportAiAuditReportPdf(data, analysis){
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(9);
   doc.setTextColor(50, 50, 50);
+  const delaySummaryText = analysis.overdueTasks.length > 0
+    ? 'The project has experienced ' + analysis.totalDelayDays + ' days of delay across ' + analysis.overdueTasks.length + ' active overdue tasks. '
+    : (analysis.totalDelayDays > 0
+      ? 'The project milestones were completed with a cumulative delay of ' + analysis.totalDelayDays + ' days lost (' + (analysis.lateCompletedTasks.length || 'multiple') + ' delayed tasks). '
+      : 'All scheduled milestones were delivered 100% on schedule with zero recorded delays. ');
+
   const summaryParagraph = 'Based on comprehensive multi-module audit across Schedule, Budget, Quality, and Drawings: ' +
-    'The project has experienced ' + analysis.totalDelayDays + ' days of delay across ' + analysis.overdueTasks.length + ' tasks. ' +
+    delaySummaryText +
     'Primary root cause: ' + (Object.entries(analysis.causes).sort((a,b)=>b[1].count-a[1].count)[0]?.[1]?.label || 'Logistics & Weather') + '. ' +
     (analysis.totalOverrun > 0 ? 'Budget overrun of Rs. ' + Math.round(analysis.totalOverrun).toLocaleString('en-IN') + ' observed across ' + analysis.overBudgetItems.length + ' material items. ' : 'Budget is fully on-track with zero material overruns. ') +
     'Quality compliance is at ' + analysis.passRate + '% with ' + analysis.openNcrs + ' open NCR issues and ' + analysis.pendingDrawings + ' drawings pending sign-off.';
