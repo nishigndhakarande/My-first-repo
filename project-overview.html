@@ -532,17 +532,17 @@ a{text-decoration:none;color:inherit;}
   flex-shrink: 0;
 }
 
-/* Site Activity & Task Remarks Log Section */
+/* Site Activity & Task Remarks Log Section - Compressed & Compact */
 .reason-filter-tabs {
   display: flex;
-  gap: 6px;
+  gap: 5px;
   align-items: center;
 }
 .rf-tab {
   font-family: var(--font-display);
-  font-size: 11.5px;
+  font-size: 11px;
   font-weight: 600;
-  padding: 5px 12px;
+  padding: 4px 10px;
   border-radius: var(--r-pill);
   border: 1px solid var(--line);
   background: var(--paper-0);
@@ -559,42 +559,53 @@ a{text-decoration:none;color:inherit;}
   color: #fff;
   border-color: var(--ink-900);
 }
+.reason-log-scrollbox {
+  max-height: 380px;
+  overflow-y: auto;
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  background: var(--paper-1);
+}
 .reason-log-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 12px;
+  font-size: 11.5px;
 }
 .reason-log-table th {
+  position: sticky;
+  top: 0;
+  z-index: 5;
   text-align: left;
-  padding: 10px 12px;
+  padding: 8px 10px;
   background: var(--paper-0);
   color: var(--muted);
-  font-weight: 600;
-  font-size: 11px;
+  font-weight: 700;
+  font-size: 10.5px;
   text-transform: uppercase;
   letter-spacing: 0.03em;
   border-bottom: 1px solid var(--line);
+  box-shadow: 0 1px 0 var(--line);
 }
 .reason-log-table td {
-  padding: 12px 12px;
+  padding: 7px 10px;
   border-bottom: 1px solid var(--line-2);
-  vertical-align: top;
+  vertical-align: middle;
   color: var(--ink-800);
 }
 .reason-log-table tr:last-child td {
   border-bottom: none;
 }
 .reason-log-table tr:hover td {
-  background: rgba(0,0,0,0.015);
+  background: rgba(0,0,0,0.02);
 }
 .reason-quote-box {
   background: var(--paper-0);
   border-left: 3px solid var(--brand-orange);
-  padding: 8px 12px;
+  padding: 5px 9px;
   border-radius: 4px;
-  font-size: 12px;
+  font-size: 11px;
   color: var(--ink-900);
-  line-height: 1.45;
+  line-height: 1.35;
   word-break: break-word;
 }
 .reason-quote-box.delayed {
@@ -608,11 +619,11 @@ a{text-decoration:none;color:inherit;}
 .reason-badge {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  font-size: 10.5px;
+  gap: 3px;
+  font-size: 10px;
   font-weight: 700;
-  padding: 3px 8px;
-  border-radius: 6px;
+  padding: 2px 7px;
+  border-radius: 5px;
   white-space: nowrap;
 }
 .reason-badge.in_progress {
@@ -630,6 +641,25 @@ a{text-decoration:none;color:inherit;}
 .reason-badge.other {
   background: #F3F4F6;
   color: #4B5563;
+}
+.rf-pg-btn {
+  font-family: var(--font-display);
+  font-size: 11px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: var(--r-sm);
+  border: 1px solid var(--line);
+  background: var(--paper-0);
+  color: var(--ink-800);
+  cursor: pointer;
+}
+.rf-pg-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.rf-pg-btn:hover:not(:disabled) {
+  background: var(--paper-1);
+  border-color: var(--muted-2);
 }
 
 </style>
@@ -738,27 +768,30 @@ a{text-decoration:none;color:inherit;}
 
     <!-- Site Activity & Task Remarks Log Section -->
     <div class="card" id="taskRemarksCard" style="margin-bottom:18px;">
-      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:14px;border-bottom:1px solid var(--line);padding-bottom:12px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:10px;border-bottom:1px solid var(--line);padding-bottom:10px;">
         <div>
-          <h3 style="margin:0;font-size:15px;display:flex;align-items:center;gap:8px;">
+          <h3 style="margin:0;font-size:14px;display:flex;align-items:center;gap:8px;">
             <span>📋 Site Activity &amp; Task Remarks Log</span>
-            <span class="ai-live-tag" style="font-size:10px;padding:2px 8px;">LIVE REASONS</span>
+            <span class="ai-live-tag" style="font-size:9.5px;padding:2px 7px;">COMPACT LOG</span>
           </h3>
-          <p style="margin:4px 0 0;font-size:11.5px;color:var(--muted);">All site engineer logs, delay reasons, and in-progress notes for this project</p>
+          <p style="margin:3px 0 0;font-size:11px;color:var(--muted);">Site engineer daily logs, delay explanations, and remarks for this project</p>
         </div>
         <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-          <input type="text" id="rfSearchInput" placeholder="🔍 Search task or reason..." style="font-family:var(--font-display);font-size:12px;padding:6px 12px;border:1px solid var(--line);border-radius:var(--r-sm);background:var(--paper-0);color:var(--ink-800);min-width:180px;">
+          <input type="text" id="rfSearchInput" placeholder="🔍 Search..." style="font-family:var(--font-display);font-size:11.5px;padding:5px 10px;border:1px solid var(--line);border-radius:var(--r-sm);background:var(--paper-0);color:var(--ink-800);width:140px;">
           <div class="reason-filter-tabs" id="reasonFilterTabs">
             <button class="rf-tab active" data-filter="all">All (<span id="rfCountAll">0</span>)</button>
             <button class="rf-tab" data-filter="in_progress">In Progress (<span id="rfCountProg">0</span>)</button>
-            <button class="rf-tab" data-filter="delayed">Delayed / Incomplete (<span id="rfCountDelay">0</span>)</button>
+            <button class="rf-tab" data-filter="delayed">Delayed (<span id="rfCountDelay">0</span>)</button>
           </div>
-          <button class="btn sm" id="btnExportReasonsCsv" title="Export reasons to CSV">⬇ Export CSV</button>
+          <button class="btn xs" id="btnExportReasonsCsv" title="Export to CSV">⬇ CSV</button>
+          <button class="btn xs" id="btnToggleRemarksCard" title="Minimize / Maximize this section">▲ Minimize</button>
         </div>
       </div>
 
-      <div id="taskRemarksLogContainer">
-        <div class="empty">Loading remarks log...</div>
+      <div id="taskRemarksCollapseBody">
+        <div id="taskRemarksLogContainer">
+          <div class="empty">Loading remarks log...</div>
+        </div>
       </div>
     </div>
 
@@ -1115,6 +1148,8 @@ function renderTaskRemarksLog(proj, allTasks, changeReqs){
 
   let currentFilter = 'all';
   let searchQuery = '';
+  let currentPage = 1;
+  const pageSize = 8; // Compressed: 8 items per page!
 
   function renderRows(){
     let filtered = rawLogs;
@@ -1134,19 +1169,28 @@ function renderTaskRemarksLog(proj, allTasks, changeReqs){
       );
     }
 
-    if(!filtered.length){
+    const totalFiltered = filtered.length;
+    const totalPages = Math.ceil(totalFiltered / pageSize) || 1;
+    if(currentPage > totalPages) currentPage = totalPages;
+    if(currentPage < 1) currentPage = 1;
+
+    if(!totalFiltered){
       container.innerHTML = `
-        <div style="text-align:center;padding:32px 16px;background:var(--paper-0);border-radius:var(--r-md);border:1px dashed var(--line);margin-top:10px;">
-          <div style="font-size:24px;margin-bottom:8px;">📋</div>
-          <div style="font-weight:700;font-size:13.5px;color:var(--ink-800);">No task remarks or delay reasons found</div>
-          <div style="font-size:12px;color:var(--muted);margin-top:4px;">
-            ${countAll === 0 ? 'All tasks in this project are currently progressing without reported issues.' : 'No items match your active search/filter.'}
+        <div style="text-align:center;padding:24px 16px;background:var(--paper-0);border-radius:var(--r-md);border:1px dashed var(--line);margin:6px 0;">
+          <div style="font-size:20px;margin-bottom:6px;">📋</div>
+          <div style="font-weight:700;font-size:12.5px;color:var(--ink-800);">No task remarks or reasons found</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:2px;">
+            ${countAll === 0 ? 'All tasks in this project are progressing without reported issues.' : 'No items match your active search/filter.'}
           </div>
         </div>`;
       return;
     }
 
-    const rowsHtml = filtered.map(item => {
+    const startIdx = (currentPage - 1) * pageSize;
+    const endIdx = Math.min(startIdx + pageSize, totalFiltered);
+    const pageItems = filtered.slice(startIdx, endIdx);
+
+    const rowsHtml = pageItems.map(item => {
       let badgeCls = 'other';
       let badgeLabel = item.status.replace(/_/g, ' ');
       if(item.status === 'in_progress'){ badgeCls = 'in_progress'; badgeLabel = 'In Progress'; }
@@ -1166,32 +1210,31 @@ function renderTaskRemarksLog(proj, allTasks, changeReqs){
 
       return `
         <tr>
-          <td style="width:28%;min-width:180px;">
-            <a href="${scheduleLink}" style="font-weight:700;font-size:13px;color:var(--ink-900);text-decoration:none;" onmouseover="this.style.color='var(--brand-orange)'" onmouseout="this.style.color='var(--ink-900)'">
+          <td style="width:26%;min-width:160px;">
+            <a href="${scheduleLink}" style="font-weight:700;font-size:12px;color:var(--ink-900);text-decoration:none;" onmouseover="this.style.color='var(--brand-orange)'" onmouseout="this.style.color='var(--ink-900)'">
               ${esc(item.taskName)}
             </a>
-            <div style="font-size:11px;color:var(--muted);margin-top:2px;display:flex;align-items:center;gap:4px;">
-              <span>📁 Milestone:</span>
-              <b>${esc(item.milestone)}</b>
+            <div style="font-size:10.5px;color:var(--muted);margin-top:1px;">
+              📁 ${esc(item.milestone)}
             </div>
           </td>
-          <td style="width:14%;min-width:110px;">
+          <td style="width:12%;min-width:95px;">
             <span class="reason-badge ${badgeCls}">${badgeLabel}</span>
           </td>
-          <td style="width:18%;min-width:120px;">
-            <div style="font-weight:600;font-size:12px;color:var(--ink-800);">${formattedDate}</div>
-            <div style="font-size:10px;color:var(--muted);margin-top:2px;">${esc(item.source)}</div>
+          <td style="width:16%;min-width:110px;">
+            <div style="font-weight:600;font-size:11.5px;color:var(--ink-800);">${formattedDate}</div>
+            <div style="font-size:9.5px;color:var(--muted);">${esc(item.source)}</div>
           </td>
-          <td style="width:40%;">
+          <td style="width:46%;">
             <div class="reason-quote-box ${quoteCls}">
-              <b>📌 Reason / Remark:</b> ${esc(item.reason)}
+              <b>📌 Reason:</b> ${esc(item.reason)}
             </div>
           </td>
         </tr>`;
     }).join('');
 
     container.innerHTML = `
-      <div style="overflow-x:auto;">
+      <div class="reason-log-scrollbox">
         <table class="reason-log-table">
           <thead>
             <tr>
@@ -1205,7 +1248,20 @@ function renderTaskRemarksLog(proj, allTasks, changeReqs){
             ${rowsHtml}
           </tbody>
         </table>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 6px 2px;font-size:11px;color:var(--muted);flex-wrap:wrap;gap:8px;">
+        <div>Showing <b>${startIdx + 1}–${endIdx}</b> of <b>${totalFiltered}</b> logs</div>
+        <div style="display:flex;align-items:center;gap:6px;">
+          <button class="rf-pg-btn" id="rfPrevBtn" ${currentPage === 1 ? 'disabled' : ''}>&laquo; Prev</button>
+          <span style="font-weight:600;color:var(--ink-800);padding:0 4px;">Page ${currentPage} of ${totalPages}</span>
+          <button class="rf-pg-btn" id="rfNextBtn" ${currentPage === totalPages ? 'disabled' : ''}>Next &raquo;</button>
+        </div>
       </div>`;
+
+    const prevBtn = document.getElementById('rfPrevBtn');
+    const nextBtn = document.getElementById('rfNextBtn');
+    if(prevBtn) prevBtn.onclick = () => { if(currentPage > 1){ currentPage--; renderRows(); } };
+    if(nextBtn) nextBtn.onclick = () => { if(currentPage < totalPages){ currentPage++; renderRows(); } };
   }
 
   const tabWrap = document.getElementById('reasonFilterTabs');
@@ -1215,6 +1271,7 @@ function renderTaskRemarksLog(proj, allTasks, changeReqs){
         tabWrap.querySelectorAll('.rf-tab').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
         currentFilter = btn.dataset.filter;
+        currentPage = 1;
         renderRows();
       };
     });
@@ -1224,6 +1281,7 @@ function renderTaskRemarksLog(proj, allTasks, changeReqs){
   if(searchInp){
     searchInp.oninput = (e) => {
       searchQuery = e.target.value.trim();
+      currentPage = 1;
       renderRows();
     };
   }
@@ -1251,6 +1309,18 @@ function renderTaskRemarksLog(proj, allTasks, changeReqs){
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
       if(typeof sipsToast === 'function') sipsToast('Task Reasons CSV Download zala!', null);
+    };
+  }
+
+  // Toggle Collapse / Minimize
+  const toggleBtn = document.getElementById('btnToggleRemarksCard');
+  const collapseBody = document.getElementById('taskRemarksCollapseBody');
+  if(toggleBtn && collapseBody){
+    let isCollapsed = false;
+    toggleBtn.onclick = () => {
+      isCollapsed = !isCollapsed;
+      collapseBody.style.display = isCollapsed ? 'none' : 'block';
+      toggleBtn.textContent = isCollapsed ? '▼ Expand' : '▲ Minimize';
     };
   }
 
