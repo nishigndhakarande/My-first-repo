@@ -532,6 +532,106 @@ a{text-decoration:none;color:inherit;}
   flex-shrink: 0;
 }
 
+/* Site Activity & Task Remarks Log Section */
+.reason-filter-tabs {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+.rf-tab {
+  font-family: var(--font-display);
+  font-size: 11.5px;
+  font-weight: 600;
+  padding: 5px 12px;
+  border-radius: var(--r-pill);
+  border: 1px solid var(--line);
+  background: var(--paper-0);
+  color: var(--muted);
+  cursor: pointer;
+  transition: all .15s ease;
+}
+.rf-tab:hover {
+  color: var(--ink-900);
+  border-color: var(--muted-2);
+}
+.rf-tab.active {
+  background: var(--ink-900);
+  color: #fff;
+  border-color: var(--ink-900);
+}
+.reason-log-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+.reason-log-table th {
+  text-align: left;
+  padding: 10px 12px;
+  background: var(--paper-0);
+  color: var(--muted);
+  font-weight: 600;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  border-bottom: 1px solid var(--line);
+}
+.reason-log-table td {
+  padding: 12px 12px;
+  border-bottom: 1px solid var(--line-2);
+  vertical-align: top;
+  color: var(--ink-800);
+}
+.reason-log-table tr:last-child td {
+  border-bottom: none;
+}
+.reason-log-table tr:hover td {
+  background: rgba(0,0,0,0.015);
+}
+.reason-quote-box {
+  background: var(--paper-0);
+  border-left: 3px solid var(--brand-orange);
+  padding: 8px 12px;
+  border-radius: 4px;
+  font-size: 12px;
+  color: var(--ink-900);
+  line-height: 1.45;
+  word-break: break-word;
+}
+.reason-quote-box.delayed {
+  border-left-color: #DC2626;
+  background: #FEF2F2;
+}
+.reason-quote-box.in_progress {
+  border-left-color: #D97706;
+  background: #FFFBEB;
+}
+.reason-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10.5px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 6px;
+  white-space: nowrap;
+}
+.reason-badge.in_progress {
+  background: #FEF3C7;
+  color: #B45309;
+}
+.reason-badge.delayed, .reason-badge.not_completed {
+  background: #FEE2E2;
+  color: #DC2626;
+}
+.reason-badge.completed, .reason-badge.rescheduled {
+  background: #DCFCE7;
+  color: #16A34A;
+}
+.reason-badge.other {
+  background: #F3F4F6;
+  color: #4B5563;
+}
+
 </style>
 </head>
 <body>
@@ -633,6 +733,32 @@ a{text-decoration:none;color:inherit;}
       <div class="card" style="cursor:pointer" onclick="location.href='drawings.html?id='+currentProj.id">
         <h3>Drawings &amp; Media</h3>
         <div id="drawingList"><div class="empty">Loading…</div></div>
+      </div>
+    </div>
+
+    <!-- Site Activity & Task Remarks Log Section -->
+    <div class="card" id="taskRemarksCard" style="margin-bottom:18px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:14px;border-bottom:1px solid var(--line);padding-bottom:12px;">
+        <div>
+          <h3 style="margin:0;font-size:15px;display:flex;align-items:center;gap:8px;">
+            <span>📋 Site Activity &amp; Task Remarks Log</span>
+            <span class="ai-live-tag" style="font-size:10px;padding:2px 8px;">LIVE REASONS</span>
+          </h3>
+          <p style="margin:4px 0 0;font-size:11.5px;color:var(--muted);">All site engineer logs, delay reasons, and in-progress notes for this project</p>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+          <input type="text" id="rfSearchInput" placeholder="🔍 Search task or reason..." style="font-family:var(--font-display);font-size:12px;padding:6px 12px;border:1px solid var(--line);border-radius:var(--r-sm);background:var(--paper-0);color:var(--ink-800);min-width:180px;">
+          <div class="reason-filter-tabs" id="reasonFilterTabs">
+            <button class="rf-tab active" data-filter="all">All (<span id="rfCountAll">0</span>)</button>
+            <button class="rf-tab" data-filter="in_progress">In Progress (<span id="rfCountProg">0</span>)</button>
+            <button class="rf-tab" data-filter="delayed">Delayed / Incomplete (<span id="rfCountDelay">0</span>)</button>
+          </div>
+          <button class="btn sm" id="btnExportReasonsCsv" title="Export reasons to CSV">⬇ Export CSV</button>
+        </div>
+      </div>
+
+      <div id="taskRemarksLogContainer">
+        <div class="empty">Loading remarks log...</div>
       </div>
     </div>
 
@@ -873,6 +999,265 @@ function renderScheduleList(allTasks){
     </div>`;
 }
 
+function renderTaskRemarksLog(proj, allTasks, changeReqs){
+  const container = document.getElementById('taskRemarksLogContainer');
+  if(!container) return;
+
+  const rawLogs = [];
+  const seenKeys = new Set();
+
+  function addLog(item) {
+    if(!item || !item.reason) return;
+    const r = String(item.reason).trim();
+    if(!r) return;
+    const key = (item.taskId || '') + '_' + (item.date || '') + '_' + r;
+    if (!seenKeys.has(key)) {
+      seenKeys.add(key);
+      rawLogs.push({ ...item, reason: r });
+    }
+  }
+
+  // 1. Scan date_status on tasks
+  (allTasks || []).forEach(t => {
+    if (t.date_status && typeof t.date_status === 'object') {
+      Object.entries(t.date_status).forEach(([day, info]) => {
+        if (info && info.reason && String(info.reason).trim()) {
+          addLog({
+            taskId: t.id,
+            taskName: t.task || 'Untitled Task',
+            milestone: t.milestone || 'General',
+            status: info.status || t.status || 'in_progress',
+            date: day,
+            reason: String(info.reason).trim(),
+            source: 'Daily Site Log',
+            sortTime: new Date(info.updated_at || day).getTime() || 0
+          });
+        }
+      });
+    }
+
+    // 2. Scan resched_reason
+    if (t.resched_reason && String(t.resched_reason).trim()) {
+      addLog({
+        taskId: t.id,
+        taskName: t.task || 'Untitled Task',
+        milestone: t.milestone || 'General',
+        status: t.status || 'in_progress',
+        date: t.due_date || t.planned_end || '',
+        reason: String(t.resched_reason).trim(),
+        source: 'Reschedule Request',
+        sortTime: new Date(t.due_date || t.updated_at || 0).getTime() || 0
+      });
+    }
+
+    // 3. Scan fail_reason
+    if (t.fail_reason && String(t.fail_reason).trim()) {
+      addLog({
+        taskId: t.id,
+        taskName: t.task || 'Untitled Task',
+        milestone: t.milestone || 'General',
+        status: t.status || 'not_completed',
+        date: t.due_date || t.planned_end || '',
+        reason: String(t.fail_reason).trim(),
+        source: 'Incomplete / Delay Log',
+        sortTime: new Date(t.due_date || t.updated_at || 0).getTime() || 0
+      });
+    }
+
+    // 4. Scan remarks
+    if (t.remarks && String(t.remarks).trim()) {
+      addLog({
+        taskId: t.id,
+        taskName: t.task || 'Untitled Task',
+        milestone: t.milestone || 'General',
+        status: t.status || 'in_progress',
+        date: t.due_date || '',
+        reason: String(t.remarks).trim(),
+        source: 'Site Remarks',
+        sortTime: new Date(t.updated_at || t.due_date || 0).getTime() || 0
+      });
+    }
+  });
+
+  // 5. Scan schedule_change_requests
+  (changeReqs || []).forEach(req => {
+    if (req.reason && String(req.reason).trim()) {
+      const parentTask = (allTasks || []).find(x => String(x.id) === String(req.task_id));
+      const tName = parentTask ? parentTask.task : 'Task #' + req.task_id;
+      const mName = parentTask ? parentTask.milestone : 'General';
+      addLog({
+        taskId: req.task_id,
+        taskName: tName,
+        milestone: mName,
+        status: req.approval_status === 'approved' ? 'rescheduled' : (parentTask ? parentTask.status : 'pending'),
+        date: req.proposed_start || (req.created_at ? req.created_at.slice(0,10) : ''),
+        reason: String(req.reason).trim(),
+        source: 'Schedule Request (' + (req.approval_status || 'pending') + ')',
+        sortTime: new Date(req.created_at || req.proposed_start || 0).getTime() || 0
+      });
+    }
+  });
+
+  // Sort descending by date
+  rawLogs.sort((a,b) => b.sortTime - a.sortTime);
+
+  // Counters
+  const countAll = rawLogs.length;
+  const countProg = rawLogs.filter(l => l.status === 'in_progress').length;
+  const countDelay = rawLogs.filter(l => l.status === 'delayed' || l.status === 'not_completed' || l.status === 'fail').length;
+
+  const countAllEl = document.getElementById('rfCountAll');
+  const countProgEl = document.getElementById('rfCountProg');
+  const countDelayEl = document.getElementById('rfCountDelay');
+  if(countAllEl) countAllEl.textContent = countAll;
+  if(countProgEl) countProgEl.textContent = countProg;
+  if(countDelayEl) countDelayEl.textContent = countDelay;
+
+  let currentFilter = 'all';
+  let searchQuery = '';
+
+  function renderRows(){
+    let filtered = rawLogs;
+    if(currentFilter === 'in_progress'){
+      filtered = filtered.filter(l => l.status === 'in_progress');
+    } else if(currentFilter === 'delayed'){
+      filtered = filtered.filter(l => l.status === 'delayed' || l.status === 'not_completed' || l.status === 'fail');
+    }
+
+    if(searchQuery){
+      const q = searchQuery.toLowerCase();
+      filtered = filtered.filter(l => 
+        (l.taskName && l.taskName.toLowerCase().includes(q)) ||
+        (l.milestone && l.milestone.toLowerCase().includes(q)) ||
+        (l.reason && l.reason.toLowerCase().includes(q)) ||
+        (l.source && l.source.toLowerCase().includes(q))
+      );
+    }
+
+    if(!filtered.length){
+      container.innerHTML = `
+        <div style="text-align:center;padding:32px 16px;background:var(--paper-0);border-radius:var(--r-md);border:1px dashed var(--line);margin-top:10px;">
+          <div style="font-size:24px;margin-bottom:8px;">📋</div>
+          <div style="font-weight:700;font-size:13.5px;color:var(--ink-800);">No task remarks or delay reasons found</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:4px;">
+            ${countAll === 0 ? 'All tasks in this project are currently progressing without reported issues.' : 'No items match your active search/filter.'}
+          </div>
+        </div>`;
+      return;
+    }
+
+    const rowsHtml = filtered.map(item => {
+      let badgeCls = 'other';
+      let badgeLabel = item.status.replace(/_/g, ' ');
+      if(item.status === 'in_progress'){ badgeCls = 'in_progress'; badgeLabel = 'In Progress'; }
+      else if(item.status === 'delayed' || item.status === 'not_completed' || item.status === 'fail'){ badgeCls = 'delayed'; badgeLabel = item.status === 'not_completed' ? 'Not Completed' : 'Delayed'; }
+      else if(item.status === 'completed'){ badgeCls = 'completed'; badgeLabel = 'Completed'; }
+
+      const quoteCls = (badgeCls === 'delayed') ? 'delayed' : 'in_progress';
+      const formattedDate = item.date ? (function(dStr){
+        try {
+          const d = new Date(dStr);
+          if(!isNaN(d)) return d.toLocaleDateString('en-IN', { day:'numeric', month:'short', year:'numeric' });
+        } catch(e){}
+        return dStr;
+      })(item.date) : 'Recent';
+
+      const scheduleLink = 'schedule.html?id=' + encodeURIComponent(proj.id);
+
+      return `
+        <tr>
+          <td style="width:28%;min-width:180px;">
+            <a href="${scheduleLink}" style="font-weight:700;font-size:13px;color:var(--ink-900);text-decoration:none;" onmouseover="this.style.color='var(--brand-orange)'" onmouseout="this.style.color='var(--ink-900)'">
+              ${esc(item.taskName)}
+            </a>
+            <div style="font-size:11px;color:var(--muted);margin-top:2px;display:flex;align-items:center;gap:4px;">
+              <span>📁 Milestone:</span>
+              <b>${esc(item.milestone)}</b>
+            </div>
+          </td>
+          <td style="width:14%;min-width:110px;">
+            <span class="reason-badge ${badgeCls}">${badgeLabel}</span>
+          </td>
+          <td style="width:18%;min-width:120px;">
+            <div style="font-weight:600;font-size:12px;color:var(--ink-800);">${formattedDate}</div>
+            <div style="font-size:10px;color:var(--muted);margin-top:2px;">${esc(item.source)}</div>
+          </td>
+          <td style="width:40%;">
+            <div class="reason-quote-box ${quoteCls}">
+              <b>📌 Reason / Remark:</b> ${esc(item.reason)}
+            </div>
+          </td>
+        </tr>`;
+    }).join('');
+
+    container.innerHTML = `
+      <div style="overflow-x:auto;">
+        <table class="reason-log-table">
+          <thead>
+            <tr>
+              <th>Task &amp; Milestone</th>
+              <th>Status</th>
+              <th>Date &amp; Source</th>
+              <th>Engineer's Reason / Remarks</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${rowsHtml}
+          </tbody>
+        </table>
+      </div>`;
+  }
+
+  const tabWrap = document.getElementById('reasonFilterTabs');
+  if(tabWrap){
+    tabWrap.querySelectorAll('.rf-tab').forEach(btn => {
+      btn.onclick = () => {
+        tabWrap.querySelectorAll('.rf-tab').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        currentFilter = btn.dataset.filter;
+        renderRows();
+      };
+    });
+  }
+
+  const searchInp = document.getElementById('rfSearchInput');
+  if(searchInp){
+    searchInp.oninput = (e) => {
+      searchQuery = e.target.value.trim();
+      renderRows();
+    };
+  }
+
+  const btnExport = document.getElementById('btnExportReasonsCsv');
+  if(btnExport){
+    btnExport.onclick = () => {
+      if(!rawLogs.length){
+        if(typeof sipsToast === 'function') sipsToast('Export sathi kontehi reasons sapadle nahit.', null);
+        else alert('No reasons found to export.');
+        return;
+      }
+      let csv = 'Project,Milestone,Task,Status,Date,Source,Reason\r\n';
+      rawLogs.forEach(l => {
+        const clean = str => '"' + (str || '').toString().replace(/"/g, '""') + '"';
+        csv += clean(proj.name) + ',' + clean(l.milestone) + ',' + clean(l.taskName) + ',' + clean(l.status) + ',' + clean(l.date) + ',' + clean(l.source) + ',' + clean(l.reason) + '\r\n';
+      });
+      const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = ((proj.name||'Project').replace(/\s+/g,'_')) + '_Task_Reasons_Log.csv';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      if(typeof sipsToast === 'function') sipsToast('Task Reasons CSV Download zala!', null);
+    };
+  }
+
+  renderRows();
+}
+
+
 async function loadOverview(){
   const params = new URLSearchParams(window.location.search);
   let projectId = params.get('id');
@@ -916,15 +1301,15 @@ async function loadOverview(){
       </div>
     </div>`;
 
-  const [{data:tasks}, {data:ncrs}, {data:drawings}, {data:cos}, {data:bitems}, {data:ptxs}, {data:qchecks}] = await Promise.all([
+  const [{data:tasks}, {data:ncrs}, {data:drawings}, {data:cos}, {data:bitems}, {data:ptxs}, {data:qchecks}, {data:changeReqs}] = await Promise.all([
     sb.from('schedule_tasks').select('*').eq('project_id', proj.id),
     sb.from('ncrs').select('*').eq('project_id', proj.id),
     sb.from('drawings').select('*').eq('project_id', proj.id),
     sb.from('change_orders').select('*').eq('project_id', proj.id),
     sb.from('budget_items').select('*').eq('project_id', proj.id),
     sb.from('payment_transactions').select('*').eq('project_id', proj.id),
-    sb.from('quality_checks').select('*').eq('project_id', proj.id)
-  ]);
+    sb.from('quality_checks').select('*').eq('project_id', proj.id),
+    sb.from('schedule_change_requests').select('*').eq('project_id', proj.id)]);
 
   const allTasks = tasks||[];
   renderProjectStatus(proj, allTasks);
@@ -977,6 +1362,7 @@ async function loadOverview(){
   }
 
   renderScheduleList(allTasks);
+  renderTaskRemarksLog(proj, allTasks, (typeof changeReqs !== 'undefined' && changeReqs) ? changeReqs : []);
   renderDrawingsMediaSummary(drawings||[]);
 
   document.getElementById('drawCount').textContent = (drawings||[]).filter(d=>bucketOf(d)==='drawing').length;
