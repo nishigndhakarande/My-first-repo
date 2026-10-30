@@ -40,7 +40,7 @@ const SIPS_NAV = [
     { href:'drawings.html', icon:SIPS_ICON.layers,   label:'Drawings & media', desc:'Site progress photos & design blueprints' },
     { href:'quality.html',  icon:SIPS_ICON.shield,   label:'Quality & NCR', desc:'Quality checks & non-conformance reports' },
     { href:'mytasks.html',  icon:SIPS_ICON.tasks,    label:'My tasks', desc:'Daily assigned engineer checklist' },
-    { href:'#', icon:SIPS_ICON.bell, label:'Notifications', desc:'System alerts & recent updates', domId:'navNotifications', badgeId:'sideNotifBadge' },
+    { href:'notifications.html', icon:SIPS_ICON.bell, label:'Notifications', desc:'System alerts & recent updates', domId:'navNotifications', badgeId:'sideNotifBadge' },
     { href:'approvals.html',icon:SIPS_ICON.check, label:'Approvals', desc:'Director approval for budget & schedule shifts', domId:'navApprovals', badgeId:'sideApprovalsBadge' },
   ]},
   { section:'Network', items:[
@@ -256,4 +256,174 @@ function sipsWireScrollHints(root){
     if(window.ResizeObserver) new ResizeObserver(check).observe(el);
   });
 }
-document.addEventListener('DOMContentLoaded', ()=> sipsWireScrollHints());
+document.addEventListener('DOMContentLoaded', ()=> {
+  sipsWireScrollHints();
+  sipsInitLoginAlertBanner();
+});
+
+/* ==========================================================================
+   TOP LOGIN ALERT BANNER (Option 1)
+   Slides down upon login / new session when action items need attention
+   ========================================================================== */
+async function sipsInitLoginAlertBanner(forceShow = false) {
+  const currentPath = location.pathname.split('/').pop().toLowerCase();
+  if (currentPath === 'login.html' || currentPath === 'notifications.html') return;
+
+  if (!forceShow && sessionStorage.getItem('sips_top_banner_dismissed')) return;
+
+  const justLoggedIn = sessionStorage.getItem('sips_just_logged_in') === '1' || forceShow;
+
+  // Small delay so auth & DOM settle cleanly
+  setTimeout(async () => {
+    try {
+      let openNcr = 0, pendingDraw = 0, pendingCO = 0, atRiskVendor = 0;
+      let userName = 'Team';
+
+      if (typeof sb !== 'undefined' && sb) {
+        try {
+          const [ncrRes, drawRes, coRes, vendRes] = await Promise.all([
+            sb.from('ncrs').select('id', { count: 'exact', head: true }).eq('status', 'open'),
+            sb.from('drawings').select('id', { count: 'exact', head: true }).ilike('status', '%pending%'),
+            sb.from('change_orders').select('id', { count: 'exact', head: true }).neq('status', 'approved'),
+            sb.from('vendors').select('id', { count: 'exact', head: true }).ilike('sla_status', '%escalated%')
+          ]);
+          openNcr = ncrRes.count || 0;
+          pendingDraw = drawRes.count || 0;
+          pendingCO = coRes.count || 0;
+          atRiskVendor = vendRes.count || 0;
+        } catch (e) {
+          console.warn('sipsAlertCounts fallback:', e.message);
+        }
+
+        try {
+          const { data: sessData } = await sb.auth.getSession();
+          if (sessData && sessData.session && sessData.session.user) {
+            const { data: prof } = await sb.from('profiles').select('full_name, role').eq('id', sessData.session.user.id).maybeSingle();
+            if (prof && prof.full_name) userName = prof.full_name.split(' ')[0];
+            else if (prof && prof.role) userName = prof.role.charAt(0).toUpperCase() + prof.role.slice(1);
+          }
+        } catch (e) {}
+      }
+
+      const totalAlerts = openNcr + pendingDraw + pendingCO + atRiskVendor;
+
+      // If no alerts and didn't just log in, don't interrupt
+      if (totalAlerts === 0 && !justLoggedIn) return;
+
+      sipsRenderTopBanner({
+        userName,
+        totalAlerts,
+        openNcr,
+        pendingDraw,
+        pendingCO,
+        atRiskVendor,
+        justLoggedIn
+      });
+
+      sessionStorage.removeItem('sips_just_logged_in');
+    } catch (err) {
+      console.warn('sipsInitLoginAlertBanner error:', err);
+    }
+  }, 450);
+}
+
+function sipsRenderTopBanner(data) {
+  if (document.getElementById('sips-login-banner')) return;
+
+  const banner = document.createElement('div');
+  banner.id = 'sips-login-banner';
+  banner.className = 'sips-login-alert-banner';
+
+  let breakdownPills = '';
+  if (data.openNcr > 0) breakdownPills += `<span class="sips-pill-mini ncr">⚠️ ${data.openNcr} Quality NCR</span>`;
+  if (data.pendingDraw > 0) breakdownPills += `<span class="sips-pill-mini draw">📐 ${data.pendingDraw} Drawings</span>`;
+  if (data.pendingCO > 0) breakdownPills += `<span class="sips-pill-mini co">📝 ${data.pendingCO} Change Orders</span>`;
+  if (data.atRiskVendor > 0) breakdownPills += `<span class="sips-pill-mini">🚚 ${data.atRiskVendor} Vendor SLA</span>`;
+
+  const titleGreeting = `नमस्कार, ${data.userName}!`;
+  let messageHtml = '';
+
+  if (data.totalAlerts > 0) {
+    messageHtml = `
+      <div class="sips-banner-title">
+        <span>${titleGreeting}</span>
+        <span class="sips-banner-badge">${data.totalAlerts} ॲलर्ट्स प्रलंबित</span>
+      </div>
+      <div class="sips-banner-msg">
+        तुमच्या प्रोजेक्ट्सवर तातडीचे लक्ष देणे आवश्यक आहे:
+        <span class="sips-banner-pills">${breakdownPills}</span>
+      </div>
+    `;
+  } else {
+    messageHtml = `
+      <div class="sips-banner-title">
+        <span>${titleGreeting}</span>
+        <span class="sips-pill-mini" style="color:#86EFAC;background:rgba(34,197,94,0.15);border-color:rgba(34,197,94,0.3);">सर्व सुरळीत आहे ✓</span>
+      </div>
+      <div class="sips-banner-msg">
+        सर्व प्रोजेक्ट साईट्स व्यवस्थित सुरू आहेत. कोणतेही प्रलंबित ॲलर्ट्स नाहीत.
+      </div>
+    `;
+  }
+
+  banner.innerHTML = `
+    <div class="sips-banner-inner">
+      <div class="sips-banner-left">
+        <div class="sips-banner-icon">
+          <svg class="sips-bell-animated" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M18.5 8.5a6.5 6.5 0 0 0-13 0c0 7.5-3 9.5-3 9.5h19s-3-2-3-9.5Z"/>
+            <path d="M13.7 21.5a2 2 0 0 1-3.4 0"/>
+          </svg>
+        </div>
+        <div class="sips-banner-text">
+          ${messageHtml}
+        </div>
+      </div>
+      <div class="sips-banner-actions">
+        ${data.totalAlerts > 0 ? `<a href="notifications.html" class="sips-banner-btn-view">तपासा (View) →</a>` : ''}
+        <button type="button" class="sips-banner-btn-close" id="sips-banner-close-btn" aria-label="Dismiss banner" title="बंद करा">✕</button>
+      </div>
+    </div>
+  `;
+
+  const appTopbar = document.querySelector('.app-topbar');
+  const appMain = document.querySelector('.app-main');
+
+  if (appTopbar && appTopbar.parentNode) {
+    appTopbar.parentNode.insertBefore(banner, appTopbar);
+  } else if (appMain) {
+    appMain.prepend(banner);
+  } else {
+    document.body.prepend(banner);
+  }
+
+  // Bell ring animation on nav icon
+  const sideBell = document.getElementById('navNotifications');
+  if (sideBell) {
+    const ic = sideBell.querySelector('.ic svg');
+    if (ic) {
+      ic.classList.add('sips-bell-animated');
+      setTimeout(() => ic.classList.remove('sips-bell-animated'), 4000);
+    }
+  }
+
+  const closeBtn = banner.querySelector('#sips-banner-close-btn');
+  if (closeBtn) {
+    closeBtn.addEventListener('click', () => {
+      banner.classList.add('closing');
+      sessionStorage.setItem('sips_top_banner_dismissed', '1');
+      setTimeout(() => banner.remove(), 320);
+    });
+  }
+
+  if (data.totalAlerts === 0) {
+    setTimeout(() => {
+      if (document.getElementById('sips-login-banner')) {
+        banner.classList.add('closing');
+        setTimeout(() => banner.remove(), 320);
+      }
+    }, 6000);
+  }
+}
+
+window.sipsTriggerLoginBanner = sipsInitLoginAlertBanner;

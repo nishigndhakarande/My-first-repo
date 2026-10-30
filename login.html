@@ -308,6 +308,8 @@ const ROLE_HOME = {
       return;
     }
 
+    sessionStorage.setItem('sips_just_logged_in', '1');
+    sessionStorage.removeItem('sips_top_banner_dismissed');
     window.location.href = ROLE_HOME[role] || 'dashboard.html';
   });
 })();
