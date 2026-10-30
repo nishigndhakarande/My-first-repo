@@ -31,26 +31,26 @@ const SIPS_ICON = {
 /* ---- Sidebar nav model (was duplicated 3x across the app — now one place) ---- */
 const SIPS_NAV = [
   { section:'Overview', items:[
-    { href:'#',                     icon:SIPS_ICON.grid, label:'My projects', domId:'navMyProjects' },
-    { href:'collaboration.html',    icon:SIPS_ICON.chat, label:'Collaboration', badgeId:'collabNavBadge' },
+    { href:'#',                     icon:SIPS_ICON.grid, label:'My projects', desc:'Project portfolio & live status', domId:'navMyProjects' },
+    { href:'collaboration.html',    icon:SIPS_ICON.chat, label:'Collaboration', desc:'Team discussions & SIPS AI assistant', badgeId:'collabNavBadge' },
   ]},
   { section:'Execution', items:[
-    { href:'schedule.html', icon:SIPS_ICON.calendar, label:'Schedule' },
-    { href:'budget.html',   icon:SIPS_ICON.wallet,   label:'Budget' },
-    { href:'drawings.html', icon:SIPS_ICON.layers,   label:'Drawings & media' },
-    { href:'quality.html',  icon:SIPS_ICON.shield,   label:'Quality & NCR' },
-    { href:'mytasks.html',  icon:SIPS_ICON.tasks,    label:'My tasks' },
-    { href:'#', icon:SIPS_ICON.bell, label:'Notifications', domId:'navNotifications', badgeId:'sideNotifBadge' },
-    { href:'approvals.html',icon:SIPS_ICON.check, label:'Approvals', domId:'navApprovals', badgeId:'sideApprovalsBadge' },
+    { href:'schedule.html', icon:SIPS_ICON.calendar, label:'Schedule', desc:'Gantt timeline & daily task tracking' },
+    { href:'budget.html',   icon:SIPS_ICON.wallet,   label:'Budget', desc:'Milestone costing & vendor payments' },
+    { href:'drawings.html', icon:SIPS_ICON.layers,   label:'Drawings & media', desc:'Site progress photos & design blueprints' },
+    { href:'quality.html',  icon:SIPS_ICON.shield,   label:'Quality & NCR', desc:'Quality checks & non-conformance reports' },
+    { href:'mytasks.html',  icon:SIPS_ICON.tasks,    label:'My tasks', desc:'Daily assigned engineer checklist' },
+    { href:'#', icon:SIPS_ICON.bell, label:'Notifications', desc:'System alerts & recent updates', domId:'navNotifications', badgeId:'sideNotifBadge' },
+    { href:'approvals.html',icon:SIPS_ICON.check, label:'Approvals', desc:'Director approval for budget & schedule shifts', domId:'navApprovals', badgeId:'sideApprovalsBadge' },
   ]},
   { section:'Network', items:[
-    { href:'vendors.html',       icon:SIPS_ICON.truck, label:'Vendors', dataPerm:'view_vendors' },
-    { href:'client-portal.html', icon:SIPS_ICON.globe, label:'Client portal' },
+    { href:'vendors.html',       icon:SIPS_ICON.truck, label:'Vendors', desc:'Material suppliers & contractor scorecard', dataPerm:'view_vendors' },
+    { href:'client-portal.html', icon:SIPS_ICON.globe, label:'Client portal', desc:'Public progress tracker for clients' },
   ]},
   { section:'Company', items:[
-    { href:'#', icon:SIPS_ICON.upload, label:'Import data', domId:'navImportData', dataPerm:'import_project' },
-    { href:'company.html',          icon:SIPS_ICON.building, label:'Company profile', dataPermGroup:'director-pm' },
-    { href:'user-management.html',  icon:SIPS_ICON.users,    label:'User management', dataPermGroup:'director-pm' },
+    { href:'#', icon:SIPS_ICON.upload, label:'Import data', desc:'Excel import for schedule & budget sheets', domId:'navImportData', dataPerm:'import_project' },
+    { href:'company.html',          icon:SIPS_ICON.building, label:'Company profile', desc:'Organization profile & company settings', dataPermGroup:'director-pm' },
+    { href:'user-management.html',  icon:SIPS_ICON.users,    label:'User management', desc:'User roles, permissions & access control', dataPermGroup:'director-pm' },
   ]},
 ];
 
@@ -78,7 +78,8 @@ function sipsRenderShell(opts){
       const permGroupAttr = it.dataPermGroup ? ` data-perm-group="${it.dataPermGroup}"` : '';
       const tag = it.href === '#' ? 'div' : 'a';
       const hrefAttr = it.href === '#' ? '' : ` href="${it.href}${qs}"`;
-      return `<${tag} class="app-nav-item${isActive?' active':''}"${idAttr}${hrefAttr}${permAttr}${permGroupAttr} aria-label="${it.label}"><span class="ic">${it.icon}</span><span class="lbl">${it.label}</span>${badge}</${tag}>`;
+      const descHtml = it.desc ? `<span class="lbl-desc">${it.desc}</span>` : '';
+      return `<${tag} class="app-nav-item${isActive?' active':''}"${idAttr}${hrefAttr}${permAttr}${permGroupAttr} aria-label="${it.label}"><span class="ic">${it.icon}</span><span class="lbl"><span class="lbl-title">${it.label}</span>${descHtml}</span>${badge}</${tag}>`;
     }).join('');
     return `<div class="app-nav-section"><span class="app-nav-section-label">${sec.section}</span>${itemsHtml}</div>`;
   }).join('');
