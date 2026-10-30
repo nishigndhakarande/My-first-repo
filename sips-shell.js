@@ -335,22 +335,22 @@ function sipsRenderTopBanner(data) {
   banner.className = 'sips-login-alert-banner';
 
   let breakdownPills = '';
-  if (data.openNcr > 0) breakdownPills += `<span class="sips-pill-mini ncr">⚠️ ${data.openNcr} Quality NCR</span>`;
-  if (data.pendingDraw > 0) breakdownPills += `<span class="sips-pill-mini draw">📐 ${data.pendingDraw} Drawings</span>`;
-  if (data.pendingCO > 0) breakdownPills += `<span class="sips-pill-mini co">📝 ${data.pendingCO} Change Orders</span>`;
+  if (data.openNcr > 0) breakdownPills += `<span class="sips-pill-mini ncr">⚠️ ${data.openNcr} Quality NCR${data.openNcr > 1 ? 's' : ''}</span>`;
+  if (data.pendingDraw > 0) breakdownPills += `<span class="sips-pill-mini draw">📐 ${data.pendingDraw} Drawing${data.pendingDraw > 1 ? 's' : ''}</span>`;
+  if (data.pendingCO > 0) breakdownPills += `<span class="sips-pill-mini co">📝 ${data.pendingCO} Change Order${data.pendingCO > 1 ? 's' : ''}</span>`;
   if (data.atRiskVendor > 0) breakdownPills += `<span class="sips-pill-mini">🚚 ${data.atRiskVendor} Vendor SLA</span>`;
 
-  const titleGreeting = `नमस्कार, ${data.userName}!`;
+  const titleGreeting = `Welcome, ${data.userName}!`;
   let messageHtml = '';
 
   if (data.totalAlerts > 0) {
     messageHtml = `
       <div class="sips-banner-title">
         <span>${titleGreeting}</span>
-        <span class="sips-banner-badge">${data.totalAlerts} ॲलर्ट्स प्रलंबित</span>
+        <span class="sips-banner-badge">${data.totalAlerts} Action Item${data.totalAlerts > 1 ? 's' : ''} Pending</span>
       </div>
       <div class="sips-banner-msg">
-        तुमच्या प्रोजेक्ट्सवर तातडीचे लक्ष देणे आवश्यक आहे:
+        Immediate attention required on your projects:
         <span class="sips-banner-pills">${breakdownPills}</span>
       </div>
     `;
@@ -358,10 +358,10 @@ function sipsRenderTopBanner(data) {
     messageHtml = `
       <div class="sips-banner-title">
         <span>${titleGreeting}</span>
-        <span class="sips-pill-mini" style="color:#86EFAC;background:rgba(34,197,94,0.15);border-color:rgba(34,197,94,0.3);">सर्व सुरळीत आहे ✓</span>
+        <span class="sips-pill-mini" style="color:#86EFAC;background:rgba(34,197,94,0.15);border-color:rgba(34,197,94,0.3);">All Clear ✓</span>
       </div>
       <div class="sips-banner-msg">
-        सर्व प्रोजेक्ट साईट्स व्यवस्थित सुरू आहेत. कोणतेही प्रलंबित ॲलर्ट्स नाहीत.
+        All project sites are operating smoothly. No pending alerts or escalations.
       </div>
     `;
   }
@@ -380,8 +380,8 @@ function sipsRenderTopBanner(data) {
         </div>
       </div>
       <div class="sips-banner-actions">
-        ${data.totalAlerts > 0 ? `<a href="notifications.html" class="sips-banner-btn-view">तपासा (View) →</a>` : ''}
-        <button type="button" class="sips-banner-btn-close" id="sips-banner-close-btn" aria-label="Dismiss banner" title="बंद करा">✕</button>
+        ${data.totalAlerts > 0 ? `<a href="notifications.html" class="sips-banner-btn-view">Review Alerts →</a>` : ''}
+        <button type="button" class="sips-banner-btn-close" id="sips-banner-close-btn" aria-label="Dismiss banner" title="Dismiss">✕</button>
       </div>
     </div>
   `;
