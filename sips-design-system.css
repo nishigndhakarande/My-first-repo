@@ -148,7 +148,7 @@ textarea:focus-visible, [tabindex]:focus-visible{
 .app-sidebar-brand img{ width:26px; height:26px; object-fit:contain; }
 .app-sidebar-brand-text, .app-sidebar-brand-sub{ display:none; } /* logo lives in the header on desktop; text hidden here to avoid duplicate branding */
 
-.app-sidebar-nav{ flex:1; overflow-y:auto; overflow-x:visible; width:100%; padding:2px 12px; display:flex; flex-direction:column; align-items:center; }
+.app-sidebar-nav{ flex:1; width:100%; padding:2px 12px; display:flex; flex-direction:column; align-items:center; }
 .app-sidebar-nav::-webkit-scrollbar{ width:0; }
 .app-nav-section{
   width:100%; display:flex; flex-direction:column; align-items:center; gap:5px;
@@ -216,6 +216,35 @@ textarea:focus-visible, [tabindex]:focus-visible{
   border-color:transparent #181E25 transparent transparent;
 }
 .app-sidebar-help:hover .lbl{ opacity:1; transform:translateY(-50%) translateX(0); }
+
+/* ---- Floating Smart Hover Card (attached to body, 100% immune to overflow clipping) ---- */
+.sips-nav-flyout{
+  position:fixed; z-index:99999; pointer-events:none;
+  transform:translateY(-50%) translateX(-6px);
+  background:#181E25; color:#fff; padding:10px 14px; border-radius:12px;
+  min-width:210px; max-width:250px;
+  box-shadow:0 14px 34px -4px rgba(15,23,42,0.45), 0 8px 14px -6px rgba(15,23,42,0.25);
+  border:1px solid rgba(255,255,255,0.08);
+  opacity:0; visibility:hidden;
+  transition:opacity .15s cubic-bezier(0.16, 1, 0.3, 1), transform .15s cubic-bezier(0.16, 1, 0.3, 1);
+  display:flex; flex-direction:column; gap:3px; text-align:left;
+}
+.sips-nav-flyout.show{
+  opacity:1; visibility:visible;
+  transform:translateY(-50%) translateX(0);
+}
+.sips-nav-flyout .flyout-arrow{
+  position:absolute; left:-6px; top:50%; transform:translateY(-50%);
+  border-width:6px 6px 6px 0; border-style:solid;
+  border-color:transparent #181E25 transparent transparent;
+}
+.sips-nav-flyout .flyout-title{ font-family:var(--font-display); font-size:12.5px; font-weight:700; color:#fff; line-height:1.25; }
+.sips-nav-flyout .flyout-desc{ font-family:var(--font-body); font-size:11px; font-weight:400; color:#94A3B8; line-height:1.35; }
+
+@media (min-width: 901px){
+  .app-nav-item .lbl { display:none !important; }
+  .app-sidebar-help .lbl { display:none !important; }
+}
 
 .app-main{ margin-left:calc(var(--nav-w) + var(--nav-margin) * 2); min-height:100vh; transition:margin-left var(--dur-base) var(--ease); }
 

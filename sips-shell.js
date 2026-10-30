@@ -114,6 +114,67 @@ function sipsRenderShell(opts){
     sidebar.classList.remove('open');
     backdrop.classList.remove('show');
   });
+
+  // Wire floating unclipped smart hover cards on desktop
+  sipsWireNavFlyouts();
+}
+
+/* ---- Floating smart hover cards (attached to body, 100% immune to container clipping) ---- */
+function sipsWireNavFlyouts(){
+  let flyout = document.getElementById('sips-nav-flyout');
+  if(!flyout){
+    flyout = document.createElement('div');
+    flyout.id = 'sips-nav-flyout';
+    flyout.className = 'sips-nav-flyout';
+    document.body.appendChild(flyout);
+
+    window.addEventListener('scroll', () => {
+      flyout.classList.remove('show');
+    }, { passive: true });
+  }
+
+  const items = document.querySelectorAll('.app-nav-item, .app-sidebar-help');
+  items.forEach(item => {
+    if(item.__flyoutBound) return;
+    item.__flyoutBound = true;
+
+    item.addEventListener('mouseenter', () => {
+      if(window.innerWidth <= 900) return;
+
+      const titleEl = item.querySelector('.lbl-title');
+      const descEl = item.querySelector('.lbl-desc');
+      const isHelp = item.classList.contains('app-sidebar-help');
+
+      let title = '', desc = '';
+      if(titleEl) title = titleEl.textContent.trim();
+      else if(item.getAttribute('aria-label')) title = item.getAttribute('aria-label').trim();
+
+      if(descEl) desc = descEl.textContent.trim();
+
+      if(isHelp){
+        title = 'Need help?';
+        desc = 'support@kindersports.in • 80874 44187';
+      }
+
+      if(!title) return;
+
+      flyout.innerHTML = `
+        <span class="flyout-arrow"></span>
+        <span class="flyout-title">${title}</span>
+        ${desc ? `<span class="flyout-desc">${desc}</span>` : ''}
+      `;
+
+      const rect = item.getBoundingClientRect();
+      const flyoutTop = rect.top + (rect.height / 2);
+      flyout.style.top = flyoutTop + 'px';
+      flyout.style.left = (rect.right + 12) + 'px';
+      flyout.classList.add('show');
+    });
+
+    item.addEventListener('mouseleave', () => {
+      if(flyout) flyout.classList.remove('show');
+    });
+  });
 }
 
 /* ---- Toast system: replaces alert() for non-blocking feedback ---- */
